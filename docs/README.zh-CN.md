@@ -487,9 +487,14 @@ export function App({ registry }) {
 - 不安全或无法加载时显示 fallback。
 
 
-## Host 提供的全局状态
+## 读取 Host 提供的全局状态
 
-当 Host 需要向 MFE 提供 session、locale、feature flags、tenant 或 analytics context 等小型只读状态时，使用 `sharedState`。
+当 Host 需要向 MFE 提供 session identity、locale、feature flags、tenant、experiment bucket 或 analytics context 等小型只读状态时，使用 `sharedState`。
+
+这个模式分两步：
+
+1. Host 将 typed snapshot 传给 `MicroFrontendProvider`。
+2. MFE 使用 `useMicroFrontendSharedState<T>()` 读取该 snapshot。
 
 ```tsx
 import {
@@ -497,13 +502,28 @@ import {
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
-const sharedState = {
+export type HostSharedState = {
+  readonly session?: {
+    readonly userId: string;
+  };
+  readonly locale: "en-US" | "ko-KR" | "zh-CN" | "ja-JP";
+  readonly featureFlags: Readonly<Record<string, boolean>>;
+  readonly tenant?: {
+    readonly id: string;
+  };
+};
+
+const sharedState: HostSharedState = {
   session: {
     userId: "user_123",
   },
   locale: "zh-CN",
   featureFlags: {
     checkoutV2: true,
+    profileMfe: true,
+  },
+  tenant: {
+    id: "bunin",
   },
 };
 
@@ -519,16 +539,23 @@ export function HostRoot({ registry }) {
 }
 
 export function FeatureModuleHeader() {
-  const host = useMicroFrontendSharedState<typeof sharedState>();
+  const host = useMicroFrontendSharedState<HostSharedState>();
+  const userId = host.session?.userId ?? "guest";
+  const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
-  return <Text>{host.locale}</Text>;
+  return (
+    <Text>
+      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+    </Text>
+  );
 }
 ```
 
 含义：
 
 - Host 仍然是 source of truth。
-- MFE 只读取 Host 明确提供的 snapshot，不直接 import Host store。
+- MFE 通过 runtime hook 获取全局状态，而不是直接 import Host store。
+- 将 `HostSharedState` type 放在 Host 与 MFE 都能 import 的小型 shared contract package 或文件中。
 - 状态变更应通过 Host commands、callbacks 或 events 回传。
 - 大型 cache、secret、native-only handle 不应放入 `sharedState`。
 

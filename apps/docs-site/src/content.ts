@@ -183,20 +183,29 @@ export function App({ registry }) {
   },
   {
     eyebrow: "Global state",
-    title: "Provide host-owned state to every module intentionally.",
+    title: "Get host-owned global state inside an MFE.",
     body: [
-      "Use sharedState for small, read-oriented snapshots such as session, locale, feature flags, tenant, or analytics context.",
-      "The host remains the source of truth. Feature modules should request mutations through host commands, events, or typed callbacks rather than owning the global store.",
+      "Pass a small typed sharedState snapshot from the host into MicroFrontendProvider, then read it inside any MFE with useMicroFrontendSharedState<T>().",
+      "Use this for read-oriented values such as session identity, locale, feature flags, tenant, experiment bucket, or analytics context. Do not put secrets, large caches, or native-only handles in sharedState.",
+      "The host remains the source of truth. When an MFE needs to change global state, call a host-owned command, event, or typed callback instead of mutating the host store directly.",
     ],
     code: `import {
   MicroFrontendProvider,
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
-const sharedState = {
+export type HostSharedState = {
+  readonly session?: { readonly userId: string };
+  readonly locale: "en-US" | "ko-KR" | "zh-CN" | "ja-JP";
+  readonly featureFlags: Readonly<Record<string, boolean>>;
+  readonly tenant?: { readonly id: string };
+};
+
+const sharedState: HostSharedState = {
   session: { userId: "user_123" },
-  locale: "en-US",
-  featureFlags: { checkoutV2: true },
+  locale: "ko-KR",
+  featureFlags: { checkoutV2: true, profileMfe: true },
+  tenant: { id: "bunin" },
 };
 
 export function HostRoot({ registry }) {
@@ -208,11 +217,16 @@ export function HostRoot({ registry }) {
 }
 
 export function FeatureModuleHeader() {
-  const host = useMicroFrontendSharedState<typeof sharedState>();
-  return <Text>{host.locale}</Text>;
+  const host = useMicroFrontendSharedState<HostSharedState>();
+  const userId = host.session?.userId ?? "guest";
+  const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
+
+  return <Text>{host.locale} · {userId} · checkoutV2={String(checkoutV2)}</Text>;
 }`,
   },
 ];
+
+export const globalStateSections: readonly DocSection[] = [docsSections[3]!];
 
 export const hotUpdaterSections: readonly DocSection[] = [
   {
@@ -312,8 +326,42 @@ export type LocalizedGuide = {
   readonly cards: readonly Feature[];
   readonly sections: readonly DocSection[];
   readonly hotUpdaterSections: readonly DocSection[];
+  readonly globalStateSections: readonly DocSection[];
   readonly nativeContractSections: readonly DocSection[];
 };
+
+const localizedGuidesShared = {
+  koGlobalState: {
+    eyebrow: "전역 상태",
+    title: "MFE 안에서 Host 전역 상태를 가져옵니다.",
+    body: [
+      "Host는 작은 typed sharedState snapshot을 MicroFrontendProvider에 전달하고, MFE는 useMicroFrontendSharedState<T>()로 읽습니다.",
+      "session identity, locale, feature flag, tenant, experiment bucket, analytics context처럼 read-oriented 값에만 사용합니다. secret, 큰 cache, native-only handle은 넣지 않습니다.",
+      "source of truth는 Host에 남깁니다. Feature module은 global store를 직접 소유하지 않고 host command, event, typed callback으로 변경을 요청해야 합니다.",
+    ],
+    code: (globalStateSections[0]!.code ?? ""),
+  },
+  zhGlobalState: {
+    eyebrow: "全局状态",
+    title: "在 MFE 内读取 Host 拥有的全局状态。",
+    body: [
+      "Host 将小型 typed sharedState snapshot 传给 MicroFrontendProvider，MFE 再通过 useMicroFrontendSharedState<T>() 读取。",
+      "只用于 session identity、locale、feature flags、tenant、experiment bucket、analytics context 等只读值。不要放入 secret、大型 cache 或 native-only handle。",
+      "Host 仍然是 source of truth。Feature module 不应直接拥有 global store，而应通过 host command、event 或 typed callback 请求变更。",
+    ],
+    code: (globalStateSections[0]!.code ?? ""),
+  },
+  jaGlobalState: {
+    eyebrow: "Global state",
+    title: "MFE 内で Host-owned global state を読み取ります。",
+    body: [
+      "Host は小さな typed sharedState snapshot を MicroFrontendProvider に渡し、MFE は useMicroFrontendSharedState<T>() で読み取ります。",
+      "session identity、locale、feature flags、tenant、experiment bucket、analytics context のような read-oriented value にだけ使います。secret、大きな cache、native-only handle は入れません。",
+      "source of truth は Host に残します。Feature module は global store を直接所有せず、host command、event、typed callback で変更を依頼します。",
+    ],
+    code: (globalStateSections[0]!.code ?? ""),
+  },
+} as const;
 
 export const localizedGuides = {
   ko: {
@@ -323,6 +371,7 @@ export const localizedGuides = {
       { title: "Hot Updater 설정", body: "기존 Hot Updater를 유지하면서 native-safety check를 앞단에 둡니다." },
       { title: "패키지 매니저", body: "Bun, npm, pnpm, Yarn, Deno에서 같은 workflow를 실행합니다." },
       { title: "Native contract", body: "어떤 변경이 Store release를 요구하는지 판단합니다." },
+      { title: "전역 상태", body: "Host sharedState를 MFE에서 타입 안전하게 읽는 방법입니다." },
     ],
     sections: [
       {
@@ -352,9 +401,10 @@ export const localizedGuides = {
       },
       {
         eyebrow: "전역 상태",
-        title: "Host가 소유한 상태를 module에 의도적으로 제공합니다.",
+        title: "MFE 안에서 Host 전역 상태를 가져옵니다.",
         body: [
-          "session, locale, feature flag, tenant, analytics context처럼 작고 read-oriented인 snapshot은 sharedState로 전달합니다.",
+          "Host는 작은 typed sharedState snapshot을 MicroFrontendProvider에 전달하고, MFE는 useMicroFrontendSharedState<T>()로 읽습니다.",
+          "session identity, locale, feature flag, tenant, experiment bucket, analytics context처럼 read-oriented 값에만 사용합니다. secret, 큰 cache, native-only handle은 넣지 않습니다.",
           "source of truth는 Host에 남깁니다. Feature module은 global store를 직접 소유하지 않고 host command, event, typed callback으로 변경을 요청해야 합니다.",
         ],
         code: (docsSections[3]!.code ?? ""),
@@ -386,6 +436,7 @@ export const localizedGuides = {
         code: (hotUpdaterSections[2]!.code ?? ""),
       },
     ],
+    globalStateSections: [localizedGuidesShared.koGlobalState],
     nativeContractSections: [
       {
         eyebrow: "Native contract",
@@ -411,6 +462,7 @@ export const localizedGuides = {
       { title: "Hot Updater 设置", body: "保留现有 Hot Updater，并在前面加入 native-safety check。" },
       { title: "包管理器", body: "用 Bun、npm、pnpm、Yarn、Deno 执行同一套 workflow。" },
       { title: "Native contract", body: "判断哪些变更必须走 Store release。" },
+      { title: "全局状态", body: "在 MFE 中类型安全地读取 Host sharedState。" },
     ],
     sections: [
       {
@@ -436,9 +488,10 @@ export const localizedGuides = {
       },
       {
         eyebrow: "全局状态",
-        title: "Host 有意地向 module 提供自己拥有的状态。",
+        title: "在 MFE 内读取 Host 拥有的全局状态。",
         body: [
-          "session、locale、feature flags、tenant、analytics context 这类小型只读 snapshot 可以通过 sharedState 传递。",
+          "Host 将小型 typed sharedState snapshot 传给 MicroFrontendProvider，MFE 再通过 useMicroFrontendSharedState<T>() 读取。",
+          "只用于 session identity、locale、feature flags、tenant、experiment bucket、analytics context 等只读值。不要放入 secret、大型 cache 或 native-only handle。",
           "Host 仍然是 source of truth。Feature module 不应直接拥有 global store，而应通过 host command、event 或 typed callback 请求变更。",
         ],
         code: (docsSections[3]!.code ?? ""),
@@ -470,6 +523,7 @@ export const localizedGuides = {
         code: (hotUpdaterSections[2]!.code ?? ""),
       },
     ],
+    globalStateSections: [localizedGuidesShared.zhGlobalState],
     nativeContractSections: [
       {
         eyebrow: "Native contract",
@@ -495,6 +549,7 @@ export const localizedGuides = {
       { title: "Hot Updater 設定", body: "既存の Hot Updater を維持し、その前段に native-safety check を置きます。" },
       { title: "Package managers", body: "Bun、npm、pnpm、Yarn、Deno で同じ workflow を実行します。" },
       { title: "Native contract", body: "どの変更が Store release を必要とするか判断します。" },
+      { title: "Global state", body: "MFE 内で Host sharedState を type-safe に読み取る方法です。" },
     ],
     sections: [
       {
@@ -520,9 +575,10 @@ export const localizedGuides = {
       },
       {
         eyebrow: "Global state",
-        title: "Host-owned state を module に意図的に提供します。",
+        title: "MFE 内で Host-owned global state を読み取ります。",
         body: [
-          "session、locale、feature flags、tenant、analytics context のような小さな read-oriented snapshot は sharedState で渡します。",
+          "Host は小さな typed sharedState snapshot を MicroFrontendProvider に渡し、MFE は useMicroFrontendSharedState<T>() で読み取ります。",
+          "session identity、locale、feature flags、tenant、experiment bucket、analytics context のような read-oriented value にだけ使います。secret、大きな cache、native-only handle は入れません。",
           "source of truth は Host に残します。Feature module は global store を直接所有せず、host command、event、typed callback で変更を依頼します。",
         ],
         code: (docsSections[3]!.code ?? ""),
@@ -554,6 +610,7 @@ export const localizedGuides = {
         code: (hotUpdaterSections[2]!.code ?? ""),
       },
     ],
+    globalStateSections: [localizedGuidesShared.jaGlobalState],
     nativeContractSections: [
       {
         eyebrow: "Native contract",

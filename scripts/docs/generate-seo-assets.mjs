@@ -8,6 +8,7 @@ const routeGroups = [
   ["/docs/hot-updater", "/ko/docs/hot-updater", "/zh-cn/docs/hot-updater", "/jp/docs/hot-updater"],
   ["/docs/package-managers", "/ko/docs/package-managers", "/zh-cn/docs/package-managers", "/jp/docs/package-managers"],
   ["/docs/native-contract", "/ko/docs/native-contract", "/zh-cn/docs/native-contract", "/jp/docs/native-contract"],
+  ["/docs/global-state", "/ko/docs/global-state", "/zh-cn/docs/global-state", "/jp/docs/global-state"],
 ];
 
 const hreflangOrder = ["en", "ko", "zh-CN", "ja"];

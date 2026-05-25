@@ -22,6 +22,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [日本語](README.ja.md) | 日本語公式ドキュメント. |
 | [包管理器](package-managers.zh-CN.md) | Bun、npm、pnpm、Yarn、Deno 命令矩阵。 |
 | [Native contract](native-contract.md) | native compatibility 说明。 |
+| [全局状态](/docs/global-state) | Host 向 MFE 提供并读取 sharedState 的指南。 |
 | [Hot Updater 设置](/docs/hot-updater) | Hot Updater 路由指南。 |
 
 ## 核心流程

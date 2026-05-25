@@ -34,6 +34,8 @@ const localeConfig = {
     packageSubtitle: "Repository는 Bun 우선이지만 consumer project는 Bun, npm, pnpm, Yarn, Deno를 사용할 수 있습니다.",
     nativeTitle: "Native contract",
     nativeSubtitle: "native hash가 무엇을 의미하고 왜 안전하지 않은 JavaScript update를 막아야 하는지 설명합니다.",
+    globalStateTitle: "전역 상태 가져오기",
+    globalStateSubtitle: "Host가 제공한 typed sharedState를 MFE에서 안전하게 읽는 방법입니다.",
     tableHeaders: ["도구", "Runtime 설치", "CLI 설치", "한 번 실행", "배포"] as const,
   },
   zh: {
@@ -51,6 +53,8 @@ const localeConfig = {
     packageSubtitle: "Repository 优先使用 Bun，但 consumer project 可使用 Bun、npm、pnpm、Yarn、Deno。",
     nativeTitle: "Native contract",
     nativeSubtitle: "说明 native hash 的含义，以及为什么必须阻止不安全的 JavaScript update。",
+    globalStateTitle: "读取全局状态",
+    globalStateSubtitle: "在 MFE 中安全读取 Host 提供的 typed sharedState。",
     tableHeaders: ["工具", "Runtime 安装", "CLI 安装", "首次运行", "发布"] as const,
   },
   jp: {
@@ -68,6 +72,8 @@ const localeConfig = {
     packageSubtitle: "Repository は Bun 優先ですが、consumer project は Bun、npm、pnpm、Yarn、Deno を使用できます。",
     nativeTitle: "Native contract",
     nativeSubtitle: "native hash の意味と、安全でない JavaScript update を止める理由を説明します。",
+    globalStateTitle: "Global state を取得する",
+    globalStateSubtitle: "Host が提供する typed sharedState を MFE 内で安全に読み取る方法です。",
     tableHeaders: ["Tool", "Runtime install", "CLI install", "初回実行", "公開"] as const,
   },
 } satisfies Record<LocaleCode, {
@@ -85,6 +91,8 @@ const localeConfig = {
   readonly packageSubtitle: string;
   readonly nativeTitle: string;
   readonly nativeSubtitle: string;
+  readonly globalStateTitle: string;
+  readonly globalStateSubtitle: string;
   readonly tableHeaders: readonly [string, string, string, string, string];
 }>;
 
@@ -151,11 +159,22 @@ export function LocalizedNativeContractRoute({ locale }: { readonly locale: Loca
   );
 }
 
-function LocalizedRouteCards({ basePath, cards }: { readonly basePath: string; readonly cards: LocalizedGuide["cards"] }) {
-  const hrefs = [`${basePath}/docs/hot-updater`, `${basePath}/docs/package-managers`, `${basePath}/docs/native-contract`];
+export function LocalizedGlobalStateRoute({ locale }: { readonly locale: LocaleCode }) {
+  const config = localeConfig[locale];
 
   return (
-    <section className={grid({ columns: { base: 1, md: 3 }, gap: "5" })}>
+    <ShellSection>
+      <PageHeader title={config.globalStateTitle} subtitle={config.globalStateSubtitle} eyebrow={config.docsEyebrow} />
+      <SectionList sections={config.guide.globalStateSections} />
+    </ShellSection>
+  );
+}
+
+function LocalizedRouteCards({ basePath, cards }: { readonly basePath: string; readonly cards: LocalizedGuide["cards"] }) {
+  const hrefs = [`${basePath}/docs/hot-updater`, `${basePath}/docs/package-managers`, `${basePath}/docs/native-contract`, `${basePath}/docs/global-state`];
+
+  return (
+    <section className={grid({ columns: { base: 1, md: 2, xl: 4 }, gap: "5" })}>
       {cards.map((card, index) => (
         <a key={card.title} href={withSiteBase(hrefs[index] ?? `${basePath}/docs`)} className={routeCard()}>
           <div className={stack({ gap: "3" })}>

@@ -22,6 +22,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [Chinese](README.zh-CN.md) | 简体中文官方文档. |
 | [Package managers](package-managers.md) | Bun, npm, pnpm, Yarn, and Deno command matrix. |
 | [Native contract](native-contract.md) | Native compatibility notes. |
+| [Global state](/docs/global-state) | Host-to-MFE sharedState providing and reading guide. |
 | [Hot Updater setup](/docs/hot-updater) | Routed website guide for Hot Updater configuration. |
 
 ## Core flow

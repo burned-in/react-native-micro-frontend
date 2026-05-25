@@ -518,7 +518,12 @@ Meaning:
 
 ## Host-provided global state
 
-Use `sharedState` when the host needs to provide small, read-oriented state to every feature module: session, locale, feature flags, tenant, experiment bucket, or analytics context.
+Use `sharedState` when the host needs to provide small, read-oriented state to every feature module: session identity, locale, feature flags, tenant, experiment bucket, or analytics context.
+
+The pattern has two sides:
+
+1. The host passes a typed snapshot to `MicroFrontendProvider`.
+2. The MFE reads that snapshot with `useMicroFrontendSharedState<T>()`.
 
 ```tsx
 import {
@@ -526,13 +531,28 @@ import {
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
-const sharedState = {
+export type HostSharedState = {
+  readonly session?: {
+    readonly userId: string;
+  };
+  readonly locale: "en-US" | "ko-KR" | "zh-CN" | "ja-JP";
+  readonly featureFlags: Readonly<Record<string, boolean>>;
+  readonly tenant?: {
+    readonly id: string;
+  };
+};
+
+const sharedState: HostSharedState = {
   session: {
     userId: "user_123",
   },
-  locale: "en-US",
+  locale: "ko-KR",
   featureFlags: {
     checkoutV2: true,
+    profileMfe: true,
+  },
+  tenant: {
+    id: "bunin",
   },
 };
 
@@ -548,16 +568,23 @@ export function HostRoot({ registry }) {
 }
 
 export function FeatureModuleHeader() {
-  const host = useMicroFrontendSharedState<typeof sharedState>();
+  const host = useMicroFrontendSharedState<HostSharedState>();
+  const userId = host.session?.userId ?? "guest";
+  const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
-  return <Text>{host.locale}</Text>;
+  return (
+    <Text>
+      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+    </Text>
+  );
 }
 ```
 
 Meaning:
 
 - the host remains the source of truth
-- feature modules read an intentional snapshot rather than importing the host store directly
+- feature modules get global state through the runtime hook, not by importing the host store
+- keep the shared type in a tiny shared contract package or file that both host and MFE can import
 - mutations should go back through host-owned commands, callbacks, or events
 - large caches, secrets, and native-only handles should not be placed in `sharedState`
 

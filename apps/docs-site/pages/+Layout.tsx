@@ -19,7 +19,7 @@ type LocalePrefix = "" | "/ko" | "/zh-cn" | "/jp";
 
 type LocalizedNavItem = {
   readonly label: string;
-  readonly path: "" | "/docs" | "/docs/hot-updater" | "/docs/package-managers" | "/docs/native-contract";
+  readonly path: "" | "/docs" | "/docs/hot-updater" | "/docs/package-managers" | "/docs/native-contract" | "/docs/global-state";
 };
 
 const localizedNavLabels = {
@@ -29,6 +29,7 @@ const localizedNavLabels = {
     hotUpdater: "Hot Updater",
     packageManagers: "Package managers",
     nativeContract: "Native contract",
+    globalState: "Global state",
   },
   "/ko": {
     overview: "개요",
@@ -36,6 +37,7 @@ const localizedNavLabels = {
     hotUpdater: "Hot Updater",
     packageManagers: "패키지 매니저",
     nativeContract: "Native contract",
+    globalState: "전역 상태",
   },
   "/zh-cn": {
     overview: "概览",
@@ -43,6 +45,7 @@ const localizedNavLabels = {
     hotUpdater: "Hot Updater",
     packageManagers: "包管理器",
     nativeContract: "Native contract",
+    globalState: "全局状态",
   },
   "/jp": {
     overview: "概要",
@@ -50,6 +53,7 @@ const localizedNavLabels = {
     hotUpdater: "Hot Updater",
     packageManagers: "Package managers",
     nativeContract: "Native contract",
+    globalState: "Global state",
   },
 } satisfies Record<LocalePrefix, Record<string, string>>;
 
@@ -88,6 +92,7 @@ const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
     { label: labels.hotUpdater, path: "/docs/hot-updater" },
     { label: labels.packageManagers, path: "/docs/package-managers" },
     { label: labels.nativeContract, path: "/docs/native-contract" },
+    { label: labels.globalState, path: "/docs/global-state" },
   ];
 };
 

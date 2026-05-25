@@ -487,9 +487,14 @@ export function App({ registry }) {
 - 安全でない場合、またはロードできない場合は fallback を表示します。
 
 
-## Host から提供する global state
+## Host から提供される global state を取得する
 
-Host から MFE へ session、locale、feature flags、tenant、analytics context のような小さな read-oriented state を渡す場合は `sharedState` を使います。
+Host から MFE へ session identity、locale、feature flags、tenant、experiment bucket、analytics context のような小さな read-oriented state を渡す場合は `sharedState` を使います。
+
+この pattern は 2 段階です。
+
+1. Host が typed snapshot を `MicroFrontendProvider` に渡します。
+2. MFE が `useMicroFrontendSharedState<T>()` でその snapshot を読み取ります。
 
 ```tsx
 import {
@@ -497,13 +502,28 @@ import {
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
-const sharedState = {
+export type HostSharedState = {
+  readonly session?: {
+    readonly userId: string;
+  };
+  readonly locale: "en-US" | "ko-KR" | "zh-CN" | "ja-JP";
+  readonly featureFlags: Readonly<Record<string, boolean>>;
+  readonly tenant?: {
+    readonly id: string;
+  };
+};
+
+const sharedState: HostSharedState = {
   session: {
     userId: "user_123",
   },
   locale: "ja-JP",
   featureFlags: {
     checkoutV2: true,
+    profileMfe: true,
+  },
+  tenant: {
+    id: "bunin",
   },
 };
 
@@ -519,16 +539,23 @@ export function HostRoot({ registry }) {
 }
 
 export function FeatureModuleHeader() {
-  const host = useMicroFrontendSharedState<typeof sharedState>();
+  const host = useMicroFrontendSharedState<HostSharedState>();
+  const userId = host.session?.userId ?? "guest";
+  const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
-  return <Text>{host.locale}</Text>;
+  return (
+    <Text>
+      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+    </Text>
+  );
 }
 ```
 
 意味:
 
 - source of truth は Host に残します。
-- MFE は Host store を直接 import せず、意図的に公開された snapshot だけを読みます。
+- MFE は Host store を直接 import せず、runtime hook で global state を取得します。
+- `HostSharedState` type は Host と MFE の両方が import できる小さな shared contract package または file に置きます。
 - 変更は Host commands、callbacks、events を通して戻す設計にします。
 - 大きな cache、secret、native-only handle は `sharedState` に入れません。
 

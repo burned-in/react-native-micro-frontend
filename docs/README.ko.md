@@ -506,9 +506,14 @@ export function App({ registry }) {
 - 안전하지 않거나 아직 로드할 수 없으면 fallback을 보여줍니다.
 
 
-## Host 제공 전역 상태
+## Host 제공 전역 상태 가져오기
 
-Host에서 MFE로 session, locale, feature flag, tenant, analytics context처럼 작은 read-oriented 상태를 내려줄 때는 `sharedState`를 사용합니다.
+Host에서 MFE로 session identity, locale, feature flag, tenant, experiment bucket, analytics context처럼 작은 read-oriented 상태를 내려줄 때는 `sharedState`를 사용합니다.
+
+패턴은 두 단계입니다.
+
+1. Host가 typed snapshot을 `MicroFrontendProvider`에 전달합니다.
+2. MFE가 `useMicroFrontendSharedState<T>()`로 그 snapshot을 읽습니다.
 
 ```tsx
 import {
@@ -516,13 +521,28 @@ import {
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
-const sharedState = {
+export type HostSharedState = {
+  readonly session?: {
+    readonly userId: string;
+  };
+  readonly locale: "en-US" | "ko-KR" | "zh-CN" | "ja-JP";
+  readonly featureFlags: Readonly<Record<string, boolean>>;
+  readonly tenant?: {
+    readonly id: string;
+  };
+};
+
+const sharedState: HostSharedState = {
   session: {
     userId: "user_123",
   },
   locale: "ko-KR",
   featureFlags: {
     checkoutV2: true,
+    profileMfe: true,
+  },
+  tenant: {
+    id: "bunin",
   },
 };
 
@@ -538,16 +558,23 @@ export function HostRoot({ registry }) {
 }
 
 export function FeatureModuleHeader() {
-  const host = useMicroFrontendSharedState<typeof sharedState>();
+  const host = useMicroFrontendSharedState<HostSharedState>();
+  const userId = host.session?.userId ?? "guest";
+  const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
-  return <Text>{host.locale}</Text>;
+  return (
+    <Text>
+      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+    </Text>
+  );
 }
 ```
 
 의미:
 
 - source of truth는 Host에 남깁니다.
-- MFE는 Host store를 직접 import하지 않고 의도적으로 공개된 snapshot만 읽습니다.
+- MFE는 Host store를 직접 import하지 않고 runtime hook으로 전역 상태를 가져옵니다.
+- Host와 MFE가 함께 import할 수 있는 작은 shared contract package 또는 file에 `HostSharedState` type을 둡니다.
 - 변경은 Host command, callback, event로 되돌려 보내는 구조가 안전합니다.
 - 큰 cache, secret, native-only handle은 `sharedState`에 넣지 않습니다.
 

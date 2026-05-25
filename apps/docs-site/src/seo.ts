@@ -28,6 +28,7 @@ const copy = {
     hotUpdater: "Configure Hot Updater for native-safe React Native micro frontend OTA delivery with verification before publish.",
     packageManagers: "Use Bun, npm, pnpm, Yarn, and Deno with the same React Native micro frontend install and release workflow.",
     nativeContract: "Understand native contract hashing, Hermes and New Architecture compatibility, and when React Native OTA must be blocked.",
+    globalState: "Provide host-owned sharedState to React Native micro frontends and read it safely with useMicroFrontendSharedState.",
   },
   ko: {
     suffix: `${brand} 한국어 문서`,
@@ -36,6 +37,7 @@ const copy = {
     hotUpdater: "Hot Updater 앞단에 native-safety verification을 추가해 React Native MFE OTA를 안전하게 배포하는 방법입니다.",
     packageManagers: "Bun, npm, pnpm, Yarn, Deno에서 동일한 React Native micro frontend workflow를 실행하는 방법입니다.",
     nativeContract: "native hash, Hermes, New Architecture 호환성, OTA 차단 기준을 설명하는 한국어 문서입니다.",
+    globalState: "Host가 제공한 sharedState를 React Native MFE에서 useMicroFrontendSharedState로 안전하게 읽는 방법입니다.",
   },
   "zh-CN": {
     suffix: `${brand} 简体中文文档`,
@@ -44,6 +46,7 @@ const copy = {
     hotUpdater: "在 Hot Updater 前加入 native-safety verification，安全发布 React Native MFE OTA。",
     packageManagers: "使用 Bun、npm、pnpm、Yarn、Deno 执行同一套 React Native micro frontend workflow。",
     nativeContract: "解释 native hash、Hermes、New Architecture compatibility 以及何时必须阻止 OTA。",
+    globalState: "说明如何在 React Native MFE 中通过 useMicroFrontendSharedState 安全读取 Host sharedState。",
   },
   ja: {
     suffix: `${brand} 日本語ドキュメント`,
@@ -52,10 +55,11 @@ const copy = {
     hotUpdater: "Hot Updater の前段に native-safety verification を追加し、React Native MFE OTA を安全に公開します。",
     packageManagers: "Bun、npm、pnpm、Yarn、Deno で同じ React Native micro frontend workflow を実行します。",
     nativeContract: "native hash、Hermes、New Architecture compatibility、OTA を止める条件を説明します。",
+    globalState: "Host が提供する sharedState を React Native MFE 内で useMicroFrontendSharedState により安全に読み取る方法です。",
   },
 } satisfies Record<Locale, Record<string, string>>;
 
-type SeoSection = "overview" | "docs" | "hotUpdater" | "packageManagers" | "nativeContract";
+type SeoSection = "overview" | "docs" | "hotUpdater" | "packageManagers" | "nativeContract" | "globalState";
 
 const titles: Record<SeoSection, string> = {
   overview: "Native-safe React Native Micro Frontends",
@@ -63,6 +67,7 @@ const titles: Record<SeoSection, string> = {
   hotUpdater: "Hot Updater Setup",
   packageManagers: "Package Manager Matrix",
   nativeContract: "Native Contract Guide",
+  globalState: "Global State Guide",
 } as const;
 
 const localizedTitles = {
@@ -73,6 +78,7 @@ const localizedTitles = {
     hotUpdater: "Hot Updater 설정",
     packageManagers: "패키지 매니저 표",
     nativeContract: "Native Contract 가이드",
+    globalState: "전역 상태 가이드",
   },
   "zh-CN": {
     overview: "Native-safe React Native Micro Frontend",
@@ -80,6 +86,7 @@ const localizedTitles = {
     hotUpdater: "Hot Updater 设置",
     packageManagers: "包管理器矩阵",
     nativeContract: "Native Contract 指南",
+    globalState: "全局状态指南",
   },
   ja: {
     overview: "Native-safe React Native Micro Frontend",
@@ -87,6 +94,7 @@ const localizedTitles = {
     hotUpdater: "Hot Updater 設定",
     packageManagers: "Package Manager 一覧",
     nativeContract: "Native Contract ガイド",
+    globalState: "Global State ガイド",
   },
 } satisfies Record<Locale, typeof titles>;
 
@@ -229,6 +237,7 @@ function getSection(pathname: string): SeoSection {
   if (route.startsWith("/docs/hot-updater")) return "hotUpdater";
   if (route.startsWith("/docs/package-managers")) return "packageManagers";
   if (route.startsWith("/docs/native-contract")) return "nativeContract";
+  if (route.startsWith("/docs/global-state")) return "globalState";
   if (route.startsWith("/docs")) return "docs";
 
   return "overview";

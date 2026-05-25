@@ -22,6 +22,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [简体中文](README.zh-CN.md) | 简体中文官方文档. |
 | [패키지 매니저](package-managers.ko.md) | Bun, npm, pnpm, Yarn, Deno 명령 매트릭스. |
 | [Native contract](native-contract.md) | native compatibility 설명. |
+| [전역 상태](/docs/global-state) | Host에서 MFE로 sharedState를 제공하고 가져오는 방법. |
 | [Hot Updater 설정](/docs/hot-updater) | Hot Updater route 문서. |
 
 ## 핵심 흐름
