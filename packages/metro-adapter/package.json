@@ -1,6 +1,12 @@
 {
   "name": "@bunin/react-native-micro-frontend-metro-adapter",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "author": "bunin contributors",
+  "homepage": "https://rnmfe.bunin.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burned-in/react-native-micro-frontend.git"
+  },
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

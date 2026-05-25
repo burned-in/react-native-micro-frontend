@@ -1,6 +1,12 @@
 {
   "name": "mfe-feature",
   "private": true,
+  "author": "bunin contributors",
+  "homepage": "https://rnmfe.bunin.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burned-in/react-native-micro-frontend.git"
+  },
   "dependencies": {
     "react": "19.0.0",
     "react-native": "0.76.0"

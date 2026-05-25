@@ -1,6 +1,12 @@
 {
   "name": "@bunin/react-native-micro-frontend-docs-site",
   "private": true,
+  "author": "bunin contributors",
+  "homepage": "https://rnmfe.bunin.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burned-in/react-native-micro-frontend.git"
+  },
   "type": "module",
   "scripts": {
     "codegen": "XDG_CONFIG_HOME=../../.cache/panda panda codegen --silent && XDG_CONFIG_HOME=../../.cache/panda panda cssgen --silent",
