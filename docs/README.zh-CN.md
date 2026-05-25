@@ -704,3 +704,9 @@ bun run release:publish
 - 再次运行完整 release check
 - 按依赖顺序发布所有 package 到 npm registry
 - publish 脚本使用 `bun publish --cwd <package>`；默认参数是 `--access public --tag latest`
+
+## License
+
+MIT.
+
+Beerware 很有黑客精神，但实际 package license 保持 MIT，这样 npm 用户、公司和自动化 compliance 工具都能更顺利地采用。如果这个库救了你的 release，给维护者买杯啤酒当然欢迎。

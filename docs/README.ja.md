@@ -702,3 +702,9 @@ bun run release:publish
 - 完全な release check を再実行
 - 依存関係順にすべての package を npm registry に publish
 - publish script は `bun publish --cwd <package>` を使用し、デフォルト option は `--access public --tag latest`
+
+## License
+
+MIT.
+
+Beerware の hacker vibe は良いですが、実際の package license は npm users、companies、automated compliance tools が採用しやすいよう MIT にします。この library が release を救ったら、maintainer に beer を一杯おごる気持ちは歓迎です。

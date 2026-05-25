@@ -15,6 +15,12 @@ React Native Micro Frontend
   runtime safety gate
 ```
 
+## 개발 상태
+
+이 프로젝트는 아직 활발히 개발 중입니다. public API는 실험과 초기 통합에 사용할 수 있지만, `0.x` 라인은 runtime, CLI, native-contract workflow가 안정화되는 동안 변경될 수 있습니다.
+
+프로덕션에서는 정확한 package version을 고정하고 CI에서 native compatibility check를 직접 돌린 뒤 사용하는 것을 권장합니다.
+
 ## 개요
 
 `@bunin/react-native-micro-frontend`는 React Native 팀이 native binary compatibility를 잃지 않으면서 feature module을 독립적으로 배포할 수 있게 해 주는 안전장치이자 통합 레이어입니다.
@@ -723,3 +729,9 @@ bun run release:publish
 - 전체 release check를 다시 실행
 - 의존성 순서대로 모든 패키지를 npm registry에 publish
 - publish 스크립트는 `bun publish --cwd <package>`를 사용하며 기본 옵션은 `--access public --tag latest`
+
+## 라이선스
+
+MIT.
+
+Beerware 감성은 좋지만 실제 package license는 npm 사용자, 회사, 자동 compliance tool이 부담 없이 채택할 수 있도록 MIT로 유지합니다. 그래도 이 라이브러리가 release를 구했다면 맥주 한 잔 사주는 마음은 언제나 환영입니다.

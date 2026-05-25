@@ -96,6 +96,17 @@ export const features: readonly Feature[] = [
 
 export const homeSections: readonly DocSection[] = [
   {
+    eyebrow: "Development status",
+    title: "Active development on the 0.x line.",
+    body: [
+      "This project is still being hardened across the runtime, CLI, native-contract checks, and Hot Updater adapter workflows.",
+      "Pin exact package versions before production use, run native compatibility checks in CI, and expect API refinements while the 0.x line evolves.",
+    ],
+    code: `status: active development
+license: MIT
+beerware spirit: appreciated, not the legal package license`,
+  },
+  {
     eyebrow: "Core concept",
     title: "Separate JavaScript delivery from native binary risk.",
     body: [
@@ -375,6 +386,17 @@ export const localizedGuides = {
     ],
     sections: [
       {
+        eyebrow: "개발 상태",
+        title: "0.x 라인은 아직 활발히 개발 중입니다.",
+        body: [
+          "runtime, CLI, native-contract check, Hot Updater adapter workflow를 계속 안정화하고 있습니다.",
+          "프로덕션에서는 exact package version을 고정하고 CI에서 native compatibility check를 돌리는 것을 권장합니다. 실제 package license는 채택 장벽을 낮추기 위해 MIT로 유지합니다.",
+        ],
+        code: `status: active development
+license: MIT
+beerware spirit: appreciated`,
+      },
+      {
         eyebrow: "설정",
         title: "정책을 한 번 선언하고 CLI가 계속 검증하게 합니다.",
         body: [
@@ -466,6 +488,17 @@ export const localizedGuides = {
     ],
     sections: [
       {
+        eyebrow: "开发状态",
+        title: "0.x 版本线仍在积极开发中。",
+        body: [
+          "runtime、CLI、native-contract check 和 Hot Updater adapter workflow 仍在持续加固。",
+          "生产使用前请固定精确 package version，并在 CI 中运行 native compatibility check。实际 package license 保持 MIT，以降低采用和合规成本。",
+        ],
+        code: `status: active development
+license: MIT
+beerware spirit: appreciated`,
+      },
+      {
         eyebrow: "配置",
         title: "只声明一次策略，然后让 CLI 持续校验。",
         body: [
@@ -552,6 +585,17 @@ export const localizedGuides = {
       { title: "Global state", body: "MFE 内で Host sharedState を type-safe に読み取る方法です。" },
     ],
     sections: [
+      {
+        eyebrow: "開発ステータス",
+        title: "0.x line はまだ活発に開発中です。",
+        body: [
+          "runtime、CLI、native-contract check、Hot Updater adapter workflow を継続的に harden しています。",
+          "production 前には exact package version を pin し、CI で native compatibility check を実行してください。実際の package license は採用と compliance のため MIT にします。",
+        ],
+        code: `status: active development
+license: MIT
+beerware spirit: appreciated`,
+      },
       {
         eyebrow: "設定",
         title: "policy を一度宣言し、CLI に継続的に検証させます。",

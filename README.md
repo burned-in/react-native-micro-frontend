@@ -13,6 +13,13 @@ React Native Micro Frontend
   runtime safety gates
 ```
 
+
+## Development status
+
+This project is still under active development. The public API is usable for experiments and early integration work, but the `0.x` line may still change while the runtime, CLI, and native-contract workflows are hardened.
+
+Use it in production only after pinning exact package versions and running your own native compatibility checks in CI.
+
 ## Overview
 
 `@bunin/react-native-micro-frontend` is a safety and integration layer for React Native teams that want independent feature delivery without losing control of native binary compatibility.
@@ -742,3 +749,9 @@ Meaning:
   8. `@bunin/react-native-micro-frontend-cli`
 
 The publish script uses `bun publish --cwd <package>`; the default options are `--access public --tag latest`.
+
+## License
+
+MIT.
+
+Beerware has a great hacker vibe, and the project keeps that spirit: if this library saves your release, buying the maintainer a beer is welcome. The actual package license stays MIT so npm users, companies, and automated compliance tools can adopt it without friction.
