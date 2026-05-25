@@ -26,6 +26,10 @@ const copy = {
     overview:
       'Native-safe React Native micro frontend delivery with Hot Updater compatibility, host-provided state, and package-manager neutral workflows.',
     docs: 'Complete React Native micro frontend documentation: install, configure, register modules, share host state, verify native contracts, and publish safely.',
+    gettingStarted:
+      'Getting started guide for React Native micro frontends: install packages, declare host policy, register a module, verify native safety, and load it at runtime.',
+    options:
+      'Complete options reference for React Native micro frontend Host config, MFE config, registry manifests, runtime providers, hooks, and screen APIs.',
     hotUpdater:
       'Configure Hot Updater for native-safe React Native micro frontend OTA delivery with verification before publish.',
     packageManagers:
@@ -40,6 +44,10 @@ const copy = {
     overview:
       'Hot Updater 호환, Host shared state, native contract 검증을 제공하는 React Native micro frontend 한국어 가이드입니다.',
     docs: '설치, 설정, MFE 등록, Host 상태 전달, native contract 검증, 안전한 배포까지 정리한 한국어 문서입니다.',
+    gettingStarted:
+      'React Native MFE를 처음 시작하기 위한 설치, Host policy 설정, module 등록, native safety 검증, runtime 로딩 가이드입니다.',
+    options:
+      'Host config, MFE config, registry manifest, runtime Provider, hook, screen API의 모든 옵션을 정리한 레퍼런스입니다.',
     hotUpdater:
       'Hot Updater 앞단에 native-safety verification을 추가해 React Native MFE OTA를 안전하게 배포하는 방법입니다.',
     packageManagers:
@@ -54,6 +62,10 @@ const copy = {
     overview:
       '面向 React Native micro frontend 的 native-safe delivery、Hot Updater 集成与 Host shared state 指南。',
     docs: '完整的简体中文文档：安装、配置、注册 MFE、传递 Host 状态、校验 native contract 并安全发布。',
+    gettingStarted:
+      'React Native MFE 入门指南：安装 package、声明 Host policy、注册 module、校验 native safety 并通过 runtime 加载。',
+    options:
+      '完整选项参考：Host config、MFE config、registry manifest、runtime Provider、hooks 与 screen API。',
     hotUpdater:
       '在 Hot Updater 前加入 native-safety verification，安全发布 React Native MFE OTA。',
     packageManagers:
@@ -68,6 +80,10 @@ const copy = {
     overview:
       'React Native micro frontend の native-safe delivery、Hot Updater 連携、Host shared state の日本語ガイドです。',
     docs: 'install、config、MFE registration、Host state、native contract verification、安全な publish までの日本語ドキュメントです。',
+    gettingStarted:
+      'React Native MFE の入門ガイドです。install、Host policy、module registration、native safety verification、runtime loading を説明します。',
+    options:
+      'Host config、MFE config、registry manifest、runtime Provider、hooks、screen API の全 option reference です。',
     hotUpdater:
       'Hot Updater の前段に native-safety verification を追加し、React Native MFE OTA を安全に公開します。',
     packageManagers:
@@ -82,6 +98,8 @@ const copy = {
 type SeoSection =
   | 'overview'
   | 'docs'
+  | 'gettingStarted'
+  | 'options'
   | 'hotUpdater'
   | 'packageManagers'
   | 'nativeContract'
@@ -90,6 +108,8 @@ type SeoSection =
 const titles: Record<SeoSection, string> = {
   overview: 'Native-safe React Native Micro Frontends',
   docs: 'Documentation',
+  gettingStarted: 'Getting Started',
+  options: 'Options Reference',
   hotUpdater: 'Hot Updater Setup',
   packageManagers: 'Package Manager Matrix',
   nativeContract: 'Native Contract Guide',
@@ -101,6 +121,8 @@ const localizedTitles = {
   ko: {
     overview: 'Native-safe React Native Micro Frontend',
     docs: '한국어 문서',
+    gettingStarted: 'Getting Started',
+    options: '옵션 레퍼런스',
     hotUpdater: 'Hot Updater 설정',
     packageManagers: '패키지 매니저 표',
     nativeContract: 'Native Contract 가이드',
@@ -109,6 +131,8 @@ const localizedTitles = {
   'zh-CN': {
     overview: 'Native-safe React Native Micro Frontend',
     docs: '简体中文文档',
+    gettingStarted: 'Getting Started',
+    options: '选项参考',
     hotUpdater: 'Hot Updater 设置',
     packageManagers: '包管理器矩阵',
     nativeContract: 'Native Contract 指南',
@@ -117,6 +141,8 @@ const localizedTitles = {
   ja: {
     overview: 'Native-safe React Native Micro Frontend',
     docs: '日本語ドキュメント',
+    gettingStarted: 'Getting Started',
+    options: 'Options reference',
     hotUpdater: 'Hot Updater 設定',
     packageManagers: 'Package Manager 一覧',
     nativeContract: 'Native Contract ガイド',
@@ -278,6 +304,8 @@ function getLocale(pathname: string): Locale {
 function getSection(pathname: string): SeoSection {
   const route = stripLocalePrefix(pathname);
 
+  if (route.startsWith('/docs/getting-started')) return 'gettingStarted';
+  if (route.startsWith('/docs/options')) return 'options';
   if (route.startsWith('/docs/hot-updater')) return 'hotUpdater';
   if (route.startsWith('/docs/package-managers')) return 'packageManagers';
   if (route.startsWith('/docs/native-contract')) return 'nativeContract';

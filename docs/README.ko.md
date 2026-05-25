@@ -4,7 +4,7 @@
 
 기능 모듈을 독립적으로 개발하고, native compatibility를 검증한 뒤, host binary가 안전하게 실행할 수 있는 경우에만 OTA로 배포합니다.
 
-관련 문서: [공식 문서 홈](index.ko.md) · [패키지 매니저 매트릭스](package-managers.ko.md)
+관련 문서: [공식 문서 홈](index.ko.md) · [Getting Started](getting-started.ko.md) · [옵션 레퍼런스](options.ko.md) · [패키지 매니저 매트릭스](package-managers.ko.md)
 
 ```txt
 React Native Micro Frontend
@@ -83,6 +83,8 @@ bun run docs:preview
 
 - `/`는 Three.js module-network hero가 있는 홈페이지입니다.
 - `/docs`는 처음 사용하는 사람을 위한 시작 경로입니다.
+- `/docs/getting-started`는 첫 MFE 설정을 단계별로 따라가는 guide입니다.
+- `/docs/options`는 Host config, MFE config, registry, runtime option을 상세 section으로 나눈 reference입니다.
 - `/docs/hot-updater`는 Hot Updater 설정 전용 route입니다.
 - `/docs/package-managers`는 Bun, npm, pnpm, Yarn, Deno 명령을 정리합니다.
 - `/docs/ko`, `/docs/zh-cn`, `/docs/ja`는 다국어 entry page입니다.
@@ -509,6 +511,10 @@ export function App({ registry }) {
 
 - Host App이 registry를 어디서 읽을지 결정합니다.
 - runtime은 blocked 또는 nativeHash mismatch MFE를 거부합니다.
+- MFE entry module은 root component를 default export해야 합니다.
+- `MicroFrontendScreen`은 fallback 중심의 policy placeholder입니다.
+- 실제 Hot Updater, embedded bundle, custom loader를 연결할 때는 `useMicroFrontend()`를 사용합니다.
+- Host 전용 loader가 JavaScript bundle을 해석하고 `module.default`를 렌더링합니다.
 - 안전하지 않거나 아직 로드할 수 없으면 fallback을 보여줍니다.
 
 
@@ -591,7 +597,7 @@ export function FeatureModuleHeader() {
 
 ## Hot Updater 설정 페이지
 
-문서 사이트의 `/docs/hot-updater` route에서 Hot Updater 설정 방법을 따로 설명합니다. 기존 Hot Updater를 OTA delivery engine으로 유지하고, `withReactNativeMicroFrontend`로 metadata를 감싼 뒤, native safety check가 통과할 때만 publish command를 생성하는 흐름입니다.
+문서 사이트의 `/docs/getting-started` route에서 최초 설치, Host 설정, MFE 등록, 검증, runtime 로딩을 단계별로 설명합니다. `/docs/hot-updater` route에서는 Hot Updater 설정 방법을 따로 설명합니다. 기존 Hot Updater를 OTA delivery engine으로 유지하고, `withReactNativeMicroFrontend`로 metadata를 감싼 뒤, native safety check가 통과할 때만 publish command를 생성하는 흐름입니다.
 
 ## OTA 판단 규칙
 

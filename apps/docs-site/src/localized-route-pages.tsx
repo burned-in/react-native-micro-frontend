@@ -28,6 +28,12 @@ const localeConfig = {
     docsCta: '문서 보기',
     matrixCta: '패키지 매니저 표',
     docsEyebrow: '한국어 문서',
+    gettingStartedTitle: 'Getting Started',
+    gettingStartedSubtitle:
+      '처음 설치부터 첫 MFE 등록, native-safety verification, runtime 로딩까지 바로 따라갈 수 있는 시작 가이드입니다.',
+    optionsTitle: 'Options reference',
+    optionsSubtitle:
+      'Host config, MFE config, registry manifest, runtime Provider와 hook의 가능한 옵션을 모두 설명합니다.',
     hotTitle: 'Hot Updater 설정',
     hotSubtitle:
       '기존 OTA engine을 바꾸지 않고 Hot Updater 앞단에 native-safety check를 추가하는 route입니다.',
@@ -58,6 +64,12 @@ const localeConfig = {
     docsCta: '查看文档',
     matrixCta: '包管理器矩阵',
     docsEyebrow: '简体中文文档',
+    gettingStartedTitle: 'Getting Started',
+    gettingStartedSubtitle:
+      '从首次安装到第一个 MFE 注册、native-safety verification 与 runtime 加载的入门指南。',
+    optionsTitle: 'Options reference',
+    optionsSubtitle:
+      '说明 Host config、MFE config、registry manifest、runtime Provider 与 hooks 的所有可用选项。',
     hotTitle: 'Hot Updater 设置',
     hotSubtitle:
       '不替换现有 OTA engine，而是在 Hot Updater 前面加入 native-safety check。',
@@ -88,6 +100,12 @@ const localeConfig = {
     docsCta: 'ドキュメントを見る',
     matrixCta: 'Package manager 一覧',
     docsEyebrow: '日本語ドキュメント',
+    gettingStartedTitle: 'Getting Started',
+    gettingStartedSubtitle:
+      '初回 install から最初の MFE registration、native-safety verification、runtime loading まで進める入門ガイドです。',
+    optionsTitle: 'Options reference',
+    optionsSubtitle:
+      'Host config、MFE config、registry manifest、runtime Provider と hooks の使用可能な option をすべて説明します。',
     hotTitle: 'Hot Updater 設定',
     hotSubtitle:
       '既存の OTA engine を置き換えず、Hot Updater の前段に native-safety check を追加する route です。',
@@ -119,6 +137,10 @@ const localeConfig = {
     readonly docsCta: string;
     readonly matrixCta: string;
     readonly docsEyebrow: string;
+    readonly gettingStartedTitle: string;
+    readonly gettingStartedSubtitle: string;
+    readonly optionsTitle: string;
+    readonly optionsSubtitle: string;
     readonly hotTitle: string;
     readonly hotSubtitle: string;
     readonly packageTitle: string;
@@ -175,6 +197,44 @@ export function LocalizedDocsRoute({
         cards={config.guide.cards}
       />
       <SectionList sections={config.guide.sections} />
+    </ShellSection>
+  );
+}
+
+export function LocalizedGettingStartedRoute({
+  locale,
+}: {
+  readonly locale: LocaleCode;
+}) {
+  const config = localeConfig[locale];
+
+  return (
+    <ShellSection>
+      <PageHeader
+        title={config.gettingStartedTitle}
+        subtitle={config.gettingStartedSubtitle}
+        eyebrow={config.docsEyebrow}
+      />
+      <SectionList sections={config.guide.gettingStartedSections} />
+    </ShellSection>
+  );
+}
+
+export function LocalizedOptionsRoute({
+  locale,
+}: {
+  readonly locale: LocaleCode;
+}) {
+  const config = localeConfig[locale];
+
+  return (
+    <ShellSection>
+      <PageHeader
+        title={config.optionsTitle}
+        subtitle={config.optionsSubtitle}
+        eyebrow={config.docsEyebrow}
+      />
+      <SectionList sections={config.guide.optionsSections} />
     </ShellSection>
   );
 }
@@ -263,6 +323,8 @@ function LocalizedRouteCards({
   readonly cards: LocalizedGuide['cards'];
 }) {
   const hrefs = [
+    `${basePath}/docs/getting-started`,
+    `${basePath}/docs/options`,
     `${basePath}/docs/hot-updater`,
     `${basePath}/docs/package-managers`,
     `${basePath}/docs/native-contract`,
@@ -270,7 +332,7 @@ function LocalizedRouteCards({
   ];
 
   return (
-    <section className={grid({ columns: { base: 1, md: 2, xl: 4 }, gap: '5' })}>
+    <section className={grid({ columns: { base: 1, md: 2, xl: 3 }, gap: '5' })}>
       {cards.map((card, index) => (
         <a
           key={card.title}

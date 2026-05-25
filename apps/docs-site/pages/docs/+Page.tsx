@@ -6,6 +6,16 @@ import { grid, stack } from '../../styled-system/patterns';
 
 const guideCards = [
   {
+    title: 'Getting started',
+    href: '/docs/getting-started',
+    body: 'Install, configure, register, verify, and load your first MFE.',
+  },
+  {
+    title: 'Options reference',
+    href: '/docs/options',
+    body: 'See every Host config, MFE config, registry, and runtime option.',
+  },
+  {
     title: 'Hot Updater setup',
     href: '/docs/hot-updater',
     body: 'Configure the adapter, verify OTA eligibility, then deploy safely.',
@@ -35,7 +45,7 @@ export default function Page() {
         subtitle="Use this guide when you are integrating the library for the first time. It explains the minimum host setup, module registration, runtime loading, and host-provided shared state."
       />
       <section
-        className={grid({ columns: { base: 1, md: 2, xl: 4 }, gap: '5' })}
+        className={grid({ columns: { base: 1, md: 2, xl: 3 }, gap: '5' })}
       >
         {guideCards.map((card) => (
           <a
@@ -48,7 +58,7 @@ export default function Page() {
               borderColor: 'line',
               bg: 'surface',
               shadow: 'card',
-              p: '6',
+              p: { base: '5', md: '6' },
               transition: 'all 160ms ease',
               _hover: { transform: 'translateY(-3px)', borderColor: 'accent' },
             })}

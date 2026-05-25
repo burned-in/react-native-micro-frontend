@@ -17,9 +17,11 @@ bunx @bunin/react-native-micro-frontend-cli init
 | Guide | Purpose |
 | --- | --- |
 | [English README](../README.md) | Main library guide and examples. |
-| [Korean](README.ko.md) | 한국어 공식 문서. |
-| [Japanese](README.ja.md) | 日本語公式ドキュメント. |
-| [Chinese](README.zh-CN.md) | 简体中文官方文档. |
+| [Getting started](getting-started.md) | Install, configure, register, verify, and load your first MFE. |
+| [Options reference](options.md) | Every Host config, MFE config, registry, and runtime option. |
+| [Korean](README.ko.md) | Korean official guide. |
+| [Japanese](README.ja.md) | Japanese official guide. |
+| [Chinese](README.zh-CN.md) | Simplified Chinese official guide. |
 | [Package managers](package-managers.md) | Bun, npm, pnpm, Yarn, and Deno command matrix. |
 | [Native contract](native-contract.md) | Native compatibility notes. |
 | [Global state](/docs/global-state) | Host-to-MFE sharedState providing and reading guide. |

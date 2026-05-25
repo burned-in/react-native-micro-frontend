@@ -17,13 +17,15 @@ bunx @bunin/react-native-micro-frontend-cli init
 | ドキュメント | 用途 |
 | --- | --- |
 | [日本語 README](README.ja.md) | メインガイドと例。 |
-| [English](../README.md) | English official guide. |
-| [한국어](README.ko.md) | 한국어 공식 문서. |
-| [简体中文](README.zh-CN.md) | 简体中文官方文档. |
+| [Getting Started](getting-started.ja.md) | install、config、register、verify、最初の MFE loading guide。 |
+| [Options reference](options.ja.md) | Host config、MFE config、registry、runtime の全 options。 |
+| [英語](../README.md) | 英語公式ガイド。 |
+| [韓国語](README.ko.md) | 韓国語公式ドキュメント。 |
+| [簡体中国語](README.zh-CN.md) | 簡体中国語公式ドキュメント。 |
 | [パッケージマネージャ](package-managers.ja.md) | Bun、npm、pnpm、Yarn、Deno コマンド一覧。 |
 | [Native contract](native-contract.md) | native compatibility notes。 |
-| [Global state](/docs/global-state) | Host から MFE へ sharedState を提供して読み取るガイド。 |
-| [Hot Updater 設定](/docs/hot-updater) | Hot Updater route guide. |
+| [Global state](/jp/docs/global-state) | Host から MFE へ sharedState を提供して読み取るガイド。 |
+| [Hot Updater 設定](/jp/docs/hot-updater) | Hot Updater route guide. |
 
 ## コアフロー
 

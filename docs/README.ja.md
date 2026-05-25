@@ -4,7 +4,7 @@
 
 機能モジュールを独立して開発し、native compatibility を検証し、host binary が安全に実行できる場合だけ OTA 更新を公開します。
 
-関連ドキュメント: [公式ドキュメントホーム](index.ja.md) · [パッケージマネージャ・マトリクス](package-managers.ja.md)
+関連ドキュメント: [公式ドキュメントホーム](index.ja.md) · [Getting Started](getting-started.ja.md) · [Options reference](options.ja.md) · [パッケージマネージャ・マトリクス](package-managers.ja.md)
 
 ```txt
 React Native Micro Frontend
@@ -484,6 +484,10 @@ export function App({ registry }) {
 
 - Host App が registry の取得元を決めます。
 - runtime は blocked または nativeHash mismatch の MFE を拒否します。
+- MFE entry module は root component を default export します。
+- `MicroFrontendScreen` は fallback-first policy placeholder です。
+- 実際の Hot Updater、embedded bundle、custom loader を接続する場合は `useMicroFrontend()` を使います。
+- Host-specific loader が JavaScript bundle を解決し、`module.default` をレンダリングします。
 - 安全でない場合、またはロードできない場合は fallback を表示します。
 
 
@@ -566,7 +570,7 @@ export function FeatureModuleHeader() {
 
 ## Hot Updater 設定ページ
 
-ドキュメントサイトには `/docs/hot-updater` route があります。Hot Updater を OTA delivery engine として維持し、`withReactNativeMicroFrontend` で metadata をラップし、native safety check が通った場合だけ publish command を生成する流れを説明します。
+ドキュメントサイトには `/docs/getting-started` route があり、初回 install、Host config、MFE registration、verification、runtime loading を説明します。`/docs/options` route は Host config、MFE config、registry、runtime options を detailed page として整理します。Hot Updater については `/docs/hot-updater` route があります。Hot Updater を OTA delivery engine として維持し、`withReactNativeMicroFrontend` で metadata をラップし、native safety check が通った場合だけ publish command を生成する流れを説明します。
 
 ## OTA 判定ルール
 

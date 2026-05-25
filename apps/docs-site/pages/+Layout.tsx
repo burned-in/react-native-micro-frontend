@@ -35,6 +35,8 @@ type LocalizedNavItem = {
   readonly path:
     | ''
     | '/docs'
+    | '/docs/getting-started'
+    | '/docs/options'
     | '/docs/hot-updater'
     | '/docs/package-managers'
     | '/docs/native-contract'
@@ -45,6 +47,8 @@ const localizedNavLabels = {
   '': {
     overview: 'Overview',
     docs: 'Docs',
+    gettingStarted: 'Getting started',
+    options: 'Options',
     hotUpdater: 'Hot Updater',
     packageManagers: 'Package managers',
     nativeContract: 'Native contract',
@@ -53,6 +57,8 @@ const localizedNavLabels = {
   '/ko': {
     overview: '개요',
     docs: '문서',
+    gettingStarted: '시작하기',
+    options: '옵션',
     hotUpdater: 'Hot Updater',
     packageManagers: '패키지 매니저',
     nativeContract: 'Native contract',
@@ -61,6 +67,8 @@ const localizedNavLabels = {
   '/zh-cn': {
     overview: '概览',
     docs: '文档',
+    gettingStarted: '入门指南',
+    options: '选项',
     hotUpdater: 'Hot Updater',
     packageManagers: '包管理器',
     nativeContract: 'Native contract',
@@ -69,6 +77,8 @@ const localizedNavLabels = {
   '/jp': {
     overview: '概要',
     docs: 'ドキュメント',
+    gettingStarted: 'Getting started',
+    options: 'Options',
     hotUpdater: 'Hot Updater',
     packageManagers: 'Package managers',
     nativeContract: 'Native contract',
@@ -108,6 +118,8 @@ const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
   return [
     { label: labels.overview, path: '' },
     { label: labels.docs, path: '/docs' },
+    { label: labels.gettingStarted, path: '/docs/getting-started' },
+    { label: labels.options, path: '/docs/options' },
     { label: labels.hotUpdater, path: '/docs/hot-updater' },
     { label: labels.packageManagers, path: '/docs/package-managers' },
     { label: labels.nativeContract, path: '/docs/native-contract' },
@@ -294,135 +306,157 @@ export default function Layout({
           })}
         >
           <header
-            className={hstack({
-              justify: 'space-between',
-              alignItems: 'center',
-              gap: { base: '3', md: '5' },
-              flexWrap: 'wrap',
-              rounded: { base: '3xl', md: 'full' },
+            className={stack({
+              gap: { base: '3', md: '3.5' },
+              rounded: '3xl',
               borderWidth: '1px',
               borderColor: 'line',
               bg: 'surface',
               shadow: 'card',
-              px: { base: '3', sm: '4', md: '6' },
-              py: { base: '3', md: '3' },
+              px: { base: '3', sm: '4', md: '5' },
+              py: { base: '3', md: '4' },
             })}
           >
-            <a
-              href={homeHref}
+            <div
               className={hstack({
-                gap: '3',
+                justify: 'space-between',
                 alignItems: 'center',
-                flexShrink: 0,
+                gap: '3',
+                minW: '0',
               })}
             >
-              <span
-                className={css({
-                  display: 'inline-grid',
-                  placeItems: 'center',
-                  w: '9',
-                  h: '9',
-                  rounded: 'xl',
-                  bg: 'page.fg',
-                  color: 'page.bg',
-                  fontWeight: '900',
+              <a
+                href={homeHref}
+                className={hstack({
+                  gap: { base: '2.5', md: '3' },
+                  alignItems: 'center',
+                  minW: '0',
                 })}
               >
-                B
-              </span>
-              <span
-                className={css({
-                  fontWeight: '900',
-                  letterSpacing: '-0.04em',
-                  whiteSpace: 'nowrap',
-                })}
-              >
-                bunin / RN MFE
-              </span>
-            </a>
-            <nav
-              className={css({
-                order: { base: '3', lg: 'initial' },
-                display: 'flex',
-                gap: '2',
-                w: { base: 'full', lg: 'auto' },
-                maxW: 'full',
-                overflowX: { base: 'auto', lg: 'visible' },
-                flexWrap: { base: 'nowrap', lg: 'wrap' },
-                justifyContent: { base: 'flex-start', lg: 'flex-end' },
-                scrollbarWidth: 'none',
-                pb: { base: '1', lg: '0' },
-                '&::-webkit-scrollbar': { display: 'none' },
-              })}
-              aria-label="Main navigation"
-            >
-              {navItems.map((item) => (
-                <a
-                  key={item.path}
-                  href={createLocalizedHref(localePrefix, item.path)}
+                <span
                   className={css({
+                    display: 'inline-grid',
+                    placeItems: 'center',
+                    w: { base: '8', md: '10' },
+                    h: { base: '8', md: '10' },
+                    rounded: { base: 'xl', md: '2xl' },
+                    bg: 'page.fg',
+                    color: 'page.bg',
+                    fontWeight: '900',
                     flexShrink: '0',
-                    rounded: 'full',
-                    px: '3',
-                    py: '2',
-                    color: 'page.muted',
-                    bg: 'surface.subtle',
-                    fontSize: 'sm',
-                    fontWeight: '700',
-                    whiteSpace: 'nowrap',
-                    _hover: { bg: 'accent.soft', color: 'page.fg' },
                   })}
                 >
-                  {item.label}
+                  B
+                </span>
+                <span
+                  className={css({
+                    minW: '0',
+                    maxW: { base: '42vw', sm: 'none' },
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    fontSize: { base: 'md', md: 'lg' },
+                    fontWeight: '900',
+                    letterSpacing: '-0.045em',
+                    lineHeight: '1',
+                    whiteSpace: 'nowrap',
+                  })}
+                >
+                  bunin / RN MFE
+                </span>
+              </a>
+              <div
+                className={css({
+                  ml: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: { base: '1.5', sm: '2' },
+                  flexShrink: '0',
+                })}
+              >
+                <a
+                  href={githubRepositoryUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open GitHub repository, ${formatStarCount(starCount)} stars`}
+                  className={githubLink()}
+                >
+                  <span>GitHub</span>
+                  <span aria-hidden="true">★</span>
+                  <span>{formatStarCount(starCount)}</span>
                 </a>
-              ))}
-              <a
-                href={withSiteBase('/ko/docs')}
-                className={languageLink({ active: localePrefix === '/ko' })}
-              >
-                한국어
-              </a>
-              <a
-                href={withSiteBase('/zh-cn/docs')}
-                className={languageLink({ active: localePrefix === '/zh-cn' })}
-              >
-                中文
-              </a>
-              <a
-                href={withSiteBase('/jp/docs')}
-                className={languageLink({ active: localePrefix === '/jp' })}
-              >
-                日本語
-              </a>
-            </nav>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className={themeButton()}
+                >
+                  {theme === 'dark' ? 'Light' : 'Dark'}
+                </button>
+              </div>
+            </div>
             <div
               className={css({
-                order: { base: '2', lg: 'initial' },
-                ml: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2',
-                flexShrink: '0',
+                minW: '0',
+                rounded: '2xl',
+                bg: 'surface.subtle',
+                borderWidth: '1px',
+                borderColor: 'line',
+                p: '1.5',
               })}
             >
-              <a
-                href={githubRepositoryUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`Open GitHub repository, ${formatStarCount(starCount)} stars`}
-                className={githubLink()}
+              <nav
+                className={css({
+                  display: 'flex',
+                  gap: '1.5',
+                  maxW: 'full',
+                  overflowX: 'auto',
+                  flexWrap: 'nowrap',
+                  alignItems: 'center',
+                  scrollbarWidth: 'none',
+                  scrollSnapType: 'x proximity',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                })}
+                aria-label="Main navigation"
               >
-                <span>GitHub</span>
-                <span aria-hidden="true">★</span>
-                <span>{formatStarCount(starCount)}</span>
-              </a>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={themeButton()}
-              >
-                {theme === 'dark' ? 'Light' : 'Dark'}
-              </button>
+                {navItems.map((item) => (
+                  <a
+                    key={item.path}
+                    href={createLocalizedHref(localePrefix, item.path)}
+                    className={navLink()}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+                <span
+                  className={css({
+                    flexShrink: '0',
+                    w: '1px',
+                    h: '5',
+                    bg: 'line',
+                    mx: '1',
+                  })}
+                  aria-hidden="true"
+                />
+                <a
+                  href={withSiteBase('/ko/docs')}
+                  className={languageLink({ active: localePrefix === '/ko' })}
+                >
+                  한국어
+                </a>
+                <a
+                  href={withSiteBase('/zh-cn/docs')}
+                  className={languageLink({
+                    active: localePrefix === '/zh-cn',
+                  })}
+                >
+                  中文
+                </a>
+                <a
+                  href={withSiteBase('/jp/docs')}
+                  className={languageLink({ active: localePrefix === '/jp' })}
+                >
+                  日本語
+                </a>
+              </nav>
             </div>
           </header>
           {children}
@@ -476,11 +510,11 @@ const githubLink = () =>
     rounded: 'full',
     borderWidth: '1px',
     borderColor: 'line',
-    bg: 'surface.subtle',
+    bg: 'surface',
     color: 'page.fg',
-    px: { base: '3', sm: '4' },
+    px: { base: '2.5', sm: '4' },
     py: '2',
-    fontSize: 'sm',
+    fontSize: { base: 'xs', sm: 'sm' },
     fontWeight: '900',
     lineHeight: '1',
     textDecoration: 'none',
@@ -499,24 +533,50 @@ const themeButton = () =>
     rounded: 'full',
     borderWidth: '1px',
     borderColor: 'line',
-    bg: 'surface.subtle',
+    bg: 'surface',
     color: 'page.fg',
-    px: '4',
+    px: { base: '3', sm: '4' },
     py: '2',
+    fontSize: { base: 'xs', sm: 'sm' },
     fontWeight: '800',
     _hover: { bg: 'accent.soft', color: 'page.fg' },
+  });
+
+const navLink = () =>
+  css({
+    flexShrink: '0',
+    scrollSnapAlign: 'start',
+    rounded: 'full',
+    px: { base: '3', md: '3.5' },
+    py: '2',
+    color: 'page.muted',
+    bg: 'surface',
+    fontSize: { base: 'xs', md: 'sm' },
+    fontWeight: '850',
+    lineHeight: '1',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+    transition: 'all 160ms ease',
+    _hover: {
+      bg: 'accent.soft',
+      color: 'page.fg',
+      transform: 'translateY(-1px)',
+    },
   });
 
 const languageLink = (props: { readonly active: boolean }) =>
   css({
     flexShrink: '0',
+    scrollSnapAlign: 'start',
     rounded: 'full',
-    px: '3',
+    px: { base: '3', md: '3.5' },
     py: '2',
     color: props.active ? 'accent' : 'page.muted',
-    bg: props.active ? 'accent.soft' : 'surface.subtle',
-    fontSize: 'sm',
-    fontWeight: '800',
+    bg: props.active ? 'accent.soft' : 'surface',
+    fontSize: { base: 'xs', md: 'sm' },
+    fontWeight: '850',
+    lineHeight: '1',
+    textDecoration: 'none',
     whiteSpace: 'nowrap',
     _hover: { bg: 'accent.soft', color: 'page.fg' },
   });

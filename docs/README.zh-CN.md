@@ -4,7 +4,7 @@
 
 独立开发功能模块，验证 native compatibility，并且只在 host binary 可以安全运行时才发布 OTA 更新。
 
-相关文档：[官方文档首页](index.zh-CN.md) · [包管理器矩阵](package-managers.zh-CN.md)
+相关文档：[官方文档首页](index.zh-CN.md) · [Getting Started](getting-started.zh-CN.md) · [选项参考](options.zh-CN.md) · [包管理器矩阵](package-managers.zh-CN.md)
 
 ```txt
 React Native Micro Frontend
@@ -484,6 +484,10 @@ export function App({ registry }) {
 
 - Host App 决定 registry 从哪里读取。
 - runtime 会拒绝 blocked 或 nativeHash mismatch 的 MFE。
+- MFE entry module 应 default export root component。
+- `MicroFrontendScreen` 是 fallback-first policy placeholder。
+- 连接真实 Hot Updater、embedded bundle 或 custom loader 时，请使用 `useMicroFrontend()`。
+- Host-specific loader 解析 JavaScript bundle 并渲染 `module.default`。
 - 不安全或无法加载时显示 fallback。
 
 
@@ -566,7 +570,7 @@ export function FeatureModuleHeader() {
 
 ## Hot Updater 设置页面
 
-文档站点提供 `/docs/hot-updater` 路由来说明 Hot Updater 设置。它保留 Hot Updater 作为 OTA delivery engine，使用 `withReactNativeMicroFrontend` 包装 metadata，并且只在 native safety check 通过后生成 publish command。
+文档站点提供 `/docs/getting-started` 路由来说明首次安装、Host 配置、MFE 注册、校验与 runtime 加载；`/docs/options` 路由按详细页面整理 Host config、MFE config、registry 与 runtime options；也提供 `/docs/hot-updater` 路由来说明 Hot Updater 设置。它保留 Hot Updater 作为 OTA delivery engine，使用 `withReactNativeMicroFrontend` 包装 metadata，并且只在 native safety check 通过后生成 publish command。
 
 ## OTA 判断规则
 

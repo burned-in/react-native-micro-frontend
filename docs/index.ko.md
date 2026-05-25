@@ -17,13 +17,15 @@ bunx @bunin/react-native-micro-frontend-cli init
 | 문서 | 목적 |
 | --- | --- |
 | [한국어 README](README.ko.md) | 주요 가이드와 예제. |
-| [English](../README.md) | English official guide. |
-| [日本語](README.ja.md) | 日本語公式ドキュメント. |
-| [简体中文](README.zh-CN.md) | 简体中文官方文档. |
+| [Getting Started](getting-started.ko.md) | 설치, 설정, 등록, 검증, 첫 MFE 로딩 가이드. |
+| [옵션 레퍼런스](options.ko.md) | Host config, MFE config, registry, runtime 옵션 전체. |
+| [영어](../README.md) | 영어 공식 가이드. |
+| [일본어](README.ja.md) | 일본어 공식 문서. |
+| [중국어 간체](README.zh-CN.md) | 중국어 간체 공식 문서. |
 | [패키지 매니저](package-managers.ko.md) | Bun, npm, pnpm, Yarn, Deno 명령 매트릭스. |
 | [Native contract](native-contract.md) | native compatibility 설명. |
-| [전역 상태](/docs/global-state) | Host에서 MFE로 sharedState를 제공하고 가져오는 방법. |
-| [Hot Updater 설정](/docs/hot-updater) | Hot Updater route 문서. |
+| [전역 상태](/ko/docs/global-state) | Host에서 MFE로 sharedState를 제공하고 가져오는 방법. |
+| [Hot Updater 설정](/ko/docs/hot-updater) | Hot Updater route 문서. |
 
 ## 핵심 흐름
 

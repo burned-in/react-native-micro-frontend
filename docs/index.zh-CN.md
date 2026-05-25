@@ -17,13 +17,15 @@ bunx @bunin/react-native-micro-frontend-cli init
 | 文档 | 用途 |
 | --- | --- |
 | [简体中文 README](README.zh-CN.md) | 主要指南和示例。 |
+| [Getting Started](getting-started.zh-CN.md) | 安装、配置、注册、校验并加载第一个 MFE。 |
+| [选项参考](options.zh-CN.md) | Host config、MFE config、registry 与 runtime 的全部选项。 |
 | [English](../README.md) | English official guide. |
-| [한국어](README.ko.md) | 한국어 공식 문서. |
-| [日本語](README.ja.md) | 日本語公式ドキュメント. |
+| [韩文](README.ko.md) | 韩文官方文档。 |
+| [日文](README.ja.md) | 日文官方文档。 |
 | [包管理器](package-managers.zh-CN.md) | Bun、npm、pnpm、Yarn、Deno 命令矩阵。 |
 | [Native contract](native-contract.md) | native compatibility 说明。 |
-| [全局状态](/docs/global-state) | Host 向 MFE 提供并读取 sharedState 的指南。 |
-| [Hot Updater 设置](/docs/hot-updater) | Hot Updater 路由指南。 |
+| [全局状态](/zh-cn/docs/global-state) | Host 向 MFE 提供并读取 sharedState 的指南。 |
+| [Hot Updater 设置](/zh-cn/docs/hot-updater) | Hot Updater 路由指南。 |
 
 ## 核心流程
 

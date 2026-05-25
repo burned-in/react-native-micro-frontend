@@ -72,6 +72,8 @@ export default defineReactNativeMicroFrontendConfig({
 | Document | Description |
 | --- | --- |
 | [`docs/index.md`](docs/index.md) | Official documentation home. |
+| [`docs/getting-started.md`](docs/getting-started.md) | First install, host config, MFE registration, verification, and runtime loading guide. |
+| [`docs/options.md`](docs/options.md) | Complete Host config, MFE config, registry, and runtime options reference. |
 | [`README.md`](README.md) | English official guide. |
 | [`docs/README.ko.md`](docs/README.ko.md) | Korean guide. |
 | [`docs/README.ja.md`](docs/README.ja.md) | Japanese guide. |
@@ -94,9 +96,11 @@ Meaning:
 
 - `/` is the homepage with a Three.js module-network hero.
 - `/docs` is the beginner-friendly setup path.
+- `/docs/getting-started` is the step-by-step first MFE setup guide.
+- `/docs/options` is the complete options reference split into detailed sections.
 - `/docs/hot-updater` is the routed Hot Updater configuration guide.
 - `/docs/package-managers` lists Bun, npm, pnpm, Yarn, and Deno commands.
-- `/docs/ko`, `/docs/zh-cn`, and `/docs/ja` expose localized entry pages.
+- `/ko/docs`, `/zh-cn/docs`, and `/jp/docs` expose localized entry pages.
 
 ## What problem does this solve?
 
@@ -520,6 +524,10 @@ Meaning:
 
 - the host app owns where the registry comes from
 - the runtime refuses blocked or nativeHash-mismatched MFEs
+- MFE entry modules should default-export their root component
+- `MicroFrontendScreen` is a fallback-first policy placeholder
+- use `useMicroFrontend()` when wiring a real Hot Updater, embedded-bundle, or custom loader
+- the host-specific loader resolves the JavaScript bundle and renders `module.default`
 - the fallback is shown when loading is unsafe or unavailable
 
 
