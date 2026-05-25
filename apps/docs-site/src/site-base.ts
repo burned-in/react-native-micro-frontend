@@ -1,6 +1,7 @@
 const rawSiteBase = import.meta.env.BASE_URL || "/";
 
 export const siteBasePath = normalizeSiteBase(rawSiteBase);
+export const siteOrigin = normalizeSiteOrigin(import.meta.env.VITE_PUBLIC_SITE_ORIGIN || "https://burned-in.github.io");
 
 export function withSiteBase(path: string) {
   if (isExternalPath(path)) {
@@ -18,6 +19,12 @@ export function withSiteBase(path: string) {
   }
 
   return `${siteBasePath}${normalizedPath}`;
+}
+
+export function absoluteSiteUrl(path: string) {
+  const withBase = withSiteBase(path);
+
+  return `${siteOrigin}${withBase}`;
 }
 
 export function stripSiteBase(pathname: string) {
@@ -51,4 +58,8 @@ function normalizeSiteBase(base: string) {
 
 function isExternalPath(path: string) {
   return path.startsWith("http://") || path.startsWith("https://") || path.startsWith("mailto:") || path.startsWith("#");
+}
+
+function normalizeSiteOrigin(origin: string) {
+  return origin.endsWith("/") ? origin.slice(0, -1) : origin;
 }

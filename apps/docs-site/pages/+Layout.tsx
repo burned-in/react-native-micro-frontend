@@ -4,6 +4,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import { css } from "../styled-system/css";
 import { hstack, stack } from "../styled-system/patterns";
 import { stripSiteBase, withSiteBase } from "../src/site-base.js";
+import { alternateOgLocales, getAlternateLinks, getCanonicalUrl, getJsonLd, getOpenGraphImageUrl, getSeoInfo } from "../src/seo.js";
 import "../styled-system/styles.css";
 
 const themeBootScript = `(() => {
@@ -110,6 +111,10 @@ export default function Layout({ children }: { readonly children: React.ReactNod
   const localePrefix = detectLocalePrefix(pageContext.urlOriginal);
   const navItems = createNavItems(localePrefix);
   const homeHref = createLocalizedHref(localePrefix, "");
+  const seo = getSeoInfo(pageContext.urlOriginal);
+  const canonicalUrl = getCanonicalUrl(pageContext.urlOriginal);
+  const ogImageUrl = getOpenGraphImageUrl();
+  const alternateLinks = getAlternateLinks(pageContext.urlOriginal);
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -122,8 +127,43 @@ export default function Layout({ children }: { readonly children: React.ReactNod
   return (
     <>
       <Head>
+        <title>{seo.title}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content={theme === "dark" ? "#050816" : "#f8fbff"} />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="description" content={seo.description} />
+        <meta name="keywords" content={seo.keywords} />
+        <meta name="author" content="bunin" />
+        <meta name="application-name" content="bunin RN MFE" />
+        <meta name="apple-mobile-web-app-title" content="bunin RN MFE" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+        <link rel="canonical" href={canonicalUrl} />
+        {alternateLinks.map((link) => (
+          <link key={link.lang} rel="alternate" hrefLang={link.lang} href={link.href} />
+        ))}
+        <link rel="icon" type="image/svg+xml" href={withSiteBase("/favicon.svg")} />
+        <link rel="apple-touch-icon" href={withSiteBase("/favicon.svg")} />
+        <link rel="manifest" href={withSiteBase("/site.webmanifest")} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="bunin React Native Micro Frontend" />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content={seo.ogLocale} />
+        {alternateOgLocales
+          .filter((locale) => locale !== seo.ogLocale)
+          .map((locale) => (
+            <meta key={locale} property="og:locale:alternate" content={locale} />
+          ))}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
+        <meta name="twitter:image" content={ogImageUrl} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: getJsonLd(pageContext.urlOriginal) }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

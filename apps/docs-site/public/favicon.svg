@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="bunin RN MFE">
+  <defs>
+    <linearGradient id="bg" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="0.52" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <filter id="glow" x="-24" y="-24" width="176" height="176" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="#050816"/>
+  <path d="M23 83 64 18l41 65-41 27-41-27Z" fill="url(#bg)" filter="url(#glow)"/>
+  <path d="M64 18v92M23 83l41-18 41 18" fill="none" stroke="white" stroke-opacity="0.72" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="65" r="12" fill="#fff"/>
+  <circle cx="64" cy="65" r="5" fill="#050816"/>
+</svg>

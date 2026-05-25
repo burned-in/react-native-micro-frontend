@@ -18,7 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/
+      GITHUB_PAGES_BASE: ${{ vars.DOCS_SITE_BASE || format('/{0}/', github.event.repository.name) }}
+      VITE_PUBLIC_SITE_ORIGIN: ${{ vars.DOCS_PUBLIC_ORIGIN || format('https://{0}.github.io', github.repository_owner) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +37,10 @@ jobs:
 
       - name: Build docs for GitHub Pages
         run: bun run docs:build && touch apps/docs-site/dist/client/.nojekyll
+
+      - name: Add custom domain CNAME
+        if: ${{ vars.DOCS_CUSTOM_DOMAIN != '' }}
+        run: echo "${{ vars.DOCS_CUSTOM_DOMAIN }}" > apps/docs-site/dist/client/CNAME
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

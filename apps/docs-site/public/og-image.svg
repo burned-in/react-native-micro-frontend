@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="bunin React Native Micro Frontend">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050816"/>
+      <stop offset="0.45" stop-color="#111827"/>
+      <stop offset="1" stop-color="#164e63"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="68%" cy="42%" r="44%">
+      <stop offset="0" stop-color="#67e8f9" stop-opacity="0.9"/>
+      <stop offset="0.42" stop-color="#a78bfa" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#22d3ee" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g opacity="0.36">
+    <circle cx="101" cy="86" r="2" fill="#e0f2fe"/>
+    <circle cx="246" cy="518" r="2" fill="#a78bfa"/>
+    <circle cx="979" cy="130" r="2" fill="#67e8f9"/>
+    <circle cx="1088" cy="502" r="2" fill="#34d399"/>
+    <circle cx="835" cy="548" r="2" fill="#e0f2fe"/>
+  </g>
+  <g transform="translate(736 315)" filter="url(#shadow)">
+    <path d="M0-126 110-62 110 62 0 126-110 62-110-62Z" fill="#67e8f9" opacity="0.18" stroke="#bae6fd" stroke-width="4"/>
+    <path d="M0-82 72-41 72 41 0 82-72 41-72-41Z" fill="#a78bfa" opacity="0.22" stroke="#c4b5fd" stroke-width="3"/>
+    <path d="M0-126V126M-110-62 110 62M110-62-110 62" stroke="#e0f2fe" stroke-width="2" opacity="0.54"/>
+    <ellipse cx="0" cy="0" rx="206" ry="68" fill="none" stroke="#67e8f9" stroke-width="4" opacity="0.5" transform="rotate(-18)"/>
+    <ellipse cx="0" cy="0" rx="252" ry="82" fill="none" stroke="#a78bfa" stroke-width="3" opacity="0.42" transform="rotate(24)"/>
+    <circle cx="-197" cy="58" r="9" fill="#34d399"/>
+    <circle cx="201" cy="-66" r="8" fill="#67e8f9"/>
+    <circle cx="88" cy="-122" r="7" fill="#f8fafc"/>
+  </g>
+  <g transform="translate(82 124)">
+    <text x="0" y="0" fill="#67e8f9" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="800" letter-spacing="4">BUNIN</text>
+    <text x="0" y="92" fill="#f8fafc" font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="900" letter-spacing="-4">React Native</text>
+    <text x="0" y="174" fill="#f8fafc" font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="900" letter-spacing="-4">Micro Frontend</text>
+    <text x="0" y="238" fill="#cbd5e1" font-family="Inter, system-ui, sans-serif" font-size="29" font-weight="600">Native-safe OTA · Hot Updater compatible · Bun-first</text>
+    <rect x="0" y="292" width="218" height="54" rx="27" fill="#f8fafc"/>
+    <text x="30" y="327" fill="#020617" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="900">Read the docs</text>
+  </g>
+</svg>
