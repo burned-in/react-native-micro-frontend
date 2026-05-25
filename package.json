@@ -25,7 +25,9 @@
     "docs:dev": "cd apps/docs-site && bun run dev",
     "docs:typecheck": "cd apps/docs-site && bun run typecheck",
     "docs:build": "cd apps/docs-site && bun run build",
-    "docs:preview": "cd apps/docs-site && bun run preview"
+    "docs:preview": "cd apps/docs-site && bun run preview",
+    "docs:build:github-pages": "GITHUB_PAGES_BASE=/react-native-micro-frontend/ bun run docs:build && touch apps/docs-site/dist/client/.nojekyll",
+    "docs:build:github-pages:root": "GITHUB_PAGES_BASE=/ bun run docs:build && touch apps/docs-site/dist/client/.nojekyll"
   },
   "devDependencies": {
     "@pandacss/dev": "^1.11.1",

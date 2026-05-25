@@ -3,6 +3,7 @@ import { Head } from "vike-react/Head";
 import { usePageContext } from "vike-react/usePageContext";
 import { css } from "../styled-system/css";
 import { hstack, stack } from "../styled-system/patterns";
+import { stripSiteBase, withSiteBase } from "../src/site-base.js";
 import "../styled-system/styles.css";
 
 const themeBootScript = `(() => {
@@ -60,7 +61,7 @@ const getPathname = (urlOriginal: string) => {
 };
 
 const detectLocalePrefix = (urlOriginal: string): LocalePrefix => {
-  const pathname = getPathname(urlOriginal);
+  const pathname = stripSiteBase(getPathname(urlOriginal));
 
   if (pathname === "/ko" || pathname.startsWith("/ko/")) {
     return "/ko";
@@ -91,10 +92,10 @@ const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
 
 const createLocalizedHref = (prefix: LocalePrefix, path: LocalizedNavItem["path"]) => {
   if (!prefix) {
-    return path || "/";
+    return withSiteBase(path || "/");
   }
 
-  return `${prefix}${path}`;
+  return withSiteBase(`${prefix}${path}`);
 };
 
 export default function Layout({ children }: { readonly children: React.ReactNode }) {
@@ -212,19 +213,19 @@ export default function Layout({ children }: { readonly children: React.ReactNod
                 </a>
               ))}
               <a
-                href="/ko/docs"
+                href={withSiteBase("/ko/docs")}
                 className={languageLink({ active: localePrefix === "/ko" })}
               >
                 한국어
               </a>
               <a
-                href="/zh-cn/docs"
+                href={withSiteBase("/zh-cn/docs")}
                 className={languageLink({ active: localePrefix === "/zh-cn" })}
               >
                 中文
               </a>
               <a
-                href="/jp/docs"
+                href={withSiteBase("/jp/docs")}
                 className={languageLink({ active: localePrefix === "/jp" })}
               >
                 日本語

@@ -3,6 +3,7 @@ import { css } from "../../styled-system/css";
 import { grid, stack } from "../../styled-system/patterns";
 import { PageHeader, SectionList, ShellSection } from "../../src/ui.js";
 import { docsSections } from "../../src/content.js";
+import { withSiteBase } from "../../src/site-base.js";
 
 const guideCards = [
   { title: "Hot Updater setup", href: "/docs/hot-updater", body: "Configure the adapter, verify OTA eligibility, then deploy safely." },
@@ -21,7 +22,7 @@ export default function Page() {
         {guideCards.map((card) => (
           <a
             key={card.href}
-            href={card.href}
+            href={withSiteBase(card.href)}
             className={css({
               display: "block",
               rounded: "3xl",

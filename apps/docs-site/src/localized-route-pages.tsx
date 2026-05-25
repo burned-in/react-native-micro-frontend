@@ -14,6 +14,7 @@ import {
   SectionList,
   ShellSection,
 } from "./ui.js";
+import { withSiteBase } from "./site-base.js";
 
 export type LocaleCode = "ko" | "zh" | "jp";
 
@@ -156,7 +157,7 @@ function LocalizedRouteCards({ basePath, cards }: { readonly basePath: string; r
   return (
     <section className={grid({ columns: { base: 1, md: 3 }, gap: "5" })}>
       {cards.map((card, index) => (
-        <a key={card.title} href={hrefs[index] ?? `${basePath}/docs`} className={routeCard()}>
+        <a key={card.title} href={withSiteBase(hrefs[index] ?? `${basePath}/docs`)} className={routeCard()}>
           <div className={stack({ gap: "3" })}>
             <h2 className={css({ m: "0", fontSize: "xl", letterSpacing: "-0.02em" })}>{card.title}</h2>
             <p className={css({ m: "0", color: "page.muted", lineHeight: "1.7" })}>{card.body}</p>

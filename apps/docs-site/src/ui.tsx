@@ -3,6 +3,7 @@ import { css, cx } from "../styled-system/css";
 import { grid, hstack, stack, wrap } from "../styled-system/patterns";
 import type { DocSection, Feature } from "./content.js";
 import { ModuleNetworkScene } from "./ModuleNetworkScene.js";
+import { withSiteBase } from "./site-base.js";
 
 export function Badge({ children }: { readonly children: React.ReactNode }) {
   return (
@@ -103,10 +104,10 @@ export function Hero({
           </p>
         </div>
         <div className={wrap({ gap: "3" })}>
-          <a className={button({ tone: "primary" })} href={primaryCta.href}>
+          <a className={button({ tone: "primary" })} href={withSiteBase(primaryCta.href)}>
             {primaryCta.label}
           </a>
-          <a className={button({ tone: "ghost" })} href={secondaryCta.href}>
+          <a className={button({ tone: "ghost" })} href={withSiteBase(secondaryCta.href)}>
             {secondaryCta.label}
           </a>
         </div>
