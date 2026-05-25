@@ -495,10 +495,12 @@ export function App({ registry }) {
 
 1. Host 将 typed snapshot 传给 `MicroFrontendProvider`。
 2. MFE 使用 `useMicroFrontendSharedState<T>()` 读取该 snapshot。
+3. 当同一个 component 会同时运行在 Host shell 和 MFE subtree 中时，可用 `useIsMfe()` 判断当前位置。
 
 ```tsx
 import {
   MicroFrontendProvider,
+  useIsMfe,
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
@@ -527,25 +529,27 @@ const sharedState: HostSharedState = {
   },
 };
 
-export function HostRoot({ registry }) {
+export function MountedFeatureModule({ registry }) {
   return (
     <MicroFrontendProvider
+      isMfe
       registry={registry}
       sharedState={sharedState}
     >
-      <FeatureShell />
+      <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
 }
 
 export function FeatureModuleHeader() {
+  const isMfe = useIsMfe();
   const host = useMicroFrontendSharedState<HostSharedState>();
   const userId = host.session?.userId ?? "guest";
   const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
   return (
     <Text>
-      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
     </Text>
   );
 }
@@ -555,6 +559,7 @@ export function FeatureModuleHeader() {
 
 - Host 仍然是 source of truth。
 - MFE 通过 runtime hook 获取全局状态，而不是直接 import Host store。
+- `useIsMfe()` 在 provider 外或 Host shell 中返回 `false`；Host 为 mounted feature subtree 设置 `isMfe` 后返回 `true`。
 - 将 `HostSharedState` type 放在 Host 与 MFE 都能 import 的小型 shared contract package 或文件中。
 - 状态变更应通过 Host commands、callbacks 或 events 回传。
 - 大型 cache、secret、native-only handle 不应放入 `sharedState`。

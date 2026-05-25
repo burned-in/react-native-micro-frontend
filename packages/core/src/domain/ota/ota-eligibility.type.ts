@@ -1,16 +1,16 @@
-import type { NativeContractChange } from "../native-contract.type.js";
+import type { NativeContractChange } from '../native-contract.type.js';
 
 /** OTA decision status for one MFE version. */
 export type OtaEligibilityStatus =
-  | "available"
-  | "disabled"
-  | "blocked-by-native-change"
-  | "blocked-by-native-hash-mismatch"
-  | "blocked-by-policy"
-  | "blocked-by-runtime"
-  | "blocked-by-react-native-version"
-  | "blocked-by-hermes-setting"
-  | "blocked-by-new-architecture-setting";
+  | 'available'
+  | 'disabled'
+  | 'blocked-by-native-change'
+  | 'blocked-by-native-hash-mismatch'
+  | 'blocked-by-policy'
+  | 'blocked-by-runtime'
+  | 'blocked-by-react-native-version'
+  | 'blocked-by-hermes-setting'
+  | 'blocked-by-new-architecture-setting';
 
 /** Reason attached to an OTA block or warning. */
 export interface OtaBlockReason {

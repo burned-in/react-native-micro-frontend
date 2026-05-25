@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
-import type { NativeContract } from "@bunin/react-native-micro-frontend";
-import { stableJson } from "./stable-json.js";
+import { createHash } from 'node:crypto';
+import type { NativeContract } from '@bunin/react-native-micro-frontend';
+import { stableJson } from './stable-json.js';
 
 /**
  * Calculates a stable nativeHash from native dependencies, platform files, RN version, Hermes and New Architecture flags.
@@ -12,8 +12,12 @@ import { stableJson } from "./stable-json.js";
  * @returns SHA-256 hex hash prefixed with `sha256:`.
  */
 export function calculateNativeHash(contract: NativeContract): string {
-  const { nativeHash: _nativeHash, generatedAt: _generatedAt, ...hashable } = contract;
-  return `sha256:${createHash("sha256").update(stableJson(hashable)).digest("hex")}`;
+  const {
+    nativeHash: _nativeHash,
+    generatedAt: _generatedAt,
+    ...hashable
+  } = contract;
+  return `sha256:${createHash('sha256').update(stableJson(hashable)).digest('hex')}`;
 }
 
 /**
@@ -23,7 +27,13 @@ export function calculateNativeHash(contract: NativeContract): string {
  * @param generatedAt ISO timestamp to store; defaults to now.
  * @returns Contract copy with calculated nativeHash.
  */
-export function attachNativeHash(contract: NativeContract, generatedAt = new Date().toISOString()): NativeContract {
+export function attachNativeHash(
+  contract: NativeContract,
+  generatedAt = new Date().toISOString(),
+): NativeContract {
   const withGeneratedAt = { ...contract, generatedAt };
-  return { ...withGeneratedAt, nativeHash: calculateNativeHash(withGeneratedAt) };
+  return {
+    ...withGeneratedAt,
+    nativeHash: calculateNativeHash(withGeneratedAt),
+  };
 }

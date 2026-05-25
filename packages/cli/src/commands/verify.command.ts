@@ -1,11 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { MfeRegistry } from '@bunin/react-native-micro-frontend';
 import {
   checkOtaEligibility,
   formatOtaEligibility,
-} from "@bunin/react-native-micro-frontend";
-import type { MfeRegistry } from "@bunin/react-native-micro-frontend";
-import type { CliPrinter } from "../cli-output.printer.js";
+} from '@bunin/react-native-micro-frontend';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm verify <mfe>` by checking registry nativeHash and block policy.
@@ -23,18 +23,20 @@ export function runVerifyCommand(
   printer: CliPrinter,
 ): number {
   if (!name) {
-    printer.error("Usage: rnm verify <mfe-name>");
+    printer.error('Usage: rnm verify <mfe-name>');
     return 1;
   }
 
-  const registryPath = join(root, "rnm.registry.json");
+  const registryPath = join(root, 'rnm.registry.json');
 
   if (!existsSync(registryPath)) {
-    printer.error("rnm.registry.json not found.");
+    printer.error('rnm.registry.json not found.');
     return 1;
   }
 
-  const registry = JSON.parse(readFileSync(registryPath, "utf8")) as MfeRegistry;
+  const registry = JSON.parse(
+    readFileSync(registryPath, 'utf8'),
+  ) as MfeRegistry;
   const mfe = registry.mfes[name];
 
   if (!mfe) {
@@ -50,7 +52,7 @@ export function runVerifyCommand(
 
   const result = checkOtaEligibility({
     otaEnabled: mfe.ota.enabled,
-    mfeBlocked: mfe.status === "blocked",
+    mfeBlocked: mfe.status === 'blocked',
     reactNativeVersionMismatch: false,
     hermesSettingMismatch: false,
     newArchitectureSettingMismatch: false,

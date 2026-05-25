@@ -10,5 +10,8 @@ export interface CliPrinter {
  * @returns Printer using console.log and console.error.
  */
 export function createConsolePrinter(): CliPrinter {
-  return { log: (message) => console.log(message), error: (message) => console.error(message) };
+  return {
+    log: (message) => console.log(message),
+    error: (message) => console.error(message),
+  };
 }

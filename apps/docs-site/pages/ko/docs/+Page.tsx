@@ -1,5 +1,4 @@
-import React from "react";
-import { LocalizedDocsRoute } from "../../../src/localized-route-pages.js";
+import { LocalizedDocsRoute } from '../../../src/localized-route-pages.js';
 
 export default function Page() {
   return <LocalizedDocsRoute locale="ko" />;

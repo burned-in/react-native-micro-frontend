@@ -1,8 +1,10 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import vike from "vike/plugin";
+import react from '@vitejs/plugin-react';
+import vike from 'vike/plugin';
+import { defineConfig } from 'vite';
 
-const siteBase = normalizeBasePath(process.env.GITHUB_PAGES_BASE ?? process.env.SITE_BASE ?? "/");
+const siteBase = normalizeBasePath(
+  process.env.GITHUB_PAGES_BASE ?? process.env.SITE_BASE ?? '/',
+);
 
 export default defineConfig({
   base: siteBase,
@@ -13,11 +15,13 @@ export default defineConfig({
 });
 
 function normalizeBasePath(basePath: string) {
-  if (!basePath || basePath === "/") {
-    return "/";
+  if (!basePath || basePath === '/') {
+    return '/';
   }
 
-  const withLeadingSlash = basePath.startsWith("/") ? basePath : `/${basePath}`;
+  const withLeadingSlash = basePath.startsWith('/') ? basePath : `/${basePath}`;
 
-  return withLeadingSlash.endsWith("/") ? withLeadingSlash : `${withLeadingSlash}/`;
+  return withLeadingSlash.endsWith('/')
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
 }

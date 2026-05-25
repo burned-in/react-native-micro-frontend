@@ -16,9 +16,7 @@
     "exactOptionalPropertyTypes": true,
     "baseUrl": ".",
     "paths": {
-      "@bunin/react-native-micro-frontend": [
-        "packages/core/src/index.ts"
-      ],
+      "@bunin/react-native-micro-frontend": ["packages/core/src/index.ts"],
       "@bunin/react-native-micro-frontend/hot-updater": [
         "packages/core/src/hot-updater.ts"
       ],
@@ -41,9 +39,6 @@
         "packages/config/src/index.ts"
       ]
     },
-    "typeRoots": [
-      "./node_modules/@types",
-      "./types"
-    ]
+    "typeRoots": ["./node_modules/@types", "./types"]
   }
 }

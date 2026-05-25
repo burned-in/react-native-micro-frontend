@@ -1,11 +1,11 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type {
   MfeManifest,
   MfeRegistry,
-} from "@bunin/react-native-micro-frontend";
-import { createEmptyRegistry } from "@bunin/react-native-micro-frontend";
-import type { CliPrinter } from "../cli-output.printer.js";
+} from '@bunin/react-native-micro-frontend';
+import { createEmptyRegistry } from '@bunin/react-native-micro-frontend';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm add <mfe>` by registering a micro frontend in rnm.registry.json.
@@ -26,7 +26,9 @@ export function runAddCommand(
   printer: CliPrinter,
 ): number {
   if (!name) {
-    printer.error("Usage: rnm add <mfe-name> --path <path> [--entry ./src/index.tsx]");
+    printer.error(
+      'Usage: rnm add <mfe-name> --path <path> [--entry ./src/index.tsx]',
+    );
     return 1;
   }
 
@@ -34,19 +36,23 @@ export function runAddCommand(
   const mfes: Record<string, MfeManifest> = { ...registry.mfes };
 
   const path = stringFlag(flags.path) ?? `../${name}`;
-  const entry = stringFlag(flags.entry) ?? "./src/index.tsx";
-  const version = stringFlag(flags.version) ?? "0.1.0";
+  const entry = stringFlag(flags.entry) ?? './src/index.tsx';
+  const version = stringFlag(flags.version) ?? '0.1.0';
 
-  const otaMode = flagEnum(flags["ota-mode"], ["auto", "manual", "disabled"], "manual");
+  const otaMode = flagEnum(
+    flags['ota-mode'],
+    ['auto', 'manual', 'disabled'],
+    'manual',
+  );
   const otaProvider = flagEnum(
-    flags["ota-provider"],
-    ["hot-updater", "none", "custom"],
-    "hot-updater",
+    flags['ota-provider'],
+    ['hot-updater', 'none', 'custom'],
+    'hot-updater',
   );
   const nativeChangePolicy = flagEnum(
-    flags["native-policy"],
-    ["ask", "block", "apply-and-disable-ota"],
-    "ask",
+    flags['native-policy'],
+    ['ask', 'block', 'apply-and-disable-ota'],
+    'ask',
   );
 
   mfes[name] = {
@@ -55,12 +61,12 @@ export function runAddCommand(
     entry,
     path,
     ota: {
-      enabled: flags["no-ota"] !== true,
+      enabled: flags['no-ota'] !== true,
       mode: otaMode,
       provider: otaProvider,
     },
     nativeChangePolicy,
-    status: "active",
+    status: 'active',
   };
 
   writeRegistry(root, {
@@ -73,24 +79,24 @@ export function runAddCommand(
 }
 
 function readRegistry(root: string): MfeRegistry {
-  const registryPath = join(root, "rnm.registry.json");
+  const registryPath = join(root, 'rnm.registry.json');
 
   if (!existsSync(registryPath)) {
     return createEmptyRegistry();
   }
 
-  return JSON.parse(readFileSync(registryPath, "utf8")) as MfeRegistry;
+  return JSON.parse(readFileSync(registryPath, 'utf8')) as MfeRegistry;
 }
 
 function writeRegistry(root: string, registry: MfeRegistry): void {
-  const registryPath = join(root, "rnm.registry.json");
+  const registryPath = join(root, 'rnm.registry.json');
   const serializedRegistry = JSON.stringify(registry, null, 2);
 
   writeFileSync(registryPath, `${serializedRegistry}\n`);
 }
 
 function stringFlag(value: string | boolean | undefined): string | undefined {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return value;
   }
 
@@ -102,7 +108,7 @@ function flagEnum<T extends string>(
   allowed: readonly T[],
   fallback: T,
 ): T {
-  if (typeof value === "string" && allowed.includes(value as T)) {
+  if (typeof value === 'string' && allowed.includes(value as T)) {
     return value as T;
   }
 

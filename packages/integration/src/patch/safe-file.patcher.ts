@@ -1,7 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import type { Result } from "@bunin/react-native-micro-frontend";
-import { err, ok } from "@bunin/react-native-micro-frontend";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
+import type { Result } from '@bunin/react-native-micro-frontend';
+import { err, ok } from '@bunin/react-native-micro-frontend';
 
 /** File patch request with safety controls. */
 export interface SafeFilePatch {
@@ -26,7 +32,10 @@ export interface SafeFilePatchError {
  * @param patches File patches to apply.
  * @returns Result containing written paths or a typed failure.
  */
-export function applySafeFilePatches(root: string, patches: readonly SafeFilePatch[]): Result<readonly string[], SafeFilePatchError> {
+export function applySafeFilePatches(
+  root: string,
+  patches: readonly SafeFilePatch[],
+): Result<readonly string[], SafeFilePatchError> {
   const written: string[] = [];
   try {
     for (const patch of patches) {
@@ -41,7 +50,10 @@ export function applySafeFilePatches(root: string, patches: readonly SafeFilePat
     }
     return ok(written);
   } catch (error) {
-    return err({ path: written.at(-1) ?? "unknown", message: error instanceof Error ? error.message : String(error) });
+    return err({
+      path: written.at(-1) ?? 'unknown',
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -52,10 +64,13 @@ export function applySafeFilePatches(root: string, patches: readonly SafeFilePat
  * @param path Project-relative file path.
  * @returns Result of the rollback operation.
  */
-export function restoreBackup(root: string, path: string): Result<string, SafeFilePatchError> {
+export function restoreBackup(
+  root: string,
+  path: string,
+): Result<string, SafeFilePatchError> {
   const target = join(root, path);
   const backup = `${target}.bak`;
-  if (!existsSync(backup)) return err({ path, message: "backup not found" });
+  if (!existsSync(backup)) return err({ path, message: 'backup not found' });
   renameSync(backup, target);
   return ok(path);
 }

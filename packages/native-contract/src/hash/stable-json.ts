@@ -13,10 +13,11 @@ export function stableJson(value: unknown): string {
 
 function sortValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortValue);
-  if (value && typeof value === "object") {
+  if (value && typeof value === 'object') {
     const input = value as Record<string, unknown>;
     const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(input).sort()) sorted[key] = sortValue(input[key]);
+    for (const key of Object.keys(input).sort())
+      sorted[key] = sortValue(input[key]);
     return sorted;
   }
   return value;

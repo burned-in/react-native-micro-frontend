@@ -5,11 +5,7 @@
     "rootDir": ".",
     "tsBuildInfoFile": "dist/cli.tsbuildinfo"
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "bin/**/*.ts"
-  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "bin/**/*.ts"],
   "references": [
     {
       "path": "../core"
@@ -27,8 +23,5 @@
       "path": "../metro-adapter"
     }
   ],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts"
-  ]
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
 }

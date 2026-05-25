@@ -1,6 +1,5 @@
-import React from "react";
-import { PageHeader, SectionList, ShellSection } from "../../../src/ui.js";
-import { globalStateSections } from "../../../src/content.js";
+import { globalStateSections } from '../../../src/content.js';
+import { PageHeader, SectionList, ShellSection } from '../../../src/ui.js';
 
 export default function Page() {
   return (

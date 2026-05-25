@@ -1,6 +1,5 @@
-import React from "react";
-import { FeatureGrid, Hero, SectionList, ShellSection } from "../src/ui.js";
-import { features, homeSections } from "../src/content.js";
+import { features, homeSections } from '../src/content.js';
+import { FeatureGrid, Hero, SectionList, ShellSection } from '../src/ui.js';
 
 export default function Page() {
   return (

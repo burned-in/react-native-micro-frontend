@@ -1,1 +1,1 @@
-export * from "./config-file.loader.js";
+export * from './config-file.loader.js';

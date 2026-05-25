@@ -1,14 +1,14 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type {
   MfeManifest,
   MfeRegistry,
-} from "@bunin/react-native-micro-frontend";
+} from '@bunin/react-native-micro-frontend';
 import {
   formatMfeBlockedBox,
   formatOtaDisabledBox,
-} from "@bunin/react-native-micro-frontend";
-import type { CliPrinter } from "../cli-output.printer.js";
+} from '@bunin/react-native-micro-frontend';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm sync <mfe>` native-change policy updates in the registry.
@@ -30,18 +30,20 @@ export function runSyncCommand(
   printer: CliPrinter,
 ): number {
   if (!name) {
-    printer.error("Usage: rnm sync <mfe-name> --apply-native|--block-native");
+    printer.error('Usage: rnm sync <mfe-name> --apply-native|--block-native');
     return 1;
   }
 
-  const registryPath = join(root, "rnm.registry.json");
+  const registryPath = join(root, 'rnm.registry.json');
 
   if (!existsSync(registryPath)) {
-    printer.error("rnm.registry.json not found.");
+    printer.error('rnm.registry.json not found.');
     return 1;
   }
 
-  const registry = JSON.parse(readFileSync(registryPath, "utf8")) as MfeRegistry;
+  const registry = JSON.parse(
+    readFileSync(registryPath, 'utf8'),
+  ) as MfeRegistry;
   const mfe = registry.mfes[name];
 
   if (!mfe) {
@@ -51,14 +53,14 @@ export function runSyncCommand(
 
   const mfes: Record<string, MfeManifest> = { ...registry.mfes };
 
-  if (flags["apply-native"] === true) {
+  if (flags['apply-native'] === true) {
     mfes[name] = {
       ...mfe,
       ota: {
         ...mfe.ota,
         enabled: false,
       },
-      status: "active",
+      status: 'active',
     };
 
     writeRegistry(registryPath, {
@@ -70,11 +72,11 @@ export function runSyncCommand(
     return 0;
   }
 
-  if (flags["block-native"] === true) {
+  if (flags['block-native'] === true) {
     mfes[name] = {
       ...mfe,
-      status: "blocked",
-      blockedReason: "Required native changes were not applied.",
+      status: 'blocked',
+      blockedReason: 'Required native changes were not applied.',
     };
 
     writeRegistry(registryPath, {
@@ -87,7 +89,7 @@ export function runSyncCommand(
   }
 
   printer.error(
-    "Native binary changes require explicit --apply-native or --block-native in CI/non-interactive mode.",
+    'Native binary changes require explicit --apply-native or --block-native in CI/non-interactive mode.',
   );
 
   return 1;

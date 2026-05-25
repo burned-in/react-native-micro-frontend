@@ -1,15 +1,15 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type {
   MfeRegistry,
   PackageManagerName,
-} from "@bunin/react-native-micro-frontend";
+} from '@bunin/react-native-micro-frontend';
 import {
   checkOtaEligibility,
   formatOtaEligibility,
-} from "@bunin/react-native-micro-frontend";
-import { generateHotUpdaterDeployCommand } from "@bunin/react-native-micro-frontend-hot-updater-adapter";
-import type { CliPrinter } from "../cli-output.printer.js";
+} from '@bunin/react-native-micro-frontend';
+import { generateHotUpdaterDeployCommand } from '@bunin/react-native-micro-frontend-hot-updater-adapter';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm publish <mfe>` by running the OTA eligibility gate and printing deploy commands.
@@ -30,18 +30,20 @@ export function runPublishCommand(
   printer: CliPrinter,
 ): number {
   if (!name) {
-    printer.error("Usage: rnm publish <mfe-name>");
+    printer.error('Usage: rnm publish <mfe-name>');
     return 1;
   }
 
-  const registryPath = join(root, "rnm.registry.json");
+  const registryPath = join(root, 'rnm.registry.json');
 
   if (!existsSync(registryPath)) {
-    printer.error("rnm.registry.json not found.");
+    printer.error('rnm.registry.json not found.');
     return 1;
   }
 
-  const registry = JSON.parse(readFileSync(registryPath, "utf8")) as MfeRegistry;
+  const registry = JSON.parse(
+    readFileSync(registryPath, 'utf8'),
+  ) as MfeRegistry;
   const mfe = registry.mfes[name];
 
   if (!mfe) {
@@ -56,8 +58,8 @@ export function runPublishCommand(
   );
 
   const result = checkOtaEligibility({
-    otaEnabled: mfe.ota.enabled && flags["no-ota"] !== true,
-    mfeBlocked: mfe.status === "blocked",
+    otaEnabled: mfe.ota.enabled && flags['no-ota'] !== true,
+    mfeBlocked: mfe.status === 'blocked',
     reactNativeVersionMismatch: false,
     hermesSettingMismatch: false,
     newArchitectureSettingMismatch: false,
@@ -70,36 +72,41 @@ export function runPublishCommand(
   }
 
   if (!result.otaPossible) {
-    printer.error("OTA PUBLISH BLOCKED. Required: Store release or native contract fix.");
+    printer.error(
+      'OTA PUBLISH BLOCKED. Required: Store release or native contract fix.',
+    );
     return 1;
   }
 
-  const packageManager = packageManagerFlag(flags["package-manager"]);
-  const channel = typeof flags.channel === "string" ? flags.channel : "production";
+  const packageManager = packageManagerFlag(flags['package-manager']);
+  const channel =
+    typeof flags.channel === 'string' ? flags.channel : 'production';
 
-  for (const platform of ["ios", "android"] as const) {
+  for (const platform of ['ios', 'android'] as const) {
     const deployCommand = generateHotUpdaterDeployCommand({
       packageManager,
       platform,
       channel,
     });
 
-    printer.log(deployCommand.join(" "));
+    printer.log(deployCommand.join(' '));
   }
 
   return 0;
 }
 
-function packageManagerFlag(value: string | boolean | undefined): PackageManagerName {
+function packageManagerFlag(
+  value: string | boolean | undefined,
+): PackageManagerName {
   if (
-    value === "bun" ||
-    value === "deno" ||
-    value === "pnpm" ||
-    value === "yarn" ||
-    value === "npm"
+    value === 'bun' ||
+    value === 'deno' ||
+    value === 'pnpm' ||
+    value === 'yarn' ||
+    value === 'npm'
   ) {
     return value;
   }
 
-  return "npm";
+  return 'npm';
 }

@@ -1,13 +1,13 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import {
   analyzeHostProject,
   createDefaultHostConfigTemplate,
   createGeneratedIntegrationFiles,
   generateIntegrationPlan,
   generateManualIntegrationGuide,
-} from "@bunin/react-native-micro-frontend-integration";
-import type { CliPrinter } from "../cli-output.printer.js";
+} from '@bunin/react-native-micro-frontend-integration';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm integrate` for safe generated-file integration and manual guides.
@@ -25,13 +25,13 @@ export function runIntegrateCommand(
   flags: Readonly<Record<string, string | boolean>>,
   printer: CliPrinter,
 ): number {
-  const mode = flags["manual-guide"]
-    ? "manual-guide"
-    : flags["dry-run"]
-      ? "dry-run"
+  const mode = flags['manual-guide']
+    ? 'manual-guide'
+    : flags['dry-run']
+      ? 'dry-run'
       : flags.full
-        ? "full"
-        : "safe-minimal";
+        ? 'full'
+        : 'safe-minimal';
 
   const analysis = analyzeHostProject(root);
   const plan = generateIntegrationPlan(analysis, mode);
@@ -44,31 +44,37 @@ export function runIntegrateCommand(
     printer.log(`[PLAN] ${change.action} ${change.path} - ${change.reason}`);
   }
 
-  if (flags["manual-guide"] === true) {
+  if (flags['manual-guide'] === true) {
     const guide = generateManualIntegrationGuide(plan);
 
-    write(root, "docs/rnm-integration-guide.md", guide);
-    printer.log("[OK] docs/rnm-integration-guide.md generated.");
+    write(root, 'docs/rnm-integration-guide.md', guide);
+    printer.log('[OK] docs/rnm-integration-guide.md generated.');
 
     return 0;
   }
 
-  if (flags["dry-run"] === true) {
+  if (flags['dry-run'] === true) {
     return 0;
   }
 
   if (flags.yes !== true) {
-    printer.error("Use --yes to write generated integration files in non-interactive mode.");
+    printer.error(
+      'Use --yes to write generated integration files in non-interactive mode.',
+    );
     return 1;
   }
 
-  write(root, "react-native-micro-frontend.config.ts", createDefaultHostConfigTemplate());
+  write(
+    root,
+    'react-native-micro-frontend.config.ts',
+    createDefaultHostConfigTemplate(),
+  );
 
   for (const file of createGeneratedIntegrationFiles()) {
     write(root, file.path, file.contents);
   }
 
-  printer.log("[OK] Generated integration files written.");
+  printer.log('[OK] Generated integration files written.');
   return 0;
 }
 

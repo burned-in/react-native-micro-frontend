@@ -1,8 +1,8 @@
-import vikeReact from "vike-react/config";
-import type { Config } from "vike/types";
+import type { Config } from 'vike/types';
+import vikeReact from 'vike-react/config';
 
 export default {
   extends: vikeReact,
   prerender: true,
-  lang: "en-US",
+  lang: 'en-US',
 } satisfies Config;

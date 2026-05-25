@@ -1,21 +1,23 @@
 #!/usr/bin/env bun
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   internalPackageNames,
   packageOrder,
   readJson,
-} from "./package-list.mjs";
+} from './package-list.mjs';
 
-const bumpKinds = new Set(["patch", "minor", "major"]);
+const bumpKinds = new Set(['patch', 'minor', 'major']);
 const rawVersion = process.argv[2];
 
 if (!rawVersion) {
-  console.error("Usage: bun scripts/release/version-all.mjs <version|patch|minor|major>");
+  console.error(
+    'Usage: bun scripts/release/version-all.mjs <version|patch|minor|major>',
+  );
   process.exit(1);
 }
 
-const rootPackagePath = "package.json";
+const rootPackagePath = 'package.json';
 const rootPackageJson = readJson(rootPackagePath);
 const currentVersion = rootPackageJson.version;
 const nextVersion = bumpKinds.has(rawVersion)
@@ -30,7 +32,7 @@ writePackageJson(rootPackagePath, {
 });
 
 for (const packageDir of packageOrder) {
-  const packageJsonPath = join(packageDir, "package.json");
+  const packageJsonPath = join(packageDir, 'package.json');
   const packageJson = readJson(packageJsonPath);
   const updatedPackageJson = updateInternalDependencyVersions(
     {
@@ -58,11 +60,11 @@ function bumpVersion(version, bumpKind) {
   const minor = Number(match[2]);
   const patch = Number(match[3]);
 
-  if (bumpKind === "major") {
+  if (bumpKind === 'major') {
     return `${major + 1}.0.0`;
   }
 
-  if (bumpKind === "minor") {
+  if (bumpKind === 'minor') {
     return `${major}.${minor + 1}.0`;
   }
 
@@ -70,7 +72,7 @@ function bumpVersion(version, bumpKind) {
 }
 
 function normalizeVersion(version) {
-  const normalizedVersion = version.replace(/^v/, "");
+  const normalizedVersion = version.replace(/^v/, '');
 
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(normalizedVersion)) {
     throw new Error(`Invalid semver version: ${version}`);
@@ -80,7 +82,12 @@ function normalizeVersion(version) {
 }
 
 function updateInternalDependencyVersions(packageJson, internalNames, version) {
-  for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+  for (const field of [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'optionalDependencies',
+  ]) {
     const dependencies = packageJson[field];
 
     if (!dependencies) {
@@ -98,8 +105,8 @@ function updateInternalDependencyVersions(packageJson, internalNames, version) {
 }
 
 function writePackageJson(path, packageJson) {
-  const previousText = readFileSync(path, "utf8");
-  const trailingNewline = previousText.endsWith("\n") ? "\n" : "";
+  const previousText = readFileSync(path, 'utf8');
+  const trailingNewline = previousText.endsWith('\n') ? '\n' : '';
   const nextText = JSON.stringify(packageJson, null, 2) + trailingNewline;
 
   writeFileSync(path, nextText);

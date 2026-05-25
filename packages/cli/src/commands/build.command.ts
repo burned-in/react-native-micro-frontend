@@ -1,5 +1,5 @@
-import { generateMfeBundleCommand } from "@bunin/react-native-micro-frontend-metro-adapter";
-import type { CliPrinter } from "../cli-output.printer.js";
+import { generateMfeBundleCommand } from '@bunin/react-native-micro-frontend-metro-adapter';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm build <mfe>` by generating Metro bundle commands.
@@ -18,13 +18,14 @@ export function runBuildCommand(
   printer: CliPrinter,
 ): number {
   if (!name) {
-    printer.error("Usage: rnm build <mfe-name> [--platform ios|android]");
+    printer.error('Usage: rnm build <mfe-name> [--platform ios|android]');
     return 1;
   }
 
-  const platform = flags.platform === "android" ? "android" : "ios";
-  const buildType = typeof flags.type === "string" ? flags.type : "ota";
-  const entryFile = typeof flags.entry === "string" ? flags.entry : "./src/index.tsx";
+  const platform = flags.platform === 'android' ? 'android' : 'ios';
+  const buildType = typeof flags.type === 'string' ? flags.type : 'ota';
+  const entryFile =
+    typeof flags.entry === 'string' ? flags.entry : './src/index.tsx';
   const dev = flags.dev === true;
 
   const bundleOutput = `dist/${name}.${platform}.${buildType}.bundle`;
@@ -39,7 +40,7 @@ export function runBuildCommand(
   });
 
   printer.log(`[OK] Metro bundle command for ${name}`);
-  printer.log(command.join(" "));
+  printer.log(command.join(' '));
 
   return 0;
 }

@@ -1,6 +1,5 @@
-import React from "react";
-import { MatrixTable, PageHeader, ShellSection } from "../../../src/ui.js";
-import { installMatrix } from "../../../src/content.js";
+import { installMatrix } from '../../../src/content.js';
+import { MatrixTable, PageHeader, ShellSection } from '../../../src/ui.js';
 
 export default function Page() {
   return (

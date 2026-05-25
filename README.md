@@ -531,10 +531,12 @@ The pattern has two sides:
 
 1. The host passes a typed snapshot to `MicroFrontendProvider`.
 2. The MFE reads that snapshot with `useMicroFrontendSharedState<T>()`.
+3. Shared UI can branch on `useIsMfe()` when the same component runs in both the host shell and an MFE subtree.
 
 ```tsx
 import {
   MicroFrontendProvider,
+  useIsMfe,
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
@@ -563,25 +565,27 @@ const sharedState: HostSharedState = {
   },
 };
 
-export function HostRoot({ registry }) {
+export function MountedFeatureModule({ registry }) {
   return (
     <MicroFrontendProvider
+      isMfe
       registry={registry}
       sharedState={sharedState}
     >
-      <FeatureShell />
+      <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
 }
 
 export function FeatureModuleHeader() {
+  const isMfe = useIsMfe();
   const host = useMicroFrontendSharedState<HostSharedState>();
   const userId = host.session?.userId ?? "guest";
   const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
   return (
     <Text>
-      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
     </Text>
   );
 }
@@ -591,6 +595,7 @@ Meaning:
 
 - the host remains the source of truth
 - feature modules get global state through the runtime hook, not by importing the host store
+- `useIsMfe()` returns `false` outside a provider or in the host shell, and `true` when the host marks the mounted feature subtree with `isMfe`
 - keep the shared type in a tiny shared contract package or file that both host and MFE can import
 - mutations should go back through host-owned commands, callbacks, or events
 - large caches, secrets, and native-only handles should not be placed in `sharedState`

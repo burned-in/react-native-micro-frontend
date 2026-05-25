@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from "react";
-import { Head } from "vike-react/Head";
-import { usePageContext } from "vike-react/usePageContext";
-import { css } from "../styled-system/css";
-import { hstack, stack } from "../styled-system/patterns";
-import { stripSiteBase, withSiteBase } from "../src/site-base.js";
-import { alternateOgLocales, getAlternateLinks, getCanonicalUrl, getJsonLd, getOpenGraphImageUrl, getSeoInfo } from "../src/seo.js";
-import "../styled-system/styles.css";
+import React, { useEffect, useState } from 'react';
+import { Head } from 'vike-react/Head';
+import { usePageContext } from 'vike-react/usePageContext';
+import {
+  alternateOgLocales,
+  getAlternateLinks,
+  getCanonicalUrl,
+  getJsonLd,
+  getOpenGraphImageUrl,
+  getSeoInfo,
+} from '../src/seo.js';
+import { stripSiteBase, withSiteBase } from '../src/site-base.js';
+import { css } from '../styled-system/css';
+import { hstack, stack } from '../styled-system/patterns';
+import '../styled-system/styles.css';
 
 const themeBootScript = `(() => {
   try {
@@ -15,117 +22,174 @@ const themeBootScript = `(() => {
   } catch (_) {}
 })();`;
 
-type LocalePrefix = "" | "/ko" | "/zh-cn" | "/jp";
+const githubRepositoryUrl =
+  'https://github.com/burned-in/react-native-micro-frontend';
+const githubRepositoryApiUrl =
+  'https://api.github.com/repos/burned-in/react-native-micro-frontend';
+const githubFallbackStarCount = 1;
+
+type LocalePrefix = '' | '/ko' | '/zh-cn' | '/jp';
 
 type LocalizedNavItem = {
   readonly label: string;
-  readonly path: "" | "/docs" | "/docs/hot-updater" | "/docs/package-managers" | "/docs/native-contract" | "/docs/global-state";
+  readonly path:
+    | ''
+    | '/docs'
+    | '/docs/hot-updater'
+    | '/docs/package-managers'
+    | '/docs/native-contract'
+    | '/docs/global-state';
 };
 
 const localizedNavLabels = {
-  "": {
-    overview: "Overview",
-    docs: "Docs",
-    hotUpdater: "Hot Updater",
-    packageManagers: "Package managers",
-    nativeContract: "Native contract",
-    globalState: "Global state",
+  '': {
+    overview: 'Overview',
+    docs: 'Docs',
+    hotUpdater: 'Hot Updater',
+    packageManagers: 'Package managers',
+    nativeContract: 'Native contract',
+    globalState: 'Global state',
   },
-  "/ko": {
-    overview: "개요",
-    docs: "문서",
-    hotUpdater: "Hot Updater",
-    packageManagers: "패키지 매니저",
-    nativeContract: "Native contract",
-    globalState: "전역 상태",
+  '/ko': {
+    overview: '개요',
+    docs: '문서',
+    hotUpdater: 'Hot Updater',
+    packageManagers: '패키지 매니저',
+    nativeContract: 'Native contract',
+    globalState: '전역 상태',
   },
-  "/zh-cn": {
-    overview: "概览",
-    docs: "文档",
-    hotUpdater: "Hot Updater",
-    packageManagers: "包管理器",
-    nativeContract: "Native contract",
-    globalState: "全局状态",
+  '/zh-cn': {
+    overview: '概览',
+    docs: '文档',
+    hotUpdater: 'Hot Updater',
+    packageManagers: '包管理器',
+    nativeContract: 'Native contract',
+    globalState: '全局状态',
   },
-  "/jp": {
-    overview: "概要",
-    docs: "ドキュメント",
-    hotUpdater: "Hot Updater",
-    packageManagers: "Package managers",
-    nativeContract: "Native contract",
-    globalState: "Global state",
+  '/jp': {
+    overview: '概要',
+    docs: 'ドキュメント',
+    hotUpdater: 'Hot Updater',
+    packageManagers: 'Package managers',
+    nativeContract: 'Native contract',
+    globalState: 'Global state',
   },
 } satisfies Record<LocalePrefix, Record<string, string>>;
 
 const getPathname = (urlOriginal: string) => {
-  if (urlOriginal.startsWith("http://") || urlOriginal.startsWith("https://")) {
+  if (urlOriginal.startsWith('http://') || urlOriginal.startsWith('https://')) {
     return new URL(urlOriginal).pathname;
   }
 
-  return urlOriginal.split("?")[0]?.split("#")[0] || "/";
+  return urlOriginal.split('?')[0]?.split('#')[0] || '/';
 };
 
 const detectLocalePrefix = (urlOriginal: string): LocalePrefix => {
   const pathname = stripSiteBase(getPathname(urlOriginal));
 
-  if (pathname === "/ko" || pathname.startsWith("/ko/")) {
-    return "/ko";
+  if (pathname === '/ko' || pathname.startsWith('/ko/')) {
+    return '/ko';
   }
 
-  if (pathname === "/zh-cn" || pathname.startsWith("/zh-cn/")) {
-    return "/zh-cn";
+  if (pathname === '/zh-cn' || pathname.startsWith('/zh-cn/')) {
+    return '/zh-cn';
   }
 
-  if (pathname === "/jp" || pathname.startsWith("/jp/")) {
-    return "/jp";
+  if (pathname === '/jp' || pathname.startsWith('/jp/')) {
+    return '/jp';
   }
 
-  return "";
+  return '';
 };
 
 const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
   const labels = localizedNavLabels[prefix];
 
   return [
-    { label: labels.overview, path: "" },
-    { label: labels.docs, path: "/docs" },
-    { label: labels.hotUpdater, path: "/docs/hot-updater" },
-    { label: labels.packageManagers, path: "/docs/package-managers" },
-    { label: labels.nativeContract, path: "/docs/native-contract" },
-    { label: labels.globalState, path: "/docs/global-state" },
+    { label: labels.overview, path: '' },
+    { label: labels.docs, path: '/docs' },
+    { label: labels.hotUpdater, path: '/docs/hot-updater' },
+    { label: labels.packageManagers, path: '/docs/package-managers' },
+    { label: labels.nativeContract, path: '/docs/native-contract' },
+    { label: labels.globalState, path: '/docs/global-state' },
   ];
 };
 
-const createLocalizedHref = (prefix: LocalePrefix, path: LocalizedNavItem["path"]) => {
+const createLocalizedHref = (
+  prefix: LocalePrefix,
+  path: LocalizedNavItem['path'],
+) => {
   if (!prefix) {
-    return withSiteBase(path || "/");
+    return withSiteBase(path || '/');
   }
 
   return withSiteBase(`${prefix}${path}`);
 };
 
-export default function Layout({ children }: { readonly children: React.ReactNode }) {
+export default function Layout({
+  children,
+}: {
+  readonly children: React.ReactNode;
+}) {
   const pageContext = usePageContext();
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [starCount, setStarCount] = useState(githubFallbackStarCount);
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
+    const isDark = document.documentElement.classList.contains('dark');
+    setTheme(isDark ? 'dark' : 'light');
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const updateStarCount = async () => {
+      try {
+        const response = await fetch(githubRepositoryApiUrl, {
+          headers: { Accept: 'application/vnd.github+json' },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const repository = (await response.json()) as {
+          readonly stargazers_count?: unknown;
+        };
+        const nextStarCount = repository.stargazers_count;
+
+        if (
+          !cancelled &&
+          typeof nextStarCount === 'number' &&
+          Number.isFinite(nextStarCount)
+        ) {
+          setStarCount(nextStarCount);
+        }
+      } catch {
+        // Keep the static fallback when GitHub's public API is unavailable.
+      }
+    };
+
+    void updateStarCount();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const localePrefix = detectLocalePrefix(pageContext.urlOriginal);
   const navItems = createNavItems(localePrefix);
-  const homeHref = createLocalizedHref(localePrefix, "");
+  const homeHref = createLocalizedHref(localePrefix, '');
   const seo = getSeoInfo(pageContext.urlOriginal);
   const canonicalUrl = getCanonicalUrl(pageContext.urlOriginal);
   const ogImageUrl = getOpenGraphImageUrl();
   const alternateLinks = getAlternateLinks(pageContext.urlOriginal);
 
   const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
-    document.documentElement.classList.toggle("dark", nextTheme === "dark");
-    localStorage.setItem("theme", nextTheme);
+    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+    localStorage.setItem('theme', nextTheme);
     setTheme(nextTheme);
   };
 
@@ -134,7 +198,10 @@ export default function Layout({ children }: { readonly children: React.ReactNod
       <Head>
         <title>{seo.title}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content={theme === "dark" ? "#050816" : "#f8fbff"} />
+        <meta
+          name="theme-color"
+          content={theme === 'dark' ? '#050816' : '#f8fbff'}
+        />
         <meta name="color-scheme" content="light dark" />
         <meta name="description" content={seo.description} />
         <meta name="keywords" content={seo.keywords} />
@@ -142,16 +209,31 @@ export default function Layout({ children }: { readonly children: React.ReactNod
         <meta name="application-name" content="bunin RN MFE" />
         <meta name="apple-mobile-web-app-title" content="bunin RN MFE" />
         <meta name="format-detection" content="telephone=no" />
-        <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+        <meta
+          name="robots"
+          content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+        />
         <link rel="canonical" href={canonicalUrl} />
         {alternateLinks.map((link) => (
-          <link key={link.lang} rel="alternate" hrefLang={link.lang} href={link.href} />
+          <link
+            key={link.lang}
+            rel="alternate"
+            hrefLang={link.lang}
+            href={link.href}
+          />
         ))}
-        <link rel="icon" type="image/svg+xml" href={withSiteBase("/favicon.svg")} />
-        <link rel="apple-touch-icon" href={withSiteBase("/favicon.svg")} />
-        <link rel="manifest" href={withSiteBase("/site.webmanifest")} />
+        <link
+          rel="icon"
+          type="image/svg+xml"
+          href={withSiteBase('/favicon.svg')}
+        />
+        <link rel="apple-touch-icon" href={withSiteBase('/favicon.svg')} />
+        <link rel="manifest" href={withSiteBase('/site.webmanifest')} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="bunin React Native Micro Frontend" />
+        <meta
+          property="og:site_name"
+          content="bunin React Native Micro Frontend"
+        />
         <meta property="og:title" content={seo.title} />
         <meta property="og:description" content={seo.description} />
         <meta property="og:url" content={canonicalUrl} />
@@ -162,15 +244,28 @@ export default function Layout({ children }: { readonly children: React.ReactNod
         {alternateOgLocales
           .filter((locale) => locale !== seo.ogLocale)
           .map((locale) => (
-            <meta key={locale} property="og:locale:alternate" content={locale} />
+            <meta
+              key={locale}
+              property="og:locale:alternate"
+              content={locale}
+            />
           ))}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seo.title} />
         <meta name="twitter:description" content={seo.description} />
         <meta name="twitter:image" content={ogImageUrl} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: getJsonLd(pageContext.urlOriginal) }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: getJsonLd(pageContext.urlOriginal),
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap"
@@ -179,61 +274,85 @@ export default function Layout({ children }: { readonly children: React.ReactNod
       </Head>
       <div
         className={css({
-          minH: "100vh",
-          bg: "page.bg",
-          color: "page.fg",
+          minH: '100vh',
+          bg: 'page.bg',
+          color: 'page.fg',
           backgroundImage: {
-            base: "radial-gradient(circle at top left, rgba(139,92,246,0.16), transparent 34%), radial-gradient(circle at bottom right, rgba(34,211,238,0.13), transparent 36%)",
-            _dark: "radial-gradient(circle at top left, rgba(34,211,238,0.12), transparent 34%), radial-gradient(circle at bottom right, rgba(139,92,246,0.16), transparent 36%)",
+            base: 'radial-gradient(circle at top left, rgba(139,92,246,0.16), transparent 34%), radial-gradient(circle at bottom right, rgba(34,211,238,0.13), transparent 36%)',
+            _dark:
+              'radial-gradient(circle at top left, rgba(34,211,238,0.12), transparent 34%), radial-gradient(circle at bottom right, rgba(139,92,246,0.16), transparent 36%)',
           },
         })}
       >
-        <div className={stack({ gap: { base: "8", md: "12" }, maxW: "7xl", mx: "auto", px: { base: "4", sm: "5", md: "8" }, py: { base: "4", md: "6" } })}>
+        <div
+          className={stack({
+            gap: { base: '8', md: '12' },
+            maxW: '7xl',
+            mx: 'auto',
+            px: { base: '4', sm: '5', md: '8' },
+            py: { base: '4', md: '6' },
+          })}
+        >
           <header
             className={hstack({
-              justify: "space-between",
-              alignItems: "center",
-              gap: { base: "3", md: "5" },
-              flexWrap: "wrap",
-              rounded: { base: "3xl", md: "full" },
-              borderWidth: "1px",
-              borderColor: "line",
-              bg: "surface",
-              shadow: "card",
-              px: { base: "3", sm: "4", md: "6" },
-              py: { base: "3", md: "3" },
+              justify: 'space-between',
+              alignItems: 'center',
+              gap: { base: '3', md: '5' },
+              flexWrap: 'wrap',
+              rounded: { base: '3xl', md: 'full' },
+              borderWidth: '1px',
+              borderColor: 'line',
+              bg: 'surface',
+              shadow: 'card',
+              px: { base: '3', sm: '4', md: '6' },
+              py: { base: '3', md: '3' },
             })}
           >
-            <a href={homeHref} className={hstack({ gap: "3", alignItems: "center", flexShrink: 0 })}>
+            <a
+              href={homeHref}
+              className={hstack({
+                gap: '3',
+                alignItems: 'center',
+                flexShrink: 0,
+              })}
+            >
               <span
                 className={css({
-                  display: "inline-grid",
-                  placeItems: "center",
-                  w: "9",
-                  h: "9",
-                  rounded: "xl",
-                  bg: "page.fg",
-                  color: "page.bg",
-                  fontWeight: "900",
+                  display: 'inline-grid',
+                  placeItems: 'center',
+                  w: '9',
+                  h: '9',
+                  rounded: 'xl',
+                  bg: 'page.fg',
+                  color: 'page.bg',
+                  fontWeight: '900',
                 })}
               >
                 B
               </span>
-              <span className={css({ fontWeight: "900", letterSpacing: "-0.04em", whiteSpace: "nowrap" })}>bunin / RN MFE</span>
+              <span
+                className={css({
+                  fontWeight: '900',
+                  letterSpacing: '-0.04em',
+                  whiteSpace: 'nowrap',
+                })}
+              >
+                bunin / RN MFE
+              </span>
             </a>
             <nav
               className={css({
-                order: { base: "3", lg: "initial" },
-                display: "flex",
-                gap: "2",
-                w: { base: "full", lg: "auto" },
-                maxW: "full",
-                overflowX: { base: "auto", lg: "visible" },
-                flexWrap: { base: "nowrap", lg: "wrap" },
-                justifyContent: { base: "flex-start", lg: "flex-end" },
-                scrollbarWidth: "none",
-                pb: { base: "1", lg: "0" },
-                '&::-webkit-scrollbar': { display: "none" },
+                order: { base: '3', lg: 'initial' },
+                display: 'flex',
+                gap: '2',
+                w: { base: 'full', lg: 'auto' },
+                maxW: 'full',
+                overflowX: { base: 'auto', lg: 'visible' },
+                flexWrap: { base: 'nowrap', lg: 'wrap' },
+                justifyContent: { base: 'flex-start', lg: 'flex-end' },
+                scrollbarWidth: 'none',
+                pb: { base: '1', lg: '0' },
+                '&::-webkit-scrollbar': { display: 'none' },
               })}
               aria-label="Main navigation"
             >
@@ -242,64 +361,99 @@ export default function Layout({ children }: { readonly children: React.ReactNod
                   key={item.path}
                   href={createLocalizedHref(localePrefix, item.path)}
                   className={css({
-                    flexShrink: "0",
-                    rounded: "full",
-                    px: "3",
-                    py: "2",
-                    color: "page.muted",
-                    bg: "surface.subtle",
-                    fontSize: "sm",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap",
-                    _hover: { bg: "accent.soft", color: "page.fg" },
+                    flexShrink: '0',
+                    rounded: 'full',
+                    px: '3',
+                    py: '2',
+                    color: 'page.muted',
+                    bg: 'surface.subtle',
+                    fontSize: 'sm',
+                    fontWeight: '700',
+                    whiteSpace: 'nowrap',
+                    _hover: { bg: 'accent.soft', color: 'page.fg' },
                   })}
                 >
                   {item.label}
                 </a>
               ))}
               <a
-                href={withSiteBase("/ko/docs")}
-                className={languageLink({ active: localePrefix === "/ko" })}
+                href={withSiteBase('/ko/docs')}
+                className={languageLink({ active: localePrefix === '/ko' })}
               >
                 한국어
               </a>
               <a
-                href={withSiteBase("/zh-cn/docs")}
-                className={languageLink({ active: localePrefix === "/zh-cn" })}
+                href={withSiteBase('/zh-cn/docs')}
+                className={languageLink({ active: localePrefix === '/zh-cn' })}
               >
                 中文
               </a>
               <a
-                href={withSiteBase("/jp/docs")}
-                className={languageLink({ active: localePrefix === "/jp" })}
+                href={withSiteBase('/jp/docs')}
+                className={languageLink({ active: localePrefix === '/jp' })}
               >
                 日本語
               </a>
             </nav>
-            <button
-              type="button"
-              onClick={toggleTheme}
+            <div
               className={css({
-                order: { base: "2", lg: "initial" },
-                ml: "auto",
-                cursor: "pointer",
-                rounded: "full",
-                borderWidth: "1px",
-                borderColor: "line",
-                bg: "surface.subtle",
-                color: "page.fg",
-                px: "4",
-                py: "2",
-                fontWeight: "800",
+                order: { base: '2', lg: 'initial' },
+                ml: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2',
+                flexShrink: '0',
               })}
             >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
+              <a
+                href={githubRepositoryUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Open GitHub repository, ${formatStarCount(starCount)} stars`}
+                className={githubLink()}
+              >
+                <span>GitHub</span>
+                <span aria-hidden="true">★</span>
+                <span>{formatStarCount(starCount)}</span>
+              </a>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={themeButton()}
+              >
+                {theme === 'dark' ? 'Light' : 'Dark'}
+              </button>
+            </div>
           </header>
           {children}
-          <footer className={hstack({ justify: "space-between", flexWrap: "wrap", gap: "4", color: "page.muted", fontSize: "sm", pb: "6" })}>
+          <footer
+            className={hstack({
+              justify: 'space-between',
+              flexWrap: 'wrap',
+              gap: '4',
+              color: 'page.muted',
+              fontSize: 'sm',
+              lineHeight: '1.6',
+              pb: '6',
+            })}
+          >
             <span>© bunin React Native Micro Frontend</span>
-            <span>Native-safe feature delivery · Hot Updater compatible · Bun-first</span>
+            <a
+              href={githubRepositoryUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={css({
+                color: 'page.muted',
+                fontWeight: '700',
+                textDecoration: 'none',
+                _hover: { color: 'page.fg' },
+              })}
+            >
+              GitHub · ★ {formatStarCount(starCount)}
+            </a>
+            <span>
+              Native-safe feature delivery · Hot Updater compatible · Bun-first
+            </span>
           </footer>
         </div>
       </div>
@@ -307,15 +461,62 @@ export default function Layout({ children }: { readonly children: React.ReactNod
   );
 }
 
-const languageLink = (props: { readonly active: boolean }) => css({
-  flexShrink: "0",
-  rounded: "full",
-  px: "3",
-  py: "2",
-  color: props.active ? "accent" : "page.muted",
-  bg: props.active ? "accent.soft" : "surface.subtle",
-  fontSize: "sm",
-  fontWeight: "800",
-  whiteSpace: "nowrap",
-  _hover: { bg: "accent.soft", color: "page.fg" },
-});
+const formatStarCount = (count: number) =>
+  new Intl.NumberFormat('en', {
+    notation: count >= 1000 ? 'compact' : 'standard',
+    maximumFractionDigits: 1,
+  }).format(count);
+
+const githubLink = () =>
+  css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1.5',
+    rounded: 'full',
+    borderWidth: '1px',
+    borderColor: 'line',
+    bg: 'surface.subtle',
+    color: 'page.fg',
+    px: { base: '3', sm: '4' },
+    py: '2',
+    fontSize: 'sm',
+    fontWeight: '900',
+    lineHeight: '1',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+    transition: 'all 160ms ease',
+    _hover: {
+      bg: 'accent.soft',
+      color: 'accent',
+      transform: 'translateY(-1px)',
+    },
+  });
+
+const themeButton = () =>
+  css({
+    cursor: 'pointer',
+    rounded: 'full',
+    borderWidth: '1px',
+    borderColor: 'line',
+    bg: 'surface.subtle',
+    color: 'page.fg',
+    px: '4',
+    py: '2',
+    fontWeight: '800',
+    _hover: { bg: 'accent.soft', color: 'page.fg' },
+  });
+
+const languageLink = (props: { readonly active: boolean }) =>
+  css({
+    flexShrink: '0',
+    rounded: 'full',
+    px: '3',
+    py: '2',
+    color: props.active ? 'accent' : 'page.muted',
+    bg: props.active ? 'accent.soft' : 'surface.subtle',
+    fontSize: 'sm',
+    fontWeight: '800',
+    whiteSpace: 'nowrap',
+    _hover: { bg: 'accent.soft', color: 'page.fg' },
+  });

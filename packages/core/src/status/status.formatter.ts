@@ -1,4 +1,4 @@
-import type { OtaEligibilityResult } from "../domain/ota/ota-eligibility.type.js";
+import type { OtaEligibilityResult } from '../domain/ota/ota-eligibility.type.js';
 
 /**
  * Formats an OTA eligibility result into stable CLI lines.
@@ -6,13 +6,23 @@ import type { OtaEligibilityResult } from "../domain/ota/ota-eligibility.type.js
  * @param result OTA result to print.
  * @returns Human-readable status lines without terminal color side effects.
  */
-export function formatOtaEligibility(result: OtaEligibilityResult): readonly string[] {
+export function formatOtaEligibility(
+  result: OtaEligibilityResult,
+): readonly string[] {
   const lines = [
-    `OTA possible: ${result.otaPossible ? "YES" : "NO"}`,
-    `Store release required: ${result.storeReleaseRequired ? "YES" : "NO"}`,
-    `Runtime load blocked: ${result.runtimeLoadBlocked ? "YES" : "NO"}`,
+    `OTA possible: ${result.otaPossible ? 'YES' : 'NO'}`,
+    `Store release required: ${result.storeReleaseRequired ? 'YES' : 'NO'}`,
+    `Runtime load blocked: ${result.runtimeLoadBlocked ? 'YES' : 'NO'}`,
   ];
-  return result.reasons.length === 0 ? lines : [...lines, "Reasons:", ...result.reasons.map((reason) => `- ${reason.code}: ${reason.message}`)];
+  return result.reasons.length === 0
+    ? lines
+    : [
+        ...lines,
+        'Reasons:',
+        ...result.reasons.map(
+          (reason) => `- ${reason.code}: ${reason.message}`,
+        ),
+      ];
 }
 
 /**

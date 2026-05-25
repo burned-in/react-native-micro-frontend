@@ -1,16 +1,15 @@
 #!/usr/bin/env bun
-import { mkdirSync, rmSync } from "node:fs";
-import { resolve } from "node:path";
-import { spawnSync } from "node:child_process";
-import { packageOrder } from "./package-list.mjs";
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { packageOrder } from './package-list.mjs';
 
-const outputDirFlagIndex = process.argv.indexOf("--out-dir");
-const outputDir = outputDirFlagIndex >= 0
-  ? process.argv[outputDirFlagIndex + 1]
-  : ".npm-pack";
+const outputDirFlagIndex = process.argv.indexOf('--out-dir');
+const outputDir =
+  outputDirFlagIndex >= 0 ? process.argv[outputDirFlagIndex + 1] : '.npm-pack';
 
 if (!outputDir) {
-  console.error("--out-dir requires a directory path");
+  console.error('--out-dir requires a directory path');
   process.exit(1);
 }
 
@@ -26,14 +25,22 @@ mkdirSync(absoluteOutputDir, {
 });
 
 for (const packageDir of packageOrder) {
-  run("bun", ["pm", "pack", "--cwd", `./${packageDir}`, "--destination", absoluteOutputDir, "--quiet"]);
+  run('bun', [
+    'pm',
+    'pack',
+    '--cwd',
+    `./${packageDir}`,
+    '--destination',
+    absoluteOutputDir,
+    '--quiet',
+  ]);
 }
 
 console.log(`[pack] wrote tarballs to ${absoluteOutputDir}`);
 
 function run(command, args) {
   const result = spawnSync(command, args, {
-    stdio: "inherit",
+    stdio: 'inherit',
     env: process.env,
   });
 

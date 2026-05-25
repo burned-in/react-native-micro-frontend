@@ -1,9 +1,12 @@
-import React, { createContext, useContext } from "react";
-import type { ReactElement, ReactNode } from "react";
-import type { MfeRegistry } from "@bunin/react-native-micro-frontend";
-import { createMicroFrontendRuntime } from "./micro-frontend-runtime.js";
-import type { MicroFrontendRuntime } from "./micro-frontend-runtime.js";
-import type { MicroFrontendSharedState, RuntimeMfeState } from "./runtime.type.js";
+import type { MfeRegistry } from '@bunin/react-native-micro-frontend';
+import type { ReactElement, ReactNode } from 'react';
+import React, { createContext, useContext } from 'react';
+import type { MicroFrontendRuntime } from './micro-frontend-runtime.js';
+import { createMicroFrontendRuntime } from './micro-frontend-runtime.js';
+import type {
+  MicroFrontendSharedState,
+  RuntimeMfeState,
+} from './runtime.type.js';
 
 const MicroFrontendContext = createContext<MicroFrontendRuntime | null>(null);
 
@@ -13,6 +16,8 @@ export interface MicroFrontendProviderProps {
   readonly registry: MfeRegistry;
   /** Host-owned shared state exposed to MFEs through runtime hooks. */
   readonly sharedState?: MicroFrontendSharedState;
+  /** Marks this provider subtree as an MFE runtime instead of the host shell. */
+  readonly isMfe?: boolean | undefined;
   /** Child React tree. */
   readonly children: ReactNode;
 }
@@ -26,11 +31,20 @@ export interface MicroFrontendProviderProps {
  * @param props Provider props.
  * @returns React provider element.
  */
-export function MicroFrontendProvider(props: MicroFrontendProviderProps): ReactElement {
+export function MicroFrontendProvider(
+  props: MicroFrontendProviderProps,
+): ReactElement {
+  const runtimeOptions =
+    props.isMfe === undefined ? {} : { isMfe: props.isMfe };
+
   return React.createElement(
     MicroFrontendContext.Provider,
     {
-      value: createMicroFrontendRuntime(props.registry, props.sharedState),
+      value: createMicroFrontendRuntime(
+        props.registry,
+        props.sharedState,
+        runtimeOptions,
+      ),
     },
     props.children,
   );
@@ -48,8 +62,8 @@ export function useMicroFrontend(name: string): RuntimeMfeState {
   if (!runtime) {
     return {
       name,
-      status: "missing",
-      reason: "MicroFrontendProvider is missing.",
+      status: 'missing',
+      reason: 'MicroFrontendProvider is missing.',
     };
   }
 
@@ -73,6 +87,21 @@ export function useMicroFrontendSharedState<
   return runtime.sharedState as TSharedState;
 }
 
+/**
+ * Returns true when the current component is rendered inside an MFE runtime.
+ *
+ * Host apps can pass `isMfe` to MicroFrontendProvider when mounting a feature
+ * module. Components rendered outside the provider, or inside a host-shell
+ * provider, receive `false`.
+ *
+ * @returns Whether the current provider subtree is an MFE.
+ */
+export function useIsMfe(): boolean {
+  const runtime = useContext(MicroFrontendContext);
+
+  return runtime?.isMfe ?? false;
+}
+
 /** Props for MicroFrontendScreen. */
 export interface MicroFrontendScreenProps {
   /** Registered MFE name. */
@@ -90,12 +119,14 @@ export interface MicroFrontendScreenProps {
  * @param props Screen props.
  * @returns React element.
  */
-export function MicroFrontendScreen(props: MicroFrontendScreenProps): ReactElement {
+export function MicroFrontendScreen(
+  props: MicroFrontendScreenProps,
+): ReactElement {
   const mfe = useMicroFrontend(props.name);
 
   return React.createElement(
     React.Fragment,
     null,
-    mfe.status === "ready" ? props.fallback : props.fallback,
+    mfe.status === 'ready' ? props.fallback : props.fallback,
   );
 }

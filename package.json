@@ -11,6 +11,10 @@
   ],
   "scripts": {
     "build": "tsc -b",
+    "format": "biome format . --write",
+    "format:check": "biome format .",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
     "typecheck": "tsc -b --pretty false",
     "test": "bun test ./packages/core/src ./packages/native-contract/src ./packages/hot-updater-adapter/src",
     "clean": "find packages -type d -name dist -prune -exec rm -rf {} +",
@@ -18,7 +22,7 @@
     "pack:all": "bun scripts/release/pack-all.mjs",
     "publish:all:dry-run": "bun scripts/release/publish-all.mjs --dry-run",
     "publish:all": "bun scripts/release/publish-all.mjs",
-    "release:check": "bun run test && bun run typecheck && bun run build && bun run docs:typecheck && bun run docs:build && bun run pack:all",
+    "release:check": "bun run lint && bun run test && bun run typecheck && bun run build && bun run docs:typecheck && bun run docs:build && bun run pack:all",
     "release:dry-run": "bun run release:check && bun run publish:all:dry-run",
     "release:publish": "bun run release:check && bun run publish:all",
     "docs:codegen": "cd apps/docs-site && bun run codegen",
@@ -31,6 +35,7 @@
     "docs:seo-assets": "bun scripts/docs/generate-seo-assets.mjs"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@pandacss/dev": "^1.11.1",
     "@types/node": "^22.15.30",
     "@types/react": "^19.0.0",

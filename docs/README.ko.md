@@ -520,10 +520,12 @@ Host에서 MFE로 session identity, locale, feature flag, tenant, experiment buc
 
 1. Host가 typed snapshot을 `MicroFrontendProvider`에 전달합니다.
 2. MFE가 `useMicroFrontendSharedState<T>()`로 그 snapshot을 읽습니다.
+3. 같은 component가 Host shell과 MFE subtree 양쪽에서 실행될 수 있으면 `useIsMfe()`로 현재 위치를 구분합니다.
 
 ```tsx
 import {
   MicroFrontendProvider,
+  useIsMfe,
   useMicroFrontendSharedState,
 } from "@bunin/react-native-micro-frontend/runtime";
 
@@ -552,25 +554,27 @@ const sharedState: HostSharedState = {
   },
 };
 
-export function HostRoot({ registry }) {
+export function MountedFeatureModule({ registry }) {
   return (
     <MicroFrontendProvider
+      isMfe
       registry={registry}
       sharedState={sharedState}
     >
-      <FeatureShell />
+      <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
 }
 
 export function FeatureModuleHeader() {
+  const isMfe = useIsMfe();
   const host = useMicroFrontendSharedState<HostSharedState>();
   const userId = host.session?.userId ?? "guest";
   const checkoutV2 = host.featureFlags.checkoutV2 ?? false;
 
   return (
     <Text>
-      {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
     </Text>
   );
 }
@@ -580,6 +584,7 @@ export function FeatureModuleHeader() {
 
 - source of truth는 Host에 남깁니다.
 - MFE는 Host store를 직접 import하지 않고 runtime hook으로 전역 상태를 가져옵니다.
+- `useIsMfe()`는 provider 밖이나 Host shell에서는 `false`, Host가 mounted feature subtree에 `isMfe`를 지정하면 `true`를 반환합니다.
 - Host와 MFE가 함께 import할 수 있는 작은 shared contract package 또는 file에 `HostSharedState` type을 둡니다.
 - 변경은 Host command, callback, event로 되돌려 보내는 구조가 안전합니다.
 - 큰 cache, secret, native-only handle은 `sharedState`에 넣지 않습니다.

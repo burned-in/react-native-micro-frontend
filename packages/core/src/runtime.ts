@@ -1,9 +1,9 @@
-import React, { createContext, useContext } from "react";
-import type { ReactElement, ReactNode } from "react";
-import type { MfeManifest, MfeRegistry } from "./domain/mfe-manifest.type.js";
+import type { ReactElement, ReactNode } from 'react';
+import React, { createContext, useContext } from 'react';
+import type { MfeManifest, MfeRegistry } from './domain/mfe-manifest.type.js';
 
 /** Runtime load status for a single MFE. */
-export type RuntimeMfeStatus = "ready" | "loading" | "blocked" | "missing";
+export type RuntimeMfeStatus = 'ready' | 'loading' | 'blocked' | 'missing';
 
 /** Runtime state returned by loader APIs and React hooks. */
 export interface RuntimeMfeState {
@@ -18,10 +18,18 @@ export interface RuntimeMfeState {
 }
 
 /** Source used to initialize the runtime registry. */
-export type RuntimeRegistrySource = MfeRegistry | (() => MfeRegistry | Promise<MfeRegistry>);
+export type RuntimeRegistrySource =
+  | MfeRegistry
+  | (() => MfeRegistry | Promise<MfeRegistry>);
 
 /** Shared host state exposed to MFEs through React context. */
 export type MicroFrontendSharedState = Readonly<Record<string, unknown>>;
+
+/** Runtime environment flags exposed through React hooks. */
+export interface MicroFrontendRuntimeOptions {
+  /** True when the current React tree is executing as an MFE mounted by a host. */
+  readonly isMfe?: boolean | undefined;
+}
 
 /** Runtime facade that can be used outside React for tests or custom hosts. */
 export interface MicroFrontendRuntime {
@@ -29,6 +37,8 @@ export interface MicroFrontendRuntime {
   readonly registry: MfeRegistry;
   /** Shared host-owned state snapshot available to MFEs. */
   readonly sharedState: MicroFrontendSharedState;
+  /** True when the current tree is running as an MFE rather than the host shell. */
+  readonly isMfe: boolean;
   /** Gets MFE state by name. */
   readonly getMfe: (name: string) => RuntimeMfeState;
 }
@@ -39,8 +49,10 @@ export interface MicroFrontendRuntime {
  * @param source Registry object or async loader.
  * @returns Resolved registry.
  */
-export async function resolveRuntimeRegistry(source: RuntimeRegistrySource): Promise<MfeRegistry> {
-  if (typeof source === "function") {
+export async function resolveRuntimeRegistry(
+  source: RuntimeRegistrySource,
+): Promise<MfeRegistry> {
+  if (typeof source === 'function') {
     return await source();
   }
 
@@ -57,23 +69,26 @@ export async function resolveRuntimeRegistry(source: RuntimeRegistrySource): Pro
  * @param name MFE name.
  * @returns Runtime state for the requested MFE.
  */
-export function getRuntimeMfeState(registry: MfeRegistry, name: string): RuntimeMfeState {
+export function getRuntimeMfeState(
+  registry: MfeRegistry,
+  name: string,
+): RuntimeMfeState {
   const manifest = registry.mfes[name];
 
   if (!manifest) {
     return {
       name,
-      status: "missing",
-      reason: "MFE is not registered.",
+      status: 'missing',
+      reason: 'MFE is not registered.',
     };
   }
 
-  if (manifest.status === "blocked") {
+  if (manifest.status === 'blocked') {
     return {
       name,
-      status: "blocked",
+      status: 'blocked',
       manifest,
-      reason: manifest.blockedReason ?? "MFE is blocked.",
+      reason: manifest.blockedReason ?? 'MFE is blocked.',
     };
   }
 
@@ -86,15 +101,15 @@ export function getRuntimeMfeState(registry: MfeRegistry, name: string): Runtime
   if (nativeHashMismatch) {
     return {
       name,
-      status: "blocked",
+      status: 'blocked',
       manifest,
-      reason: "nativeHash mismatch.",
+      reason: 'nativeHash mismatch.',
     };
   }
 
   return {
     name,
-    status: "ready",
+    status: 'ready',
     manifest,
   };
 }
@@ -108,10 +123,12 @@ export function getRuntimeMfeState(registry: MfeRegistry, name: string): Runtime
 export function createMicroFrontendRuntime(
   registry: MfeRegistry,
   sharedState: MicroFrontendSharedState = {},
+  options: MicroFrontendRuntimeOptions = {},
 ): MicroFrontendRuntime {
   return {
     registry,
     sharedState,
+    isMfe: options.isMfe ?? false,
     getMfe: (name) => getRuntimeMfeState(registry, name),
   };
 }
@@ -124,6 +141,8 @@ export interface MicroFrontendProviderProps {
   readonly registry: MfeRegistry;
   /** Host-owned shared state exposed to MFEs through runtime hooks. */
   readonly sharedState?: MicroFrontendSharedState;
+  /** Marks this provider subtree as an MFE runtime instead of the host shell. */
+  readonly isMfe?: boolean | undefined;
   /** Child React tree. */
   readonly children: ReactNode;
 }
@@ -137,11 +156,20 @@ export interface MicroFrontendProviderProps {
  * @param props Provider props.
  * @returns React provider element.
  */
-export function MicroFrontendProvider(props: MicroFrontendProviderProps): ReactElement {
+export function MicroFrontendProvider(
+  props: MicroFrontendProviderProps,
+): ReactElement {
+  const runtimeOptions: MicroFrontendRuntimeOptions =
+    props.isMfe === undefined ? {} : { isMfe: props.isMfe };
+
   return React.createElement(
     MicroFrontendContext.Provider,
     {
-      value: createMicroFrontendRuntime(props.registry, props.sharedState),
+      value: createMicroFrontendRuntime(
+        props.registry,
+        props.sharedState,
+        runtimeOptions,
+      ),
     },
     props.children,
   );
@@ -159,14 +187,13 @@ export function useMicroFrontend(name: string): RuntimeMfeState {
   if (!runtime) {
     return {
       name,
-      status: "missing",
-      reason: "MicroFrontendProvider is missing.",
+      status: 'missing',
+      reason: 'MicroFrontendProvider is missing.',
     };
   }
 
   return runtime.getMfe(name);
 }
-
 
 /**
  * Reads host-owned shared state provided by MicroFrontendProvider.
@@ -178,7 +205,9 @@ export function useMicroFrontend(name: string): RuntimeMfeState {
  *
  * @returns Shared host state snapshot.
  */
-export function useMicroFrontendSharedState<TSharedState extends MicroFrontendSharedState = MicroFrontendSharedState>(): TSharedState {
+export function useMicroFrontendSharedState<
+  TSharedState extends MicroFrontendSharedState = MicroFrontendSharedState,
+>(): TSharedState {
   const runtime = useContext(MicroFrontendContext);
 
   if (!runtime) {
@@ -186,6 +215,21 @@ export function useMicroFrontendSharedState<TSharedState extends MicroFrontendSh
   }
 
   return runtime.sharedState as TSharedState;
+}
+
+/**
+ * Returns true when the current component is rendered inside an MFE runtime.
+ *
+ * Host apps can pass `isMfe` to MicroFrontendProvider when mounting a feature
+ * module. Components rendered outside the provider, or inside a host-shell
+ * provider, receive `false`.
+ *
+ * @returns Whether the current provider subtree is an MFE.
+ */
+export function useIsMfe(): boolean {
+  const runtime = useContext(MicroFrontendContext);
+
+  return runtime?.isMfe ?? false;
 }
 
 /** Props for MicroFrontendScreen. */
@@ -205,10 +249,12 @@ export interface MicroFrontendScreenProps {
  * @param props Screen props.
  * @returns React element.
  */
-export function MicroFrontendScreen(props: MicroFrontendScreenProps): ReactElement {
+export function MicroFrontendScreen(
+  props: MicroFrontendScreenProps,
+): ReactElement {
   const mfe = useMicroFrontend(props.name);
 
-  if (mfe.status !== "ready") {
+  if (mfe.status !== 'ready') {
     return React.createElement(React.Fragment, null, props.fallback);
   }
 

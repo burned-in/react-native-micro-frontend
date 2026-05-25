@@ -1,4 +1,4 @@
-import type { CliPrinter } from "../cli-output.printer.js";
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles commands whose domain services exist but require host-specific project state.
@@ -10,8 +10,15 @@ import type { CliPrinter } from "../cli-output.printer.js";
  * @param printer Output sink.
  * @returns Exit code.
  */
-export function runPlaceholderCommand(command: string, printer: CliPrinter): number {
-  printer.log(`[WARN] rnm ${command} requires an initialized host project and command-specific inputs.`);
-  printer.log("Implemented safety policy: dry-run/verification primitives are available; native patching requires explicit --yes or interactive confirmation in a host app.");
+export function runPlaceholderCommand(
+  command: string,
+  printer: CliPrinter,
+): number {
+  printer.log(
+    `[WARN] rnm ${command} requires an initialized host project and command-specific inputs.`,
+  );
+  printer.log(
+    'Implemented safety policy: dry-run/verification primitives are available; native patching requires explicit --yes or interactive confirmation in a host app.',
+  );
   return 0;
 }

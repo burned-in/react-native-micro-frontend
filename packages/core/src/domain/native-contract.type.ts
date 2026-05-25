@@ -1,5 +1,5 @@
 /** Describes whether a runtime-sensitive React Native switch is enabled, disabled, or undetected. */
-export type NativeRuntimeFlag = "enabled" | "disabled" | "unknown";
+export type NativeRuntimeFlag = 'enabled' | 'disabled' | 'unknown';
 
 /** A dependency declared by package.json that may affect the native binary. */
 export interface NativePackageDependency {
@@ -71,9 +71,16 @@ export interface NativeContract {
 /** A concrete native-contract delta between an MFE and a host app. */
 export interface NativeContractChange {
   /** Native surface where the change was found. */
-  readonly area: "package" | "ios" | "android" | "react-native" | "hermes" | "new-architecture" | "hash";
+  readonly area:
+    | 'package'
+    | 'ios'
+    | 'android'
+    | 'react-native'
+    | 'hermes'
+    | 'new-architecture'
+    | 'hash';
   /** Machine-readable change kind. */
-  readonly kind: "added" | "removed" | "changed" | "mismatch";
+  readonly kind: 'added' | 'removed' | 'changed' | 'mismatch';
   /** Human-readable path or logical key. */
   readonly key: string;
   /** Host-side value. */

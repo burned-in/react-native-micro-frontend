@@ -8,11 +8,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
-    "types": [
-      "node",
-      "react",
-      "react-dom"
-    ]
+    "types": ["node", "react", "react-dom"]
   },
   "include": [
     "pages/**/*.ts",

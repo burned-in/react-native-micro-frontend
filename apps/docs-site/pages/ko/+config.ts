@@ -1,3 +1,3 @@
 export default {
-  lang: "ko",
+  lang: 'ko',
 };

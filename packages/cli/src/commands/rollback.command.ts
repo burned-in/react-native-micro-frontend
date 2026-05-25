@@ -1,7 +1,7 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { restoreBackup } from "@bunin/react-native-micro-frontend-integration";
-import type { CliPrinter } from "../cli-output.printer.js";
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { restoreBackup } from '@bunin/react-native-micro-frontend-integration';
+import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
  * Handles `rnm rollback` by restoring known `.bak` files.
@@ -20,13 +20,13 @@ export function runRollbackCommand(
   printer: CliPrinter,
 ): number {
   const candidates = [
-    "package.json",
-    "metro.config.js",
-    "ios/Podfile",
-    "android/settings.gradle",
-    "android/app/build.gradle",
-    "rnm.registry.json",
-    "rnm.native-contract.json",
+    'package.json',
+    'metro.config.js',
+    'ios/Podfile',
+    'android/settings.gradle',
+    'android/app/build.gradle',
+    'rnm.registry.json',
+    'rnm.native-contract.json',
   ];
 
   const existingBackups = candidates.filter((path) => {
@@ -34,7 +34,7 @@ export function runRollbackCommand(
   });
 
   if (existingBackups.length === 0) {
-    printer.log("No rollback backups found.");
+    printer.log('No rollback backups found.');
     return 0;
   }
 
@@ -43,7 +43,7 @@ export function runRollbackCommand(
   }
 
   if (flags.yes !== true) {
-    printer.error("Use --yes to restore backups in non-interactive mode.");
+    printer.error('Use --yes to restore backups in non-interactive mode.');
     return 1;
   }
 
@@ -56,6 +56,6 @@ export function runRollbackCommand(
     }
   }
 
-  printer.log("[OK] Rollback complete.");
+  printer.log('[OK] Rollback complete.');
   return 0;
 }

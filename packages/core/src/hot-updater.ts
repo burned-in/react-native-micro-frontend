@@ -23,6 +23,9 @@ export type HotUpdaterConfigWithMfe<T extends object> = T & {
  * @param options MFE registry and native contract paths.
  * @returns New config object with MFE metadata attached.
  */
-export function withReactNativeMicroFrontend<T extends object>(baseConfig: T, options: ReactNativeMicroFrontendHotUpdaterOptions): HotUpdaterConfigWithMfe<T> {
+export function withReactNativeMicroFrontend<T extends object>(
+  baseConfig: T,
+  options: ReactNativeMicroFrontendHotUpdaterOptions,
+): HotUpdaterConfigWithMfe<T> {
   return { ...baseConfig, reactNativeMicroFrontend: options };
 }

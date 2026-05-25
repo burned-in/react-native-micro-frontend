@@ -4,7 +4,9 @@
  * @param text Android manifest XML.
  * @returns Unique permission names sorted alphabetically.
  */
-export function parseAndroidManifestPermissions(text: string): readonly string[] {
+export function parseAndroidManifestPermissions(
+  text: string,
+): readonly string[] {
   const permissions = new Set<string>();
   const regex = /<uses-permission[^>]+android:name=["']([^"']+)["'][^>]*>/g;
   for (const match of text.matchAll(regex)) {

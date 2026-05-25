@@ -1,5 +1,5 @@
 /** Supported JavaScript package manager or CLI runtime. */
-export type PackageManagerName = "bun" | "deno" | "npm" | "pnpm" | "yarn";
+export type PackageManagerName = 'bun' | 'deno' | 'npm' | 'pnpm' | 'yarn';
 
 /** Evidence produced while detecting a package manager. */
 export interface PackageManagerDetection {
@@ -17,5 +17,8 @@ export interface PackageManagerDetection {
 export interface PackageManagerCommands {
   readonly executeRnm: readonly string[];
   readonly runScript: (scriptName: string) => readonly string[];
-  readonly installDependencies: (dependencies: readonly string[], dev: boolean) => readonly string[];
+  readonly installDependencies: (
+    dependencies: readonly string[],
+    dev: boolean,
+  ) => readonly string[];
 }

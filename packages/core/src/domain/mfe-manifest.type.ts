@@ -1,11 +1,11 @@
 /** OTA mode for a micro frontend. */
-export type OtaMode = "auto" | "manual" | "disabled";
+export type OtaMode = 'auto' | 'manual' | 'disabled';
 /** Supported OTA providers. */
-export type OtaProvider = "hot-updater" | "none" | "custom";
+export type OtaProvider = 'hot-updater' | 'none' | 'custom';
 /** Native-change strategy for sync and publish. */
-export type NativeChangePolicy = "ask" | "block" | "apply-and-disable-ota";
+export type NativeChangePolicy = 'ask' | 'block' | 'apply-and-disable-ota';
 /** MFE lifecycle status stored in the registry. */
-export type MfeRegistryStatus = "active" | "blocked" | "disabled";
+export type MfeRegistryStatus = 'active' | 'blocked' | 'disabled';
 
 /** Manifest for a single Micro Frontend bundle. */
 export interface MfeManifest {

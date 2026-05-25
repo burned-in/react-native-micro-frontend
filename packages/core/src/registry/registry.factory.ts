@@ -1,5 +1,5 @@
-import type { MfeConfig } from "../domain/config.type.js";
-import type { MfeManifest, MfeRegistry } from "../domain/mfe-manifest.type.js";
+import type { MfeConfig } from '../domain/config.type.js';
+import type { MfeManifest, MfeRegistry } from '../domain/mfe-manifest.type.js';
 
 /**
  * Creates an empty registry object for a host app.
@@ -8,7 +8,9 @@ import type { MfeManifest, MfeRegistry } from "../domain/mfe-manifest.type.js";
  * @returns Registry with schemaVersion 1 and no MFEs.
  */
 export function createEmptyRegistry(hostNativeHash?: string): MfeRegistry {
-  return hostNativeHash ? { schemaVersion: 1, hostNativeHash, mfes: {} } : { schemaVersion: 1, mfes: {} };
+  return hostNativeHash
+    ? { schemaVersion: 1, hostNativeHash, mfes: {} }
+    : { schemaVersion: 1, mfes: {} };
 }
 
 /**
@@ -20,14 +22,21 @@ export function createEmptyRegistry(hostNativeHash?: string): MfeRegistry {
  * @param hostPath Optional path from the host root to the MFE root.
  * @returns Registry-ready MFE manifest.
  */
-export function createMfeManifest(config: MfeConfig, hostPath?: string): MfeManifest {
+export function createMfeManifest(
+  config: MfeConfig,
+  hostPath?: string,
+): MfeManifest {
   return {
     name: config.name,
     version: config.version,
     entry: config.entry,
-    path: config.path ?? hostPath ?? ".",
-    ota: { enabled: config.ota.enabled, mode: config.ota.mode, provider: config.ota.provider ?? "hot-updater" },
+    path: config.path ?? hostPath ?? '.',
+    ota: {
+      enabled: config.ota.enabled,
+      mode: config.ota.mode,
+      provider: config.ota.provider ?? 'hot-updater',
+    },
     nativeChangePolicy: config.nativeChangePolicy,
-    status: "active",
+    status: 'active',
   };
 }
