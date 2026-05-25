@@ -1,0 +1,12 @@
+{
+  "name": "@bunin/react-native-micro-frontend-docs-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "codegen": "XDG_CONFIG_HOME=../../.cache/panda panda codegen --silent && XDG_CONFIG_HOME=../../.cache/panda panda cssgen --silent",
+    "dev": "XDG_CONFIG_HOME=../../.cache/panda panda codegen --silent && XDG_CONFIG_HOME=../../.cache/panda panda cssgen --silent && vike dev",
+    "build": "XDG_CONFIG_HOME=../../.cache/panda panda codegen --silent && XDG_CONFIG_HOME=../../.cache/panda panda cssgen --silent && vike build",
+    "preview": "vike preview",
+    "typecheck": "XDG_CONFIG_HOME=../../.cache/panda panda codegen --silent && XDG_CONFIG_HOME=../../.cache/panda panda cssgen --silent && tsc -p tsconfig.json --noEmit"
+  }
+}

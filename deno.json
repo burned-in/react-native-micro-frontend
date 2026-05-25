@@ -1,0 +1,19 @@
+{
+  "tasks": {
+    "build": "bun run build",
+    "typecheck": "bun run typecheck",
+    "test": "bun run test",
+    "version:all": "bun scripts/release/version-all.mjs",
+    "pack:all": "bun scripts/release/pack-all.mjs",
+    "publish:all:dry-run": "bun scripts/release/publish-all.mjs --dry-run",
+    "publish:all": "bun scripts/release/publish-all.mjs",
+    "release:check": "bun run release:check",
+    "release:dry-run": "bun run release:dry-run",
+    "release:publish": "bun run release:publish",
+    "docs:codegen": "bun run docs:codegen",
+    "docs:dev": "bun run docs:dev",
+    "docs:typecheck": "bun run docs:typecheck",
+    "docs:build": "bun run docs:build",
+    "docs:preview": "bun run docs:preview"
+  }
+}

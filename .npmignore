@@ -1,0 +1,16 @@
+# This repository root is private, but keep accidental root packs small.
+node_modules/
+packages/
+examples/
+docs/
+types/
+.omx/
+.idea/
+.vscode/
+*.tsbuildinfo
+*.tgz
+coverage/
+apps/
+bun.lock
+.npm-pack/
+.cache/

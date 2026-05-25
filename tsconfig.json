@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/native-contract" },
+    { "path": "packages/hot-updater-adapter" },
+    { "path": "packages/metro-adapter" },
+    { "path": "packages/integration" },
+    { "path": "packages/react-native-runtime" },
+    { "path": "packages/config" },
+    { "path": "packages/cli" }
+  ]
+}

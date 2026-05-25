@@ -1,0 +1,30 @@
+{
+  "name": "@bunin/react-native-micro-frontend-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "bin": {
+    "rnm": "dist/bin/rnm.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@bunin/react-native-micro-frontend": "0.1.0",
+    "@bunin/react-native-micro-frontend-native-contract": "0.1.0",
+    "@bunin/react-native-micro-frontend-hot-updater-adapter": "0.1.0",
+    "@bunin/react-native-micro-frontend-metro-adapter": "0.1.0",
+    "@bunin/react-native-micro-frontend-integration": "0.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

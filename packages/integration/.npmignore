@@ -1,0 +1,14 @@
+# Source and tests are compiled before publish.
+src/
+bin/*.ts
+**/*.test.ts
+**/*.spec.ts
+
+# TypeScript project files
+tsconfig.json
+*.tsbuildinfo
+
+# Local outputs and package artifacts
+coverage/
+*.tgz
+node_modules/

@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
+    "paths": {
+      "@bunin/react-native-micro-frontend": [
+        "packages/core/src/index.ts"
+      ],
+      "@bunin/react-native-micro-frontend/hot-updater": [
+        "packages/core/src/hot-updater.ts"
+      ],
+      "@bunin/react-native-micro-frontend/runtime": [
+        "packages/core/src/runtime.ts"
+      ],
+      "@bunin/react-native-micro-frontend-native-contract": [
+        "packages/native-contract/src/index.ts"
+      ],
+      "@bunin/react-native-micro-frontend-hot-updater-adapter": [
+        "packages/hot-updater-adapter/src/index.ts"
+      ],
+      "@bunin/react-native-micro-frontend-metro-adapter": [
+        "packages/metro-adapter/src/index.ts"
+      ],
+      "@bunin/react-native-micro-frontend-integration": [
+        "packages/integration/src/index.ts"
+      ],
+      "@bunin/react-native-micro-frontend-config": [
+        "packages/config/src/index.ts"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ]
+  }
+}

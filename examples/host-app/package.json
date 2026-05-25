@@ -1,0 +1,9 @@
+{
+  "name": "example-host-app",
+  "private": true,
+  "dependencies": {
+    "react": "19.0.0",
+    "react-native": "0.76.0",
+    "@bunin/react-native-micro-frontend": "workspace:*"
+  }
+}
