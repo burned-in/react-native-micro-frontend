@@ -4,15 +4,15 @@ This page lists the public options used by the Host App, each MFE project, the r
 
 Use this rule when you are unsure where a value belongs:
 
-- Host-wide safety policy belongs in `react-native-micro-frontend.config.ts`.
+- Host-wide safety policy belongs in `react-native-micro-frontend.config.ts`, `.mjs`, `.cjs`, or `.json`.
 - Runtime registration belongs in `rnm.registry.json`.
-- One module's build assumptions belong in `mfe.config.ts`.
+- One module's build assumptions belong in `mfe.config.ts / .mjs / .cjs`.
 - Render-time access belongs in `MicroFrontendProvider` and hooks.
 
 ## Ownership map
 
 ```txt
-host-app/react-native-micro-frontend.config.ts
+host-app/react-native-micro-frontend.config.ts / .mjs / .cjs / .json
   reactNative
   ota
   nativeChangePolicy
@@ -32,7 +32,7 @@ host-app/rnm.registry.json
   mfes[name].otaBundleUrl
   mfes[name].bundleArchiveUrl
 
-mfe-feature/mfe.config.ts
+mfe-feature/mfe.config.ts / .mjs / .cjs
   name
   version
   entry
@@ -47,7 +47,7 @@ mfe-feature/mfe.config.ts
 
 ## Host config options
 
-File: `host-app/react-native-micro-frontend.config.ts`
+File: `host-app/react-native-micro-frontend.config.ts`, `.mjs`, `.cjs`, or `.json`
 
 | Option | Values | Meaning |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ File: `host-app/react-native-micro-frontend.config.ts`
 | `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | OTA provider integration selected by the Host. |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | How publish commands are produced or gated. |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | How to handle an existing Hot Updater config. |
-| `ota.existingHotUpdater.configPath` | `string` | Optional path to `hot-updater.config.ts` or `.js`. |
+| `ota.existingHotUpdater.configPath` | `string` | Optional path to `hot-updater.config.ts`, `.mjs`, `.cjs`, or `.js`. |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | What to do when native changes are detected. |
 | `packageManager.supported` | `("bun" \| "deno" \| "npm" \| "pnpm" \| "yarn")[]` | Package managers allowed in Host/MFE workflows. |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | How commands pick a package manager. |
@@ -71,7 +71,9 @@ File: `host-app/react-native-micro-frontend.config.ts`
 
 ## MFE config options
 
-File: `mfe-feature/mfe.config.ts`
+File: `mfe-feature/mfe.config.ts`, `mfe-feature/mfe.config.mjs`, or `mfe-feature/mfe.config.cjs`
+
+`rnm bundle` uses Bun for JS/TS/CJS/MJS config loading.
 
 | Option | Values | Meaning |
 | --- | --- | --- |

@@ -22,6 +22,8 @@ export function runRollbackCommand(
   const candidates = [
     'package.json',
     'metro.config.js',
+    'metro.config.cjs',
+    'metro.config.mjs',
     'ios/Podfile',
     'android/settings.gradle',
     'android/app/build.gradle',

@@ -201,7 +201,7 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
       },
     ],
     configs: [
-      'Host react-native-micro-frontend.config.ts package.sync, ios.pods, android.integration',
+      'Host react-native-micro-frontend.config.ts/.mjs/.cjs package.sync, ios.pods, android.integration',
       'Registry rnm.registry.json for MFE path resolution',
       'Generated native include files under ios/ and android/',
     ],
@@ -248,6 +248,10 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
         description: 'Update the host registry bundleArchiveUrl after copying.',
       },
       watcherOption,
+    ],
+    configs: [
+      'MFE defaults: mfe.config.ts, mfe.config.mjs, mfe.config.cjs, or mfe.config.json',
+      'Optional Host registry update: rnm.registry.json bundleArchiveUrl',
     ],
   },
   build: {

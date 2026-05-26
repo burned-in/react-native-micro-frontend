@@ -4,15 +4,15 @@ Host App, 각 MFE project, runtime registry, runtime API에서 사용하는 공�
 
 헷갈릴 때는 아래 기준으로 나누면 됩니다.
 
-- Host 전체 safety policy는 `react-native-micro-frontend.config.ts`에 둡니다.
+- Host 전체 safety policy는 `react-native-micro-frontend.config.ts`, `.mjs`, `.cjs`, 또는 `.json`에 둡니다.
 - Runtime 등록 정보는 `rnm.registry.json`에 둡니다.
-- 한 module의 build assumption은 `mfe.config.ts`에 둡니다.
+- 한 module의 build assumption은 `mfe.config.ts / .mjs / .cjs`에 둡니다.
 - Render-time 접근은 `MicroFrontendProvider`와 hooks에서 처리합니다.
 
 ## 소유권 지도
 
 ```txt
-host-app/react-native-micro-frontend.config.ts
+host-app/react-native-micro-frontend.config.ts / .mjs / .cjs / .json
   reactNative
   ota
   nativeChangePolicy
@@ -32,7 +32,7 @@ host-app/rnm.registry.json
   mfes[name].otaBundleUrl
   mfes[name].bundleArchiveUrl
 
-mfe-feature/mfe.config.ts
+mfe-feature/mfe.config.ts / .mjs / .cjs
   name
   version
   entry
@@ -47,7 +47,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 
 ## Host config 옵션
 
-파일: `host-app/react-native-micro-frontend.config.ts`
+파일: `host-app/react-native-micro-frontend.config.ts`, `.mjs`, `.cjs`, 또는 `.json`
 
 | 옵션 | 값 | 의미 |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 | `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Host가 사용할 OTA provider integration입니다. |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | publish command를 자동 생성할지, 수동 gate로 둘지, 비활성화할지 정합니다. |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | 기존 Hot Updater config 처리 방식입니다. |
-| `ota.existingHotUpdater.configPath` | `string` | 선택 사항. `hot-updater.config.ts` 또는 `.js` 경로입니다. |
+| `ota.existingHotUpdater.configPath` | `string` | 선택 사항. `hot-updater.config.ts`, `.mjs`, `.cjs` 또는 `.js` 경로입니다. |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | native 변경 감지 시 처리 방식입니다. |
 | `packageManager.supported` | `("bun" \| "deno" \| "npm" \| "pnpm" \| "yarn")[]` | Host/MFE workflow에서 허용할 package manager입니다. |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | command가 package manager를 고르는 방식입니다. |
@@ -71,7 +71,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 
 ## MFE config 옵션
 
-파일: `mfe-feature/mfe.config.ts`
+파일: `mfe-feature/mfe.config.ts / .mjs / .cjs`
 
 | 옵션 | 값 | 의미 |
 | --- | --- | --- |

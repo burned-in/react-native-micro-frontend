@@ -4,15 +4,15 @@
 
 値をどこに置くか迷った場合は、次の基準で分けます。
 
-- Host 全体の safety policy は `react-native-micro-frontend.config.ts` に置きます。
+- Host 全体の safety policy は `react-native-micro-frontend.config.ts`、`.mjs`、`.cjs`、または `.json` に置きます。
 - Runtime registration は `rnm.registry.json` に置きます。
-- 1 module の build assumptions は `mfe.config.ts` に置きます。
+- 1 module の build assumptions は `mfe.config.ts / .mjs / .cjs` に置きます。
 - Render-time access は `MicroFrontendProvider` と hooks で扱います。
 
 ## Ownership map
 
 ```txt
-host-app/react-native-micro-frontend.config.ts
+host-app/react-native-micro-frontend.config.ts / .mjs / .cjs / .json
   reactNative
   ota
   nativeChangePolicy
@@ -32,7 +32,7 @@ host-app/rnm.registry.json
   mfes[name].otaBundleUrl
   mfes[name].bundleArchiveUrl
 
-mfe-feature/mfe.config.ts
+mfe-feature/mfe.config.ts / .mjs / .cjs
   name
   version
   entry
@@ -47,7 +47,7 @@ Host config の `mfes` は通常空にします。Runtime registration は `rnm 
 
 ## Host config options
 
-File: `host-app/react-native-micro-frontend.config.ts`
+File: `host-app/react-native-micro-frontend.config.ts`, `.mjs`, `.cjs`, or `.json`
 
 | Option | Values | Meaning |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ File: `host-app/react-native-micro-frontend.config.ts`
 | `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Host が選択する OTA provider integration。 |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | publish command を生成または gate する方式。 |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | 既存 Hot Updater config の扱い。 |
-| `ota.existingHotUpdater.configPath` | `string` | 任意。`hot-updater.config.ts` または `.js` の path。 |
+| `ota.existingHotUpdater.configPath` | `string` | 任意。`hot-updater.config.ts`、`.mjs`、`.cjs` または `.js` の path。 |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | native changes が検出された時の処理。 |
 | `packageManager.supported` | `("bun" \| "deno" \| "npm" \| "pnpm" \| "yarn")[]` | Host/MFE workflows で許可する package managers。 |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | command が package manager を選ぶ方式。 |
@@ -71,7 +71,7 @@ File: `host-app/react-native-micro-frontend.config.ts`
 
 ## MFE config options
 
-File: `mfe-feature/mfe.config.ts`
+File: `mfe-feature/mfe.config.ts / .mjs / .cjs`
 
 | Option | Values | Meaning |
 | --- | --- | --- |

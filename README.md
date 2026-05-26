@@ -37,7 +37,10 @@ It does **not** replace Hot Updater. Hot Updater remains the OTA delivery engine
 | Bundle archive          | `rnm bundle` runs React Native bundling and archives only `index.bundle`, Metro `assets/`, and `manifest.json` for Host copy/CDN delivery.                                        |
 | Hot Updater adapter     | Reuses existing Hot Updater deployments instead of replacing them.                                                                                                                |
 | Package manager support | Supports Bun, npm, pnpm, Yarn, and Deno for consumer workflows.                                                                                                                   |
-| Expo support          | Supports Expo managed, prebuild, and bare/prebuilt Host Apps; the watcher can generate an Expo config plugin when native folders do not exist yet.                                  |
+| Expo support           | Supports Expo managed, prebuild, and bare/prebuilt Host Apps; `examples/expo` shows EAS Update plus Bun-loaded `mfe.config.mjs` / `.cjs` support.                                |
+| CJS/MJS package output | Every published package exposes Bun-built ESM (`dist/mjs/*.mjs`) and CommonJS (`dist/cjs/*.cjs`) entry points.                                                                       |
+
+Host/MFE config files can use TypeScript, MJS, CJS, or JSON variants. Metro and Hot Updater config detection also recognizes `.mjs` and `.cjs`.
 
 ## Quick start
 

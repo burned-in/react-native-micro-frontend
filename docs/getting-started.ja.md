@@ -9,12 +9,12 @@ React Native MFE 構成は通常 2 つの project で構成します。
 
 ```txt
 host-app/
-  react-native-micro-frontend.config.ts  # Host policy
+  react-native-micro-frontend.config.ts / .mjs / .cjs  # Host policy
   rnm.registry.json                      # runtime MFE registry
 
 mfe-feature/
   src/index.tsx                          # MFE default component entry
-  mfe.config.ts                          # MFE-local assumptions
+  mfe.config.ts / .mjs / .cjs                      # MFE-local assumptions
 ```
 
 まず次の model で理解してください。
@@ -23,7 +23,7 @@ mfe-feature/
 | --- | --- |
 | Host App | install 済み native binary、navigation、fallback UI、shared state、実際の bundle loader を所有します。 |
 | MFE | 機能を独立した JavaScript bundle として配布し、root component を 1 つ default export します。 |
-| `react-native-micro-frontend.config.ts` | Host policy: OTA provider、package manager、native-change policy、iOS/Android integration mode。 |
+| `react-native-micro-frontend.config.ts` / `.mjs` / `.cjs` | Host policy: OTA provider、package manager、native-change policy、iOS/Android integration mode。 |
 | `rnm.registry.json` | `rnm add` が生成する runtime registry。Host がどの MFE を知っていて、entry file がどこにあるかを示します。 |
 | runtime hooks | Host loader が render する前に missing、blocked、native-incompatible MFE を止める safety gate です。 |
 
@@ -41,7 +41,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## 2. Host policy を設定する
 
-`react-native-micro-frontend.config.ts` は Host policy を記述します。通常の runtime module registration は `rnm add` が生成する `rnm.registry.json` に置くため、Host config の `mfes` は空にします。
+`react-native-micro-frontend.config.ts`、`.mjs`、または `.cjs` は Host policy を記述します。通常の runtime module registration は `rnm add` が生成する `rnm.registry.json` に置くため、Host config の `mfes` は空にします。
 
 ```ts
 import { defineReactNativeMicroFrontendConfig } from "@bunin/react-native-micro-frontend";

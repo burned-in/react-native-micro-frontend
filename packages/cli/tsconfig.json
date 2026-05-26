@@ -21,6 +21,9 @@
     },
     {
       "path": "../metro-adapter"
+    },
+    {
+      "path": "../config"
     }
   ],
   "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]

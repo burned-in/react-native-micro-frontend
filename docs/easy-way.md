@@ -77,7 +77,7 @@ If verification fails because native assumptions changed, ship a store release i
 
 ## 4. Expo — managed or prebuild Host Apps
 
-Expo Host Apps are supported. Use the same Generic, Bundle, or OTA menu, then let the RNM integration watcher handle native additions. When the MFE is registered with `--ota-provider expo`, `rnm add` also shows and can apply missing Host packages such as `expo` and `expo-updates`.
+Expo Host Apps are supported. Use the same Generic, Bundle, or OTA menu, then let the RNM integration watcher handle native additions. See `examples/expo` for an Expo Host plus `mfe.config.mjs` sample; `mfe.config.cjs` is also supported through Bun. When the MFE is registered with `--ota-provider expo`, `rnm add` also shows and can apply missing Host packages such as `expo` and `expo-updates`.
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature

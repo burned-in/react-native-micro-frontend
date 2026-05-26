@@ -60,12 +60,16 @@ export function analyzeHostProject(root: string): HostProjectAnalysis {
     babelConfigDetected: [
       'babel.config.js',
       'babel.config.cjs',
+      'babel.config.mjs',
       'babel.config.json',
     ].some((file) => existsSync(join(root, file))),
     hotUpdaterDetected:
-      ['hot-updater.config.ts', 'hot-updater.config.js'].some((file) =>
-        existsSync(join(root, file)),
-      ) ||
+      [
+        'hot-updater.config.ts',
+        'hot-updater.config.mjs',
+        'hot-updater.config.cjs',
+        'hot-updater.config.js',
+      ].some((file) => existsSync(join(root, file))) ||
       Boolean(
         dependencies['@hot-updater/react-native'] ||
           dependencies['hot-updater'],

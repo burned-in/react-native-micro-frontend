@@ -41,12 +41,13 @@
     },
     "packages/cli": {
       "name": "@bunin/react-native-micro-frontend-cli",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "bin": {
         "rnm": "dist/bin/rnm.js",
       },
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
+        "@bunin/react-native-micro-frontend-config": "workspace:*",
         "@bunin/react-native-micro-frontend-hot-updater-adapter": "workspace:*",
         "@bunin/react-native-micro-frontend-integration": "workspace:*",
         "@bunin/react-native-micro-frontend-metro-adapter": "workspace:*",
@@ -55,14 +56,14 @@
     },
     "packages/config": {
       "name": "@bunin/react-native-micro-frontend-config",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@bunin/react-native-micro-frontend",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "peerDependencies": {
         "react": "*",
         "react-native": ">=0.70.0",
@@ -74,35 +75,35 @@
     },
     "packages/hot-updater-adapter": {
       "name": "@bunin/react-native-micro-frontend-hot-updater-adapter",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/integration": {
       "name": "@bunin/react-native-micro-frontend-integration",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/metro-adapter": {
       "name": "@bunin/react-native-micro-frontend-metro-adapter",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/native-contract": {
       "name": "@bunin/react-native-micro-frontend-native-contract",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/react-native-runtime": {
       "name": "@bunin/react-native-micro-frontend-runtime",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bunin/react-native-micro-frontend": "workspace:*",
       },

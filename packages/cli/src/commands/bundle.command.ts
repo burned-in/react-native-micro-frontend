@@ -13,6 +13,10 @@ import type {
   MfeRegistry,
 } from '@bunin/react-native-micro-frontend';
 import { createEmptyRegistry } from '@bunin/react-native-micro-frontend';
+import {
+  formatConfigPath,
+  loadMfeConfigFile,
+} from '@bunin/react-native-micro-frontend-config';
 import type { CliPrinter } from '../cli-output.printer.js';
 
 interface BundleTarget {
@@ -46,7 +50,7 @@ interface BundleManifest {
  * packaging only the runtime bundle, Metro assets, and bundle manifest.
  *
  * @param root Project root where the MFE app command is executed.
- * @param name Optional MFE name. Defaults to mfe.config.ts or package.json.
+ * @param name Optional MFE name. Defaults to mfe.config.{ts,mjs,cjs} or package.json.
  * @param flags CLI flags for platform, entry, output, and host copy.
  * @param printer Output sink.
  * @returns Exit code.
@@ -58,8 +62,18 @@ export function runBundleCommand(
   printer: CliPrinter,
 ): number {
   const platforms = platformFlags(flags.platform);
+  const mfeConfigResult = readMfeConfig(root);
+
+  if (!mfeConfigResult.ok) {
+    printer.error(
+      `[ERROR] Failed to load ${formatConfigPath(root, mfeConfigResult.error.path)}: ${mfeConfigResult.error.message}`,
+    );
+    return 1;
+  }
+
+  const mfeConfig = mfeConfigResult.value;
   const resolvedName =
-    name ?? stringFlag(flags.name) ?? readMfeConfigString(root, 'name');
+    name ?? stringFlag(flags.name) ?? readConfigString(mfeConfig, 'name');
 
   if (!resolvedName) {
     printer.error(
@@ -70,12 +84,12 @@ export function runBundleCommand(
 
   const version =
     stringFlag(flags.version) ??
-    readMfeConfigString(root, 'version') ??
+    readConfigString(mfeConfig, 'version') ??
     readPackageJsonString(root, 'version') ??
     '0.0.0';
   const entryFile =
     stringFlag(flags.entry) ??
-    readMfeConfigString(root, 'entry') ??
+    readConfigString(mfeConfig, 'entry') ??
     './src/index.tsx';
   const dev = flags.dev === true;
   const hostRoot = stringFlag(flags.host);
@@ -350,20 +364,23 @@ function platformFlags(
   return ['ios'];
 }
 
-function readMfeConfigString(
-  root: string,
+function readMfeConfig(root: string) {
+  return loadMfeConfigFile(root);
+}
+
+function readConfigString(
+  config:
+    | {
+        readonly name?: unknown;
+        readonly version?: unknown;
+        readonly entry?: unknown;
+      }
+    | undefined,
   key: 'name' | 'version' | 'entry',
 ): string | undefined {
-  const configPath = join(root, 'mfe.config.ts');
+  const value = config?.[key];
 
-  if (!existsSync(configPath)) {
-    return undefined;
-  }
-
-  const source = readFileSync(configPath, 'utf8');
-  const match = source.match(new RegExp(`${key}\\s*:\\s*['"]([^'"]+)['"]`));
-
-  return match?.[1];
+  return typeof value === 'string' ? value : undefined;
 }
 
 function readPackageJsonString(

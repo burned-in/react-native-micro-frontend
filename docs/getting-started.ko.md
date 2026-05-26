@@ -9,12 +9,12 @@ React Native MFE 구성은 보통 두 project로 나뉩니다.
 
 ```txt
 host-app/
-  react-native-micro-frontend.config.ts  # Host policy
+  react-native-micro-frontend.config.ts / .mjs / .cjs  # Host policy
   rnm.registry.json                      # runtime MFE registry
 
 mfe-feature/
   src/index.tsx                          # MFE default component entry
-  mfe.config.ts                          # MFE-local assumptions
+  mfe.config.ts / .mjs / .cjs                      # MFE-local assumptions
 ```
 
 먼저 이렇게 이해하면 됩니다.
@@ -23,7 +23,7 @@ mfe-feature/
 | --- | --- |
 | Host App | 설치된 native binary, navigation, fallback UI, shared state, 실제 bundle loader를 소유합니다. |
 | MFE | 기능을 별도 JavaScript bundle로 배포하고 root component 하나를 default export합니다. |
-| `react-native-micro-frontend.config.ts` | OTA provider, package manager, native-change policy, iOS/Android integration mode 같은 Host policy입니다. |
+| `react-native-micro-frontend.config.ts` / `.mjs` / `.cjs` | OTA provider, package manager, native-change policy, iOS/Android integration mode 같은 Host policy입니다. |
 | `rnm.registry.json` | `rnm add`가 만드는 runtime registry입니다. Host가 어떤 MFE를 알고 있고 entry file이 어디인지 알게 합니다. |
 | runtime hooks | Host loader가 렌더링하기 전에 missing, blocked, native-incompatible MFE를 막는 safety gate입니다. |
 
@@ -41,7 +41,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## 2. Host policy 설정
 
-`react-native-micro-frontend.config.ts`는 Host 정책을 설명합니다. 일반적인 runtime module 등록은 `rnm add`가 만드는 `rnm.registry.json`에 두고, Host config의 `mfes`는 비워 둡니다.
+`react-native-micro-frontend.config.ts`, `.mjs`, 또는 `.cjs`는 Host 정책을 설명합니다. 일반적인 runtime module 등록은 `rnm add`가 만드는 `rnm.registry.json`에 두고, Host config의 `mfes`는 비워 둡니다.
 
 ```ts
 import { defineReactNativeMicroFrontendConfig } from "@bunin/react-native-micro-frontend";

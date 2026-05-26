@@ -1,6 +1,6 @@
 {
   "name": "@bunin/react-native-micro-frontend-cli",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": "bunin contributors",
   "homepage": "https://rnmfe.bunin.app/",
   "repository": {
@@ -8,12 +8,13 @@
     "url": "git+https://github.com/burned-in/react-native-micro-frontend.git"
   },
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "import": "./dist/mjs/index.mjs",
+      "require": "./dist/cjs/index.cjs"
     }
   },
   "bin": {
@@ -25,13 +26,15 @@
   ],
   "dependencies": {
     "@bunin/react-native-micro-frontend": "workspace:*",
-    "@bunin/react-native-micro-frontend-native-contract": "workspace:*",
+    "@bunin/react-native-micro-frontend-config": "workspace:*",
     "@bunin/react-native-micro-frontend-hot-updater-adapter": "workspace:*",
+    "@bunin/react-native-micro-frontend-integration": "workspace:*",
     "@bunin/react-native-micro-frontend-metro-adapter": "workspace:*",
-    "@bunin/react-native-micro-frontend-integration": "workspace:*"
+    "@bunin/react-native-micro-frontend-native-contract": "workspace:*"
   },
   "publishConfig": {
     "access": "public"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "module": "./dist/mjs/index.mjs"
 }

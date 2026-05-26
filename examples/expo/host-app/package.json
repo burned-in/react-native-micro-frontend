@@ -1,0 +1,20 @@
+{
+  "name": "example-expo-host-app",
+  "private": true,
+  "author": "bunin contributors",
+  "homepage": "https://rnmfe.bunin.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burned-in/react-native-micro-frontend.git"
+  },
+  "dependencies": {
+    "@bunin/react-native-micro-frontend": "workspace:*",
+    "expo": "~52.0.0",
+    "expo-updates": "~0.27.0",
+    "react": "18.3.1",
+    "react-native": "0.76.0"
+  },
+  "devDependencies": {
+    "@bunin/react-native-micro-frontend-cli": "workspace:*"
+  }
+}

@@ -26,9 +26,12 @@ export function detectHotUpdater(root: string): HotUpdaterDetection {
         scripts?: Record<string, string>;
       })
     : {};
-  const configPath = ['hot-updater.config.ts', 'hot-updater.config.js'].find(
-    (file) => existsSync(join(root, file)),
-  );
+  const configPath = [
+    'hot-updater.config.ts',
+    'hot-updater.config.mjs',
+    'hot-updater.config.cjs',
+    'hot-updater.config.js',
+  ].find((file) => existsSync(join(root, file)));
   const configText = configPath
     ? readFileSync(join(root, configPath), 'utf8')
     : '';

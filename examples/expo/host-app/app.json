@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "RNM Expo Host",
+    "slug": "rnm-expo-host",
+    "scheme": "rnmexpo",
+    "plugins": ["./rnm.expo-plugin.cjs"],
+    "updates": {
+      "url": "https://u.expo.dev/00000000-0000-0000-0000-000000000000"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}

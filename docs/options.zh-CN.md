@@ -4,15 +4,15 @@
 
 不确定某个值放在哪里时，请使用下面的规则：
 
-- Host 级 safety policy 放在 `react-native-micro-frontend.config.ts`。
+- Host 级 safety policy 放在 `react-native-micro-frontend.config.ts`、`.mjs`、`.cjs` 或 `.json`。
 - Runtime registration 放在 `rnm.registry.json`。
-- 单个 module 的 build assumptions 放在 `mfe.config.ts`。
+- 单个 module 的 build assumptions 放在 `mfe.config.ts / .mjs / .cjs`。
 - Render-time access 通过 `MicroFrontendProvider` 和 hooks 处理。
 
 ## 所属关系图
 
 ```txt
-host-app/react-native-micro-frontend.config.ts
+host-app/react-native-micro-frontend.config.ts / .mjs / .cjs / .json
   reactNative
   ota
   nativeChangePolicy
@@ -32,7 +32,7 @@ host-app/rnm.registry.json
   mfes[name].otaBundleUrl
   mfes[name].bundleArchiveUrl
 
-mfe-feature/mfe.config.ts
+mfe-feature/mfe.config.ts / .mjs / .cjs
   name
   version
   entry
@@ -47,7 +47,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 
 ## Host config 选项
 
-文件：`host-app/react-native-micro-frontend.config.ts`
+文件：`host-app/react-native-micro-frontend.config.ts`、`.mjs`、`.cjs` 或 `.json`
 
 | 选项 | 值 | 含义 |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Host 选择的 OTA provider integration。 |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | publish command 的生成或 gate 方式。 |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | 如何处理已有 Hot Updater config。 |
-| `ota.existingHotUpdater.configPath` | `string` | 可选。`hot-updater.config.ts` 或 `.js` 路径。 |
+| `ota.existingHotUpdater.configPath` | `string` | 可选。`hot-updater.config.ts`、`.mjs`、`.cjs` 或 `.js` 路径。 |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | 检测到 native change 时的处理方式。 |
 | `packageManager.supported` | `("bun" \| "deno" \| "npm" \| "pnpm" \| "yarn")[]` | Host/MFE workflows 中允许使用的 package managers。 |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | command 选择 package manager 的方式。 |
@@ -71,7 +71,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 
 ## MFE config 选项
 
-文件：`mfe-feature/mfe.config.ts`
+文件：`mfe-feature/mfe.config.ts / .mjs / .cjs`
 
 | 选项 | 值 | 含义 |
 | --- | --- | --- |

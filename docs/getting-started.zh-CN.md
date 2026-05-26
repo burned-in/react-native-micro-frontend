@@ -9,12 +9,12 @@ React Native MFE 通常由两个 project 组成：
 
 ```txt
 host-app/
-  react-native-micro-frontend.config.ts  # Host policy
+  react-native-micro-frontend.config.ts / .mjs / .cjs  # Host policy
   rnm.registry.json                      # runtime MFE registry
 
 mfe-feature/
   src/index.tsx                          # MFE default component entry
-  mfe.config.ts                          # MFE-local assumptions
+  mfe.config.ts / .mjs / .cjs                      # MFE-local assumptions
 ```
 
 可以先按这个模型理解：
@@ -23,7 +23,7 @@ mfe-feature/
 | --- | --- |
 | Host App | 拥有已安装的 native binary、navigation、fallback UI、shared state 和真实 bundle loader。 |
 | MFE | 以独立 JavaScript bundle 发布功能，并 default export 一个 root component。 |
-| `react-native-micro-frontend.config.ts` | Host policy：OTA provider、package manager、native-change policy、iOS/Android integration mode。 |
+| `react-native-micro-frontend.config.ts` / `.mjs` / `.cjs` | Host policy：OTA provider、package manager、native-change policy、iOS/Android integration mode。 |
 | `rnm.registry.json` | 由 `rnm add` 生成的 runtime registry；告诉 Host 哪些 MFE 存在以及 entry file 在哪里。 |
 | runtime hooks | 在 Host loader 渲染前，阻止 missing、blocked 或 native-incompatible MFE。 |
 
@@ -41,7 +41,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## 2. 配置 Host policy
 
-`react-native-micro-frontend.config.ts` 描述 Host policy。常规 runtime module registration 放在 `rnm add` 生成的 `rnm.registry.json` 中，因此 Host config 里的 `mfes` 保持为空。
+`react-native-micro-frontend.config.ts`、`.mjs` 或 `.cjs` 描述 Host policy。常规 runtime module registration 放在 `rnm add` 生成的 `rnm.registry.json` 中，因此 Host config 里的 `mfes` 保持为空。
 
 ```ts
 import { defineReactNativeMicroFrontendConfig } from "@bunin/react-native-micro-frontend";

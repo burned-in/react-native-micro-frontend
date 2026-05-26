@@ -54,7 +54,7 @@ rnm all mfe-feature --yes
 
 ### Expo support
 
-The same CLI commands support Expo managed, prebuild, and bare/prebuilt Host Apps. In bare/prebuilt projects, RNM writes generated Podfile and Gradle include files. In managed projects without `ios/` or `android/`, RNM writes `rnm.expo-plugin.cjs` and `rnm.expo-integration.json`, then adds the plugin to `app.json` when possible.
+The same CLI commands support Expo managed, prebuild, and bare/prebuilt Host Apps. See `examples/expo` for an Expo Host and MFE config loaded through Bun (`mfe.config.mjs`; `.cjs` is supported too). In bare/prebuilt projects, RNM writes generated Podfile and Gradle include files. In managed projects without `ios/` or `android/`, RNM writes `rnm.expo-plugin.cjs` and `rnm.expo-integration.json`, then adds the plugin to `app.json` when possible.
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature --yes
