@@ -234,7 +234,7 @@ module.exports = (async () => {
 Hot Updater のような archive を作って Host project に取り込む場合は MFE project で実行します。
 
 ```bash
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 この command は local React Native `bundle` を実行し、`index.bundle`, `assets/`, `manifest.json` だけを生成して `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz` に圧縮します。`--host` を指定すると `<host>/.bundle/rnm/` に copy し、`--update-registry` を指定すると `rnm.registry.json` の `bundleArchiveUrl` を更新します。
@@ -287,7 +287,7 @@ MFE を portable archive にして Host project へ copy したり、release art
 
 ```bash
 # mfe-feature/ で実行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
 ```tsx
@@ -296,7 +296,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`--update-registry` は `bundleArchiveUrl` を記録します。custom loader は archive download/read、verify、unpack、runtime engine での evaluation を担当します。
+`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`--update-registry` を外すと bundle-only/no-OTA flow です。custom loader は archive download/read、verify、unpack、runtime engine での evaluation を担当します。`rnm.registry.json` に `bundleArchiveUrl` を書きたい場合だけ `--update-registry` を追加してください。
 
 ### メニュー 3. OTA — Hot Updater または custom OTA pipeline で配布
 

@@ -13,7 +13,6 @@ React Native Micro Frontend
   runtime safety gates
 ```
 
-
 ## Development status
 
 This project is still under active development. The public API is usable for experiments and early integration work, but the `0.x` line may still change while the runtime, CLI, and native-contract workflows are hardened.
@@ -28,16 +27,16 @@ It does **not** replace Hot Updater. Hot Updater remains the OTA delivery engine
 
 ## Highlights
 
-| Capability | What it does |
-| --- | --- |
-| MFE registry | Keeps every feature module, entry point, OTA policy, and runtime status in one predictable registry. |
-| Native contract | Hashes React Native version, Hermes, New Architecture, native dependencies, Podfile, Gradle, AndroidManifest, and Info.plist-sensitive inputs. |
-| OTA gate | Blocks OTA when native assumptions no longer match the host binary. |
-| Runtime policy | Refuses blocked or incompatible MFEs and falls back safely in the host app. |
-| Metro integration | `withMfe` merges Metro config, watches registered MFE roots, and automatically maps shared packages to Host `node_modules`; `rnm build` still prints inspectable bundle commands. |
-| Bundle archive | `rnm bundle` runs React Native bundling and archives only `index.bundle`, Metro `assets/`, and `manifest.json` for Host copy/CDN delivery. |
-| Hot Updater adapter | Reuses existing Hot Updater deployments instead of replacing them. |
-| Package manager support | Supports Bun, npm, pnpm, Yarn, and Deno for consumer workflows. |
+| Capability              | What it does                                                                                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MFE registry            | Keeps every feature module, entry point, OTA policy, and runtime status in one predictable registry.                                                                              |
+| Native contract         | Hashes React Native version, Hermes, New Architecture, native dependencies, Podfile, Gradle, AndroidManifest, and Info.plist-sensitive inputs.                                    |
+| OTA gate                | Blocks OTA when native assumptions no longer match the host binary.                                                                                                               |
+| Runtime policy          | Refuses blocked or incompatible MFEs and falls back safely in the host app.                                                                                                       |
+| Metro integration       | `withMfe` merges Metro config, watches registered MFE roots, and automatically maps shared packages to Host `node_modules`; `rnm build` still prints inspectable bundle commands. |
+| Bundle archive          | `rnm bundle` runs React Native bundling and archives only `index.bundle`, Metro `assets/`, and `manifest.json` for Host copy/CDN delivery.                                        |
+| Hot Updater adapter     | Reuses existing Hot Updater deployments instead of replacing them.                                                                                                                |
+| Package manager support | Supports Bun, npm, pnpm, Yarn, and Deno for consumer workflows.                                                                                                                   |
 
 ## Quick start
 
@@ -113,7 +112,7 @@ Use this when you want a portable archive that can be copied into the Host proje
 
 ```bash
 # in mfe-feature/
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
 ```tsx
@@ -122,7 +121,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; `--update-registry` writes `bundleArchiveUrl`. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine.
+`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; without `--update-registry` it stays a bundle-only/no-OTA flow. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine. Add `--update-registry` only when you intentionally want to write `bundleArchiveUrl`.
 
 ### Menu 3. OTA — publish through Hot Updater or a custom OTA pipeline
 
@@ -146,17 +145,19 @@ Use `hotUpdater` when `ota.provider` is `hot-updater`; use `custom` when your re
 
 ## Documentation
 
-| Document | Description |
-| --- | --- |
-| [`docs/index.md`](docs/index.md) | Official documentation home. |
-| [`docs/getting-started.md`](docs/getting-started.md) | First install, host config, MFE registration, verification, and runtime loading guide. |
-| [`docs/options.md`](docs/options.md) | Complete Host config, MFE config, registry, and runtime options reference. |
-| [`README.md`](README.md) | English official guide. |
-| [`docs/README.ko.md`](docs/README.ko.md) | Korean guide. |
-| [`docs/README.ja.md`](docs/README.ja.md) | Japanese guide. |
-| [`docs/README.zh-CN.md`](docs/README.zh-CN.md) | Simplified Chinese guide. |
-| [`docs/package-managers.md`](docs/package-managers.md) | Package manager command matrix. |
-| [`docs/native-contract.md`](docs/native-contract.md) | Native contract notes. |
+| Document                                                       | Description                                                                            |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                               | Official documentation home.                                                           |
+| [`docs/getting-started.md`](docs/getting-started.md)           | First install, host config, MFE registration, verification, and runtime loading guide. |
+| [`docs/easy-way.md`](docs/easy-way.md)                         | Choose Generic, Bundle, or OTA usage.                                                  |
+| [`docs/metro-bundle-archive.md`](docs/metro-bundle-archive.md) | Merge Metro and load bundle archives.                                                  |
+| [`docs/options.md`](docs/options.md)                           | Complete Host config, MFE config, registry, and runtime options reference.             |
+| [`README.md`](README.md)                                       | English official guide.                                                                |
+| [`docs/README.ko.md`](docs/README.ko.md)                       | Korean guide.                                                                          |
+| [`docs/README.ja.md`](docs/README.ja.md)                       | Japanese guide.                                                                        |
+| [`docs/README.zh-CN.md`](docs/README.zh-CN.md)                 | Simplified Chinese guide.                                                              |
+| [`docs/package-managers.md`](docs/package-managers.md)         | Package manager command matrix.                                                        |
+| [`docs/native-contract.md`](docs/native-contract.md)           | Native contract notes.                                                                 |
 
 ## Documentation website
 
@@ -236,7 +237,6 @@ What this means:
 - `bun test` runs regression tests for the core OTA rules, native hash, native diff, and package-manager detection.
 - `bun run typecheck` validates all TypeScript packages as a monorepo.
 - `bun run build` emits package `dist/` output with declaration files.
-
 
 ## Package manager support
 
@@ -524,7 +524,7 @@ module.exports = (async () => {
       resolver: {
         assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
       },
-    }),
+    })
   );
 })();
 ```
@@ -540,7 +540,7 @@ Meaning:
 
 ```bash
 # In the MFE project
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 Meaning:
@@ -634,9 +634,15 @@ import {
 
 type MfeModule = MicroFrontendModule;
 
-declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
-declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
-declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
 
 const loadMfeModule = createMicroFrontendLoader<MfeModule>({
   hotUpdater: loadWithHotUpdater,
@@ -710,10 +716,7 @@ const sharedState: HostSharedState = {
 
 export function MountedFeatureModule({ registry }) {
   return (
-    <MicroFrontendProvider
-      registry={registry}
-      sharedState={sharedState}
-    >
+    <MicroFrontendProvider registry={registry} sharedState={sharedState}>
       <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
@@ -727,7 +730,8 @@ export function FeatureModuleHeader() {
 
   return (
     <Text>
-      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2=
+      {String(checkoutV2)}
     </Text>
   );
 }
@@ -841,7 +845,6 @@ pnpm version:all 0.2.0
 yarn version:all 0.2.0
 deno task version:all 0.2.0
 ```
-
 
 Meaning:
 

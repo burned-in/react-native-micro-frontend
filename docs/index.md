@@ -14,19 +14,20 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## Guides
 
-| Guide | Purpose |
-| --- | --- |
-| [English README](../README.md) | Main library guide and examples. |
-| [Getting started](getting-started.md) | Install, configure, register, verify, and load your first MFE. |
-| [Options reference](options.md) | Every Host config, MFE config, registry, and runtime option. |
-| [Korean](README.ko.md) | Korean official guide. |
-| [Japanese](README.ja.md) | Japanese official guide. |
-| [Chinese](README.zh-CN.md) | Simplified Chinese official guide. |
-| [Package managers](package-managers.md) | Bun, npm, pnpm, Yarn, and Deno command matrix. |
-| [Native contract](native-contract.md) | Native compatibility notes. |
-| [Global state](/docs/global-state) | Host-to-MFE sharedState providing and reading guide. |
-| [Hot Updater setup](/docs/hot-updater) | Routed website guide for Hot Updater configuration. |
-
+| Guide                                             | Purpose                                                        |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| [English README](../README.md)                    | Main library guide and examples.                               |
+| [Getting started](getting-started.md)             | Install, configure, register, verify, and load your first MFE. |
+| [Easy Way](easy-way.md)                           | Choose Generic, Bundle without OTA publish, or OTA delivery.   |
+| [Options reference](options.md)                   | Every Host config, MFE config, registry, and runtime option.   |
+| [Metro / Bundle archive](metro-bundle-archive.md) | Merge Metro with `withMfe` and load portable bundle archives.  |
+| [Korean](README.ko.md)                            | Korean official guide.                                         |
+| [Japanese](README.ja.md)                          | Japanese official guide.                                       |
+| [Chinese](README.zh-CN.md)                        | Simplified Chinese official guide.                             |
+| [Package managers](package-managers.md)           | Bun, npm, pnpm, Yarn, and Deno command matrix.                 |
+| [Native contract](native-contract.md)             | Native compatibility notes.                                    |
+| [Global state](/docs/global-state)                | Host-to-MFE sharedState providing and reading guide.           |
+| [Hot Updater setup](/docs/hot-updater)            | Routed website guide for Hot Updater configuration.            |
 
 ## Easy Way
 
@@ -42,10 +43,10 @@ Use `withMfe` in `metro.config.js`, then map the local MFE through a static impo
 
 ```bash
 # run in the MFE project
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-This creates a `.tar.gz` containing only `index.bundle`, `assets/`, and `manifest.json`; `--update-registry` writes `bundleArchiveUrl`.
+This creates a `.tar.gz` containing only `index.bundle`, `assets/`, and `manifest.json`; without `--update-registry` it stays bundle-only/no-OTA.
 
 ### 3. OTA — Hot Updater/custom delivery
 

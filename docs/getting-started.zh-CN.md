@@ -234,7 +234,7 @@ module.exports = (async () => {
 如果想像 Hot Updater 一样生成 archive 并放入 Host project，请在 MFE project 中执行：
 
 ```bash
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 该命令执行本地 React Native `bundle`，只生成 `index.bundle`、`assets/` 和 `manifest.json`，然后压缩为 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`。提供 `--host` 时复制到 `<host>/.bundle/rnm/`，同时提供 `--update-registry` 时更新 `rnm.registry.json` 的 `bundleArchiveUrl`。
@@ -287,7 +287,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 ```bash
 # 在 mfe-feature/ 中执行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
 ```tsx
@@ -296,7 +296,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；`--update-registry` 会写入 `bundleArchiveUrl`。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。
+`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；不传 `--update-registry` 时就是 bundle-only/no-OTA 流程。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。只有想把 `bundleArchiveUrl` 写入 `rnm.registry.json` 时才添加 `--update-registry`。
 
 ### 菜单 3. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 

@@ -14,19 +14,20 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## 문서
 
-| 문서 | 목적 |
-| --- | --- |
-| [한국어 README](README.ko.md) | 주요 가이드와 예제. |
-| [Getting Started](getting-started.ko.md) | 설치, 설정, 등록, 검증, 첫 MFE 로딩 가이드. |
-| [옵션 레퍼런스](options.ko.md) | Host config, MFE config, registry, runtime 옵션 전체. |
-| [영어](../README.md) | 영어 공식 가이드. |
-| [일본어](README.ja.md) | 일본어 공식 문서. |
-| [중국어 간체](README.zh-CN.md) | 중국어 간체 공식 문서. |
-| [패키지 매니저](package-managers.ko.md) | Bun, npm, pnpm, Yarn, Deno 명령 매트릭스. |
-| [Native contract](native-contract.md) | native compatibility 설명. |
-| [전역 상태](/ko/docs/global-state) | Host에서 MFE로 sharedState를 제공하고 가져오는 방법. |
-| [Hot Updater 설정](/ko/docs/hot-updater) | Hot Updater route 문서. |
-
+| 문서                                                 | 목적                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------- |
+| [한국어 README](README.ko.md)                        | 주요 가이드와 예제.                                                 |
+| [Getting Started](getting-started.ko.md)             | 설치, 설정, 등록, 검증, 첫 MFE 로딩 가이드.                         |
+| [Easy Way](easy-way.ko.md)                           | Generic, OTA 없는 Bundle, OTA delivery 중 선택하는 가이드.          |
+| [옵션 레퍼런스](options.ko.md)                       | Host config, MFE config, registry, runtime 옵션 전체.               |
+| [Metro / Bundle archive](metro-bundle-archive.ko.md) | `withMfe`로 Metro를 merge하고 portable bundle archive를 로드합니다. |
+| [영어](../README.md)                                 | 영어 공식 가이드.                                                   |
+| [일본어](README.ja.md)                               | 일본어 공식 문서.                                                   |
+| [중국어 간체](README.zh-CN.md)                       | 중국어 간체 공식 문서.                                              |
+| [패키지 매니저](package-managers.ko.md)              | Bun, npm, pnpm, Yarn, Deno 명령 매트릭스.                           |
+| [Native contract](native-contract.md)                | native compatibility 설명.                                          |
+| [전역 상태](/ko/docs/global-state)                   | Host에서 MFE로 sharedState를 제공하고 가져오는 방법.                |
+| [Hot Updater 설정](/ko/docs/hot-updater)             | Hot Updater route 문서.                                             |
 
 ## Easy Way
 
@@ -42,10 +43,10 @@ rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.
 
 ```bash
 # MFE project에서 실행
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-`index.bundle`, `assets/`, `manifest.json`만 들어 있는 `.tar.gz`를 만들고, `--update-registry`가 있으면 `bundleArchiveUrl`을 기록합니다.
+`index.bundle`, `assets/`, `manifest.json`만 들어 있는 `.tar.gz`를 만들고, `--update-registry`를 빼면 bundle-only/no-OTA 흐름으로 유지됩니다.
 
 ### 3. OTA — Hot Updater/custom delivery
 

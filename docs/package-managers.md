@@ -52,7 +52,7 @@ The repository release workflow still uses Bun internally for testing, building,
 Run this from the MFE project after installing the CLI. It executes React Native bundling and archives only `index.bundle`, `assets/`, and `manifest.json`.
 
 ```bash
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 Use the same command through each runner: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, or `deno run -A ... bundle`.

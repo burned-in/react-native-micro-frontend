@@ -4,7 +4,7 @@
 
 機能モジュールを独立して開発し、native compatibility を検証し、host binary が安全に実行できる場合だけ OTA 更新を公開します。
 
-関連ドキュメント: [公式ドキュメントホーム](index.ja.md) · [Getting Started](getting-started.ja.md) · [Options reference](options.ja.md) · [パッケージマネージャ・マトリクス](package-managers.ja.md)
+関連ドキュメント: [公式ドキュメントホーム](index.ja.md) · [Getting Started](getting-started.ja.md) · [Easy Way](easy-way.ja.md) · [Metro / Bundle archive](metro-bundle-archive.ja.md) · [Options reference](options.ja.md) · [パッケージマネージャ・マトリクス](package-managers.ja.md)
 
 ```txt
 React Native Micro Frontend
@@ -23,16 +23,16 @@ Hot Updater を置き換えるものではありません。Hot Updater は OTA 
 
 ## 主な機能
 
-| 機能 | 説明 |
-| --- | --- |
-| MFE registry | feature module、entry point、OTA policy、runtime status を 1 つの registry で管理します。 |
-| Native contract | React Native version、Hermes、New Architecture、native dependency、Podfile、Gradle、AndroidManifest、Info.plist 関連入力を hash 化します。 |
-| OTA gate | native assumption が host binary と一致しない場合は OTA をブロックします。 |
-| Runtime policy | blocked/incompatible MFE をロードせず、安全に fallback します。 |
-| Metro integration | `withMfe` が Metro config を merge し、registered MFE root と shared package を Host `node_modules` に自動 map します。`rnm build` は inspectable bundle command を引き続き表示します。 |
-| Bundle archive | `rnm bundle` が React Native bundling を実行し、`index.bundle`, Metro `assets/`, `manifest.json` だけを archive して Host copy/CDN delivery に使えます。 |
-| Hot Updater adapter | 既存の Hot Updater 公開フローを再利用します。 |
-| Package manager support | Bun、npm、pnpm、Yarn、Deno の consumer workflow をサポートします。 |
+| 機能                    | 説明                                                                                                                                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MFE registry            | feature module、entry point、OTA policy、runtime status を 1 つの registry で管理します。                                                                                               |
+| Native contract         | React Native version、Hermes、New Architecture、native dependency、Podfile、Gradle、AndroidManifest、Info.plist 関連入力を hash 化します。                                              |
+| OTA gate                | native assumption が host binary と一致しない場合は OTA をブロックします。                                                                                                              |
+| Runtime policy          | blocked/incompatible MFE をロードせず、安全に fallback します。                                                                                                                         |
+| Metro integration       | `withMfe` が Metro config を merge し、registered MFE root と shared package を Host `node_modules` に自動 map します。`rnm build` は inspectable bundle command を引き続き表示します。 |
+| Bundle archive          | `rnm bundle` が React Native bundling を実行し、`index.bundle`, Metro `assets/`, `manifest.json` だけを archive して Host copy/CDN delivery に使えます。                                |
+| Hot Updater adapter     | 既存の Hot Updater 公開フローを再利用します。                                                                                                                                           |
+| Package manager support | Bun、npm、pnpm、Yarn、Deno の consumer workflow をサポートします。                                                                                                                      |
 
 ## クイックスタート
 
@@ -108,7 +108,7 @@ MFE を portable archive にして Host project へ copy したり、release art
 
 ```bash
 # mfe-feature/ で実行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
 ```tsx
@@ -117,7 +117,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`--update-registry` は `bundleArchiveUrl` を記録します。custom loader は archive download/read、verify、unpack、runtime engine での evaluation を担当します。
+`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`--update-registry` を外すと bundle-only/no-OTA flow のままです。custom loader は archive download/read、verify、unpack、runtime engine での evaluation を担当します。registry に `bundleArchiveUrl` を書きたい場合だけ `--update-registry` を追加してください。
 
 ### メニュー 3. OTA — Hot Updater または custom OTA pipeline で配布
 
@@ -196,7 +196,6 @@ bun run build
 - `bun test`: OTA 判定、native hash、native diff、package manager 検出の回帰テストを実行します。
 - `bun run typecheck`: monorepo 全体の TypeScript 型を検証します。
 - `bun run build`: 各 package の `dist/` と declaration file を生成します。
-
 
 ## パッケージマネージャ対応
 
@@ -484,7 +483,7 @@ module.exports = (async () => {
       resolver: {
         assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
       },
-    }),
+    })
   );
 })();
 ```
@@ -500,7 +499,7 @@ module.exports = (async () => {
 
 ```bash
 # MFE project で実行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 意味:
@@ -594,9 +593,15 @@ import {
 
 type MfeModule = MicroFrontendModule;
 
-declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
-declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
-declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
 
 const loadMfeModule = createMicroFrontendLoader<MfeModule>({
   hotUpdater: loadWithHotUpdater,
@@ -670,10 +675,7 @@ const sharedState: HostSharedState = {
 
 export function MountedFeatureModule({ registry }) {
   return (
-    <MicroFrontendProvider
-      registry={registry}
-      sharedState={sharedState}
-    >
+    <MicroFrontendProvider registry={registry} sharedState={sharedState}>
       <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
@@ -687,7 +689,8 @@ export function FeatureModuleHeader() {
 
   return (
     <Text>
-      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2=
+      {String(checkoutV2)}
     </Text>
   );
 }
@@ -799,7 +802,6 @@ pnpm version:all 0.2.0
 yarn version:all 0.2.0
 deno task version:all 0.2.0
 ```
-
 
 意味:
 

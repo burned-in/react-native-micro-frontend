@@ -11,6 +11,11 @@ const guideCards = [
     body: 'Install, configure, register, verify, and load your first MFE.',
   },
   {
+    title: 'Easy Way',
+    href: '/docs/easy-way',
+    body: 'Choose Generic, Bundle, or OTA before wiring your Host and MFE.',
+  },
+  {
     title: 'Options reference',
     href: '/docs/options',
     body: 'See every Host config, MFE config, registry, and runtime option.',
@@ -19,6 +24,11 @@ const guideCards = [
     title: 'Hot Updater setup',
     href: '/docs/hot-updater',
     body: 'Configure the adapter, verify OTA eligibility, then deploy safely.',
+  },
+  {
+    title: 'Metro / Bundle archive',
+    href: '/docs/metro-bundle-archive',
+    body: 'Merge Metro with withMfe and load rnm bundle archives through a Host loader.',
   },
   {
     title: 'Package managers',

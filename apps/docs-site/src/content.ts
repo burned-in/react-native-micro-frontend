@@ -20,8 +20,10 @@ export const navItems: readonly NavItem[] = [
   { label: 'Overview', href: '/' },
   { label: 'Docs', href: '/docs' },
   { label: 'Getting started', href: '/docs/getting-started' },
+  { label: 'Easy Way', href: '/docs/easy-way' },
   { label: 'Options', href: '/docs/options' },
   { label: 'Hot Updater', href: '/docs/hot-updater' },
+  { label: 'Metro / Bundle', href: '/docs/metro-bundle-archive' },
   { label: 'Package managers', href: '/docs/package-managers' },
   { label: 'Native contract', href: '/docs/native-contract' },
   { label: '한국어', href: '/ko/docs' },
@@ -104,6 +106,12 @@ export const features: readonly Feature[] = [
   },
 ];
 
+const splitExamplesCode = `examples/
+  general-ts/   # normal TypeScript module through Metro + withMfe
+  bundle/       # .tar.gz archive; Host custom loader owns evaluation
+  ota/          # Hot Updater/custom OTA SDK loader after rnm verify
+  mfe-feature/  # shared sample MFE used by all three examples`;
+
 export const homeSections: readonly DocSection[] = [
   {
     eyebrow: 'Development status',
@@ -175,11 +183,21 @@ module.exports = (async () => {
 
 # 2. Bundle: portable archive
 # in mfe-feature/
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 
 # 3. OTA: verified remote delivery
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production`,
+  },
+  {
+    eyebrow: 'Examples',
+    title: 'Examples are split into general TS, bundle, and OTA folders.',
+    body: [
+      'Open examples/general-ts when you want Metro to include a local MFE source like a normal TypeScript module.',
+      'Open examples/bundle when you want rnm bundle to produce a portable archive without OTA publish. The sample custom loader never imports source; it marks the Host-owned archive evaluation boundary.',
+      'Open examples/ota when you want Hot Updater or another OTA SDK to download and evaluate JavaScript after rnm verify passes.',
+    ],
+    code: splitExamplesCode,
   },
   {
     eyebrow: 'Metro and bundles',
@@ -199,7 +217,7 @@ module.exports = (async () => {
 })();
 
 # in mfe-feature/
-rnm bundle --platform ios --host ../host-app --update-registry`,
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry`,
   },
 ];
 
@@ -397,7 +415,7 @@ module.exports = (async () => {
       'Use --host to copy the archive into the Host project and --update-registry to set bundleArchiveUrl in rnm.registry.json. Your custom loader still owns download, verification, unpacking, and JS evaluation.',
     ],
     code: `# in mfe-feature/
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 
 # output
 # dist/rnm-bundles/mfe-feature/ios/index.bundle
@@ -425,7 +443,7 @@ const localModules = {
 
 # 2. Bundle: portable archive
 # mfe-feature/
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 
 const bundleLoader = createMicroFrontendLoader({
   custom: loadBundleArchive,
@@ -441,6 +459,131 @@ const otaLoader = createMicroFrontendLoader({
   hotUpdater: loadWithHotUpdater,
   custom: loadWithCustomOta,
 });`,
+  },
+];
+
+export const easyWaySections: readonly DocSection[] = [
+  {
+    eyebrow: 'Menu 1',
+    title: 'Generic: use the MFE like a normal TypeScript module.',
+    body: [
+      'Choose Generic when the Host App and MFE project live in the same workspace and Metro can include the MFE source directly.',
+      'Register the MFE with OTA disabled, merge Metro with withMfe, and keep the Host loader import map static so Metro can see the dependency graph.',
+      'This is the lowest-friction path for local development or features shipped inside the app-store binary.',
+    ],
+    code: `# host-app/
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+
+# host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
+})();
+
+const localModules = {
+  "mfe-feature": () => import("../mfe-feature/src/index"),
+};`,
+  },
+  {
+    eyebrow: 'Menu 2',
+    title: 'Bundle: create a portable archive without OTA publish.',
+    body: [
+      'Choose Bundle when the MFE project should produce an artifact that can be copied into the Host, attached to a release, or uploaded to your own storage.',
+      'Run rnm bundle from the MFE project. The archive contains only index.bundle, assets, and manifest.json.',
+      'If you do not want OTA metadata, omit --update-registry and keep the Host registry provider set to none while storing bundleArchiveUrl yourself.',
+    ],
+    code: `# mfe-feature/
+rnm bundle mfe-feature --platform ios --host ../host-app
+
+# Host registry for bundle without OTA
+{
+  "bundleArchiveUrl": ".bundle/rnm/mfe-feature.ios.ota.tar.gz",
+  "ota": { "enabled": false, "mode": "disabled", "provider": "none" }
+}
+
+const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});`,
+  },
+  {
+    eyebrow: 'Menu 3',
+    title: 'OTA: publish through Hot Updater or a custom OTA pipeline.',
+    body: [
+      'Choose OTA when the MFE should be delivered remotely after native-safety verification.',
+      'The library verifies the native contract first. Hot Updater or your custom OTA engine still owns distribution, download, and JavaScript evaluation.',
+      'If verification fails because native assumptions changed, ship a store release instead of pushing OTA.',
+    ],
+    code: `# host-app/
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+
+const loadMfeModule = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  custom: loadWithCustomOta,
+});`,
+  },
+];
+
+export const metroBundleSections: readonly DocSection[] = [
+  {
+    eyebrow: 'Metro',
+    title: 'Merge your existing Metro config with withMfe.',
+    body: [
+      'Use withMfe after getDefaultConfig/mergeConfig. It reads rnm.registry.json, adds active MFE roots to watchFolders, and maps shared dependencies to the Host node_modules automatically.',
+      'Keep your existing Metro options in mergeConfig. User-defined resolver.extraNodeModules entries are preserved and take precedence over automatic shared-package aliases.',
+    ],
+    code: `// host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  const config = mergeConfig(defaultConfig, {
+    resolver: {
+      assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
+    },
+  });
+
+  return withMfe(__dirname, config);
+})();`,
+  },
+  {
+    eyebrow: 'Bundle archive',
+    title: 'Create only the archive files the Host needs.',
+    body: [
+      'Run rnm bundle in the MFE project when you need a portable artifact without OTA publish. The archive contains only index.bundle, assets, and manifest.json.',
+      '--host copies the .tar.gz into <host>/.bundle/rnm/. Add --update-registry only when you intentionally want to write bundleArchiveUrl into the Host registry.',
+    ],
+    code: `# in mfe-feature/
+rnm bundle mfe-feature --platform ios --host ../host-app
+rnm bundle mfe-feature --platform android --host ../host-app
+
+# output copied to Host
+# host-app/.bundle/rnm/mfe-feature.ios.ota.tar.gz
+# host-app/.bundle/rnm/mfe-feature.android.ota.tar.gz`,
+  },
+  {
+    eyebrow: 'Host loader',
+    title: 'loadBundleArchive is the Host-owned evaluation boundary.',
+    body: [
+      'The runtime selects your custom loader when bundleArchiveUrl is present, but it does not execute compressed JavaScript by itself.',
+      'A production loadBundleArchive should read or download the archive, verify integrity, unpack index.bundle/assets/manifest.json, and evaluate the bundle through your Host runtime or OTA engine. Do not fall back to importing MFE source in the bundle path.',
+    ],
+    code: `const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
+
+<MicroFrontendComponent
+  name="mfe-feature"
+  load={loadMfeModule}
+  loadOptions={{
+    bundleArchiveUrl: ".bundle/rnm/mfe-feature.ios.ota.tar.gz",
+  }}
+/>`,
   },
 ];
 
@@ -1653,6 +1796,8 @@ export type LocalizedGuide = {
   readonly cards: readonly Feature[];
   readonly sections: readonly DocSection[];
   readonly gettingStartedSections: readonly DocSection[];
+  readonly easyWaySections: readonly DocSection[];
+  readonly metroBundleSections: readonly DocSection[];
   readonly optionsSections: readonly DocSection[];
   readonly hotUpdaterSections: readonly DocSection[];
   readonly globalStateSections: readonly DocSection[];
@@ -1820,6 +1965,67 @@ export const localizedGuides = {
         code: gettingStartedSections[8]?.code ?? '',
       },
     ],
+    easyWaySections: [
+      {
+        eyebrow: '메뉴 1',
+        title: 'Generic: 일반 TypeScript module처럼 사용합니다.',
+        body: [
+          'Host App과 MFE project가 같은 workspace에 있고 Metro가 MFE source를 직접 포함할 수 있을 때 선택합니다.',
+          'OTA를 끄고 등록한 뒤 withMfe로 Metro를 merge하고, Host loader는 static import map으로 유지합니다.',
+          'local development 또는 app-store binary에 함께 포함되는 feature에 가장 단순한 경로입니다.',
+        ],
+        code: easyWaySections[0]?.code ?? '',
+      },
+      {
+        eyebrow: '메뉴 2',
+        title: 'Bundle: OTA publish 없이 portable archive를 만듭니다.',
+        body: [
+          'MFE project에서 Host로 복사하거나 release artifact/storage에 올릴 archive가 필요할 때 선택합니다.',
+          'MFE project에서 rnm bundle을 실행하면 index.bundle, assets, manifest.json만 archive에 들어갑니다.',
+          'OTA metadata를 원하지 않으면 --update-registry를 빼고, Host registry는 provider none 상태로 bundleArchiveUrl만 직접 유지합니다.',
+        ],
+        code: easyWaySections[1]?.code ?? '',
+      },
+      {
+        eyebrow: '메뉴 3',
+        title: 'OTA: Hot Updater 또는 custom OTA pipeline으로 배포합니다.',
+        body: [
+          'native-safety verification을 통과한 MFE를 원격 배포해야 할 때 선택합니다.',
+          '이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution/download/evaluation은 Hot Updater 또는 custom OTA engine이 담당합니다.',
+          'native assumption이 바뀌어 검증이 실패하면 OTA 대신 Store release를 진행합니다.',
+        ],
+        code: easyWaySections[2]?.code ?? '',
+      },
+    ],
+    metroBundleSections: [
+      {
+        eyebrow: 'Metro',
+        title: 'withMfe로 기존 Metro config를 merge합니다.',
+        body: [
+          'getDefaultConfig/mergeConfig 뒤에 withMfe를 적용합니다. rnm.registry.json을 읽어 active MFE root를 watchFolders에 추가하고 shared dependency를 Host node_modules로 자동 매핑합니다.',
+          '기존 Metro option은 mergeConfig 안에 그대로 두세요. 직접 지정한 resolver.extraNodeModules는 자동 alias보다 우선합니다.',
+        ],
+        code: metroBundleSections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'Bundle archive',
+        title: 'Host가 필요한 archive 파일만 만듭니다.',
+        body: [
+          'OTA publish 없이 portable artifact가 필요하면 MFE project에서 rnm bundle을 실행합니다. archive에는 index.bundle, assets, manifest.json만 들어갑니다.',
+          '--host는 .tar.gz를 <host>/.bundle/rnm/로 복사합니다. Host registry에 bundleArchiveUrl을 쓰려는 경우에만 --update-registry를 추가하세요.',
+        ],
+        code: metroBundleSections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'Host loader',
+        title: 'loadBundleArchive가 Host-owned evaluation boundary입니다.',
+        body: [
+          'bundleArchiveUrl이 있으면 runtime은 custom loader를 선택하지만, compressed JavaScript를 직접 실행하지 않습니다.',
+          'production loadBundleArchive는 archive 읽기/download, integrity 검증, index.bundle/assets/manifest.json 압축 해제, Host runtime 또는 OTA engine을 통한 evaluation을 담당해야 합니다. bundle path에서 MFE source import로 우회하지 마세요.',
+        ],
+        code: metroBundleSections[2]?.code ?? '',
+      },
+    ],
     optionsSections: [
       {
         eyebrow: '옵션 맵',
@@ -1924,6 +2130,16 @@ beerware spirit: appreciated`,
           'OTA는 verify를 통과한 뒤 Hot Updater 또는 custom OTA pipeline으로 원격 배포하는 방식입니다.',
         ],
         code: gettingStartedSections[8]?.code ?? '',
+      },
+      {
+        eyebrow: 'Examples',
+        title: 'examples 폴더를 general TS, bundle, OTA로 분리했습니다.',
+        body: [
+          'examples/general-ts는 일반 TypeScript module처럼 local MFE source를 Metro와 withMfe로 포함하는 예제입니다.',
+          'examples/bundle은 OTA publish 없이 rnm bundle archive를 만들고 Host custom loader가 archive evaluation 경계를 소유하는 예제입니다.',
+          'examples/ota는 rnm verify 통과 후 Hot Updater 또는 custom OTA SDK가 download/evaluation을 담당하는 예제입니다.',
+        ],
+        code: splitExamplesCode,
       },
     ],
     hotUpdaterSections: [
@@ -2094,6 +2310,67 @@ beerware spirit: appreciated`,
         code: gettingStartedSections[8]?.code ?? '',
       },
     ],
+    easyWaySections: [
+      {
+        eyebrow: '菜单 1',
+        title: 'Generic：像普通 TypeScript module 一样使用。',
+        body: [
+          '当 Host App 与 MFE project 在同一个 workspace 中，并且 Metro 可以直接包含 MFE source 时选择 Generic。',
+          '注册时关闭 OTA，用 withMfe merge Metro，并把 Host loader 保持为 static import map，让 Metro 能看到 dependency graph。',
+          '这是 local development 或随 app-store binary 一起发布 feature 时摩擦最小的路径。',
+        ],
+        code: easyWaySections[0]?.code ?? '',
+      },
+      {
+        eyebrow: '菜单 2',
+        title: 'Bundle：不做 OTA publish，只创建 portable archive。',
+        body: [
+          '当 MFE project 需要生成可复制到 Host、附加到 release 或上传到自有 storage 的 artifact 时选择 Bundle。',
+          '在 MFE project 中运行 rnm bundle，archive 只包含 index.bundle、assets 和 manifest.json。',
+          '如果不需要 OTA metadata，就不要传 --update-registry，并让 Host registry 的 provider 保持 none，同时自行维护 bundleArchiveUrl。',
+        ],
+        code: easyWaySections[1]?.code ?? '',
+      },
+      {
+        eyebrow: '菜单 3',
+        title: 'OTA：通过 Hot Updater 或 custom OTA pipeline 发布。',
+        body: [
+          '当 MFE 通过 native-safety verification 后需要远程交付时选择 OTA。',
+          '本库先验证 native contract；实际 distribution、download 和 JavaScript evaluation 仍由 Hot Updater 或 custom OTA engine 负责。',
+          '如果 verification 因 native assumptions 改变而失败，应发布 Store release，而不是继续推 OTA。',
+        ],
+        code: easyWaySections[2]?.code ?? '',
+      },
+    ],
+    metroBundleSections: [
+      {
+        eyebrow: 'Metro',
+        title: '使用 withMfe merge 现有 Metro config。',
+        body: [
+          '在 getDefaultConfig/mergeConfig 之后应用 withMfe。它读取 rnm.registry.json，把 active MFE root 加入 watchFolders，并自动把 shared dependency 映射到 Host node_modules。',
+          '保留你现有的 Metro options。手动设置的 resolver.extraNodeModules 会被保留，并优先于自动 alias。',
+        ],
+        code: metroBundleSections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'Bundle archive',
+        title: '只创建 Host 需要的 archive 文件。',
+        body: [
+          '如果需要不做 OTA publish 的 portable artifact，请在 MFE project 中运行 rnm bundle。archive 只包含 index.bundle、assets 和 manifest.json。',
+          '--host 会把 .tar.gz 复制到 <host>/.bundle/rnm/。只有明确要把 bundleArchiveUrl 写入 Host registry 时才添加 --update-registry。',
+        ],
+        code: metroBundleSections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'Host loader',
+        title: 'loadBundleArchive 是 Host-owned evaluation boundary。',
+        body: [
+          '存在 bundleArchiveUrl 时 runtime 会选择 custom loader，但不会自行执行压缩后的 JavaScript。',
+          'production loadBundleArchive 应负责读取/下载 archive、校验 integrity、解压 index.bundle/assets/manifest.json，并通过 Host runtime 或 OTA engine evaluate。不要在 bundle path 中退回到 import MFE source。',
+        ],
+        code: metroBundleSections[2]?.code ?? '',
+      },
+    ],
     optionsSections: [
       {
         eyebrow: '选项地图',
@@ -2198,6 +2475,16 @@ beerware spirit: appreciated`,
           'OTA 是 verify 通过后，通过 Hot Updater 或 custom OTA pipeline 远程发布。',
         ],
         code: gettingStartedSections[8]?.code ?? '',
+      },
+      {
+        eyebrow: 'Examples',
+        title: 'examples 已分成 general TS、bundle、OTA 三个目录。',
+        body: [
+          'examples/general-ts 展示把 local MFE source 像普通 TypeScript module 一样交给 Metro 与 withMfe 处理。',
+          'examples/bundle 展示不做 OTA publish 的 rnm bundle archive，Host custom loader 拥有 archive evaluation 边界。',
+          'examples/ota 展示 rnm verify 通过后由 Hot Updater 或 custom OTA SDK 负责 download/evaluation。',
+        ],
+        code: splitExamplesCode,
       },
     ],
     hotUpdaterSections: [
@@ -2374,6 +2661,67 @@ beerware spirit: appreciated`,
         code: gettingStartedSections[8]?.code ?? '',
       },
     ],
+    easyWaySections: [
+      {
+        eyebrow: 'メニュー 1',
+        title: 'Generic: 通常の TypeScript module のように使います。',
+        body: [
+          'Host App と MFE project が同じ workspace にあり、Metro が MFE source を直接含められる場合に Generic を選びます。',
+          'OTA を無効にして登録し、withMfe で Metro を merge し、Host loader は static import map のままにして Metro が dependency graph を見られるようにします。',
+          'local development や app-store binary に含めて出す feature に最も friction の少ない path です。',
+        ],
+        code: easyWaySections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'メニュー 2',
+        title: 'Bundle: OTA publish なしで portable archive を作ります。',
+        body: [
+          'MFE project から Host に copy したり、release artifact/storage に upload する artifact が必要な場合に Bundle を選びます。',
+          'MFE project で rnm bundle を実行すると、archive には index.bundle、assets、manifest.json だけが入ります。',
+          'OTA metadata が不要なら --update-registry を外し、Host registry の provider は none のまま bundleArchiveUrl を自分で保持します。',
+        ],
+        code: easyWaySections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'メニュー 3',
+        title: 'OTA: Hot Updater または custom OTA pipeline で配布します。',
+        body: [
+          'native-safety verification を通過した MFE を remote delivery する必要がある場合に OTA を選びます。',
+          'この library は native contract を先に検証します。実際の distribution、download、JavaScript evaluation は Hot Updater または custom OTA engine が担当します。',
+          'native assumptions が変わって verification が失敗した場合は、OTA ではなく Store release を行います。',
+        ],
+        code: easyWaySections[2]?.code ?? '',
+      },
+    ],
+    metroBundleSections: [
+      {
+        eyebrow: 'Metro',
+        title: 'withMfe で既存の Metro config を merge します。',
+        body: [
+          'getDefaultConfig/mergeConfig の後に withMfe を適用します。rnm.registry.json を読み、active MFE root を watchFolders に追加し、shared dependency を Host node_modules に自動 map します。',
+          '既存の Metro options は mergeConfig に残してください。手動の resolver.extraNodeModules は保持され、自動 alias より優先されます。',
+        ],
+        code: metroBundleSections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'Bundle archive',
+        title: 'Host が必要な archive files だけを作成します。',
+        body: [
+          'OTA publish なしの portable artifact が必要な場合は、MFE project で rnm bundle を実行します。archive には index.bundle、assets、manifest.json だけが含まれます。',
+          '--host は .tar.gz を <host>/.bundle/rnm/ に copy します。Host registry に bundleArchiveUrl を書き込む場合だけ --update-registry を追加してください。',
+        ],
+        code: metroBundleSections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'Host loader',
+        title: 'loadBundleArchive が Host-owned evaluation boundary です。',
+        body: [
+          'bundleArchiveUrl がある場合、runtime は custom loader を選択しますが、compressed JavaScript を直接実行しません。',
+          'production loadBundleArchive は archive の read/download、integrity verification、index.bundle/assets/manifest.json の unpack、Host runtime または OTA engine による evaluation を担当します。bundle path で MFE source import に戻さないでください。',
+        ],
+        code: metroBundleSections[2]?.code ?? '',
+      },
+    ],
     optionsSections: [
       {
         eyebrow: 'Options map',
@@ -2478,6 +2826,17 @@ beerware spirit: appreciated`,
           'OTA は verify 通過後に Hot Updater または custom OTA pipeline で remote delivery する方式です。',
         ],
         code: gettingStartedSections[8]?.code ?? '',
+      },
+      {
+        eyebrow: 'Examples',
+        title:
+          'examples を general TS、bundle、OTA の 3 folders に分けました。',
+        body: [
+          'examples/general-ts は local MFE source を通常の TypeScript module として Metro と withMfe に含める例です。',
+          'examples/bundle は OTA publish なしの rnm bundle archive と、Host custom loader が archive evaluation boundary を持つ例です。',
+          'examples/ota は rnm verify 通過後に Hot Updater または custom OTA SDK が download/evaluation を担当する例です。',
+        ],
+        code: splitExamplesCode,
       },
     ],
     hotUpdaterSections: [

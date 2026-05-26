@@ -30,26 +30,44 @@ const githubFallbackStarCount = 1;
 
 type LocalePrefix = '' | '/ko' | '/zh-cn' | '/jp';
 
+type NavLabelKey =
+  | 'overview'
+  | 'docs'
+  | 'gettingStarted'
+  | 'easyWay'
+  | 'options'
+  | 'hotUpdater'
+  | 'metroBundle'
+  | 'packageManagers'
+  | 'nativeContract'
+  | 'globalState';
+
 type LocalizedNavItem = {
   readonly label: string;
   readonly path:
     | ''
     | '/docs'
     | '/docs/getting-started'
+    | '/docs/easy-way'
     | '/docs/options'
     | '/docs/hot-updater'
+    | '/docs/metro-bundle-archive'
     | '/docs/package-managers'
     | '/docs/native-contract'
     | '/docs/global-state';
 };
+
+const localePrefixes = ['', '/ko', '/zh-cn', '/jp'] as const;
 
 const localizedNavLabels = {
   '': {
     overview: 'Overview',
     docs: 'Docs',
     gettingStarted: 'Getting started',
+    easyWay: 'Easy Way',
     options: 'Options',
     hotUpdater: 'Hot Updater',
+    metroBundle: 'Metro / Bundle',
     packageManagers: 'Package managers',
     nativeContract: 'Native contract',
     globalState: 'Global state',
@@ -58,8 +76,10 @@ const localizedNavLabels = {
     overview: '개요',
     docs: '문서',
     gettingStarted: '시작하기',
+    easyWay: '쉬운 사용법',
     options: '옵션',
     hotUpdater: 'Hot Updater',
+    metroBundle: 'Metro / Bundle',
     packageManagers: '패키지 매니저',
     nativeContract: 'Native contract',
     globalState: '전역 상태',
@@ -68,8 +88,10 @@ const localizedNavLabels = {
     overview: '概览',
     docs: '文档',
     gettingStarted: '入门指南',
+    easyWay: '简单用法',
     options: '选项',
     hotUpdater: 'Hot Updater',
+    metroBundle: 'Metro / Bundle',
     packageManagers: '包管理器',
     nativeContract: 'Native contract',
     globalState: '全局状态',
@@ -77,14 +99,26 @@ const localizedNavLabels = {
   '/jp': {
     overview: '概要',
     docs: 'ドキュメント',
-    gettingStarted: 'Getting started',
-    options: 'Options',
+    gettingStarted: 'はじめに',
+    easyWay: '簡単な使い方',
+    options: 'オプション',
     hotUpdater: 'Hot Updater',
-    packageManagers: 'Package managers',
+    metroBundle: 'Metro / Bundle',
+    packageManagers: 'パッケージマネージャー',
     nativeContract: 'Native contract',
-    globalState: 'Global state',
+    globalState: 'グローバル状態',
   },
-} satisfies Record<LocalePrefix, Record<string, string>>;
+} satisfies Record<LocalePrefix, Record<NavLabelKey, string>>;
+
+const languageLinks = [
+  { label: 'English', prefix: '' },
+  { label: '한국어', prefix: '/ko' },
+  { label: '中文', prefix: '/zh-cn' },
+  { label: '日本語', prefix: '/jp' },
+] as const satisfies readonly {
+  readonly label: string;
+  readonly prefix: LocalePrefix;
+}[];
 
 const getPathname = (urlOriginal: string) => {
   if (urlOriginal.startsWith('http://') || urlOriginal.startsWith('https://')) {
@@ -112,6 +146,31 @@ const detectLocalePrefix = (urlOriginal: string): LocalePrefix => {
   return '';
 };
 
+const stripLocalePrefix = (pathname: string) => {
+  for (const prefix of localePrefixes) {
+    if (!prefix) {
+      continue;
+    }
+
+    if (pathname === prefix) {
+      return '/';
+    }
+
+    if (pathname.startsWith(`${prefix}/`)) {
+      return pathname.slice(prefix.length) || '/';
+    }
+  }
+
+  return pathname || '/';
+};
+
+const createLocaleHref = (prefix: LocalePrefix, currentPathname: string) => {
+  const route = stripLocalePrefix(stripSiteBase(currentPathname));
+  const normalizedRoute = route === '/' ? '' : route;
+
+  return withSiteBase(`${prefix}${normalizedRoute}` || '/');
+};
+
 const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
   const labels = localizedNavLabels[prefix];
 
@@ -119,8 +178,10 @@ const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
     { label: labels.overview, path: '' },
     { label: labels.docs, path: '/docs' },
     { label: labels.gettingStarted, path: '/docs/getting-started' },
+    { label: labels.easyWay, path: '/docs/easy-way' },
     { label: labels.options, path: '/docs/options' },
     { label: labels.hotUpdater, path: '/docs/hot-updater' },
+    { label: labels.metroBundle, path: '/docs/metro-bundle-archive' },
     { label: labels.packageManagers, path: '/docs/package-managers' },
     { label: labels.nativeContract, path: '/docs/native-contract' },
     { label: labels.globalState, path: '/docs/global-state' },
@@ -136,6 +197,19 @@ const createLocalizedHref = (
   }
 
   return withSiteBase(`${prefix}${path}`);
+};
+
+const isActiveNavItem = (
+  routeWithoutLocale: string,
+  path: LocalizedNavItem['path'],
+) => {
+  const normalizedRoute = routeWithoutLocale === '/' ? '' : routeWithoutLocale;
+
+  if (path === '') {
+    return normalizedRoute === '';
+  }
+
+  return normalizedRoute === path;
 };
 
 export default function Layout({
@@ -190,6 +264,8 @@ export default function Layout({
   }, []);
 
   const localePrefix = detectLocalePrefix(pageContext.urlOriginal);
+  const currentPathname = getPathname(pageContext.urlOriginal);
+  const routeWithoutLocale = stripLocalePrefix(stripSiteBase(currentPathname));
   const navItems = createNavItems(localePrefix);
   const homeHref = createLocalizedHref(localePrefix, '');
   const seo = getSeoInfo(pageContext.urlOriginal);
@@ -377,7 +453,9 @@ export default function Layout({
                   href={githubRepositoryUrl}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label={`Open GitHub repository, ${formatStarCount(starCount)} stars`}
+                  aria-label={`Open GitHub repository, ${formatStarCount(
+                    starCount,
+                  )} stars`}
                   className={githubLink()}
                 >
                   <span>GitHub</span>
@@ -421,7 +499,14 @@ export default function Layout({
                   <a
                     key={item.path}
                     href={createLocalizedHref(localePrefix, item.path)}
-                    className={navLink()}
+                    className={navLink({
+                      active: isActiveNavItem(routeWithoutLocale, item.path),
+                    })}
+                    aria-current={
+                      isActiveNavItem(routeWithoutLocale, item.path)
+                        ? 'page'
+                        : undefined
+                    }
                   >
                     {item.label}
                   </a>
@@ -436,26 +521,20 @@ export default function Layout({
                   })}
                   aria-hidden="true"
                 />
-                <a
-                  href={withSiteBase('/ko/docs')}
-                  className={languageLink({ active: localePrefix === '/ko' })}
-                >
-                  한국어
-                </a>
-                <a
-                  href={withSiteBase('/zh-cn/docs')}
-                  className={languageLink({
-                    active: localePrefix === '/zh-cn',
-                  })}
-                >
-                  中文
-                </a>
-                <a
-                  href={withSiteBase('/jp/docs')}
-                  className={languageLink({ active: localePrefix === '/jp' })}
-                >
-                  日本語
-                </a>
+                {languageLinks.map((language) => (
+                  <a
+                    key={language.prefix || 'en'}
+                    href={createLocaleHref(language.prefix, currentPathname)}
+                    className={languageLink({
+                      active: localePrefix === language.prefix,
+                    })}
+                    aria-current={
+                      localePrefix === language.prefix ? 'page' : undefined
+                    }
+                  >
+                    {language.label}
+                  </a>
+                ))}
               </nav>
             </div>
           </header>
@@ -542,15 +621,15 @@ const themeButton = () =>
     _hover: { bg: 'accent.soft', color: 'page.fg' },
   });
 
-const navLink = () =>
+const navLink = (props: { readonly active: boolean }) =>
   css({
     flexShrink: '0',
     scrollSnapAlign: 'start',
     rounded: 'full',
     px: { base: '3', md: '3.5' },
     py: '2',
-    color: 'page.muted',
-    bg: 'surface',
+    color: props.active ? 'accent' : 'page.muted',
+    bg: props.active ? 'accent.soft' : 'surface',
     fontSize: { base: 'xs', md: 'sm' },
     fontWeight: '850',
     lineHeight: '1',

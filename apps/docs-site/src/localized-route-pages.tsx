@@ -31,12 +31,18 @@ const localeConfig = {
     gettingStartedTitle: 'Getting Started',
     gettingStartedSubtitle:
       '처음 설치부터 첫 MFE 등록, native-safety verification, runtime 로딩까지 바로 따라갈 수 있는 시작 가이드입니다.',
+    easyWayTitle: '쉬운 사용법',
+    easyWaySubtitle:
+      'generic, bundle, OTA 세 가지 메뉴 중 현재 project에 맞는 적용 방식을 고릅니다.',
     optionsTitle: 'Options reference',
     optionsSubtitle:
       'Host config, MFE config, registry manifest, runtime Provider와 hook의 가능한 옵션을 모두 설명합니다.',
     hotTitle: 'Hot Updater 설정',
     hotSubtitle:
       '기존 OTA engine을 바꾸지 않고 Hot Updater 앞단에 native-safety check를 추가하는 route입니다.',
+    metroBundleTitle: 'Metro / Bundle archive',
+    metroBundleSubtitle:
+      'withMfe로 Metro를 merge하고, rnm bundle archive를 Host custom loader에 연결하는 방법입니다.',
     packageTitle: '패키지 매니저 표',
     packageSubtitle:
       'Repository는 Bun 우선이지만 consumer project는 Bun, npm, pnpm, Yarn, Deno를 사용할 수 있습니다.',
@@ -67,12 +73,18 @@ const localeConfig = {
     gettingStartedTitle: 'Getting Started',
     gettingStartedSubtitle:
       '从首次安装到第一个 MFE 注册、native-safety verification 与 runtime 加载的入门指南。',
+    easyWayTitle: '简单用法',
+    easyWaySubtitle:
+      '在 generic、bundle、OTA 三个菜单中选择适合当前 project 的接入方式。',
     optionsTitle: 'Options reference',
     optionsSubtitle:
       '说明 Host config、MFE config、registry manifest、runtime Provider 与 hooks 的所有可用选项。',
     hotTitle: 'Hot Updater 设置',
     hotSubtitle:
       '不替换现有 OTA engine，而是在 Hot Updater 前面加入 native-safety check。',
+    metroBundleTitle: 'Metro / Bundle archive',
+    metroBundleSubtitle:
+      '使用 withMfe merge Metro，并把 rnm bundle archive 接入 Host custom loader。',
     packageTitle: '包管理器矩阵',
     packageSubtitle:
       'Repository 优先使用 Bun，但 consumer project 可使用 Bun、npm、pnpm、Yarn、Deno。',
@@ -103,12 +115,18 @@ const localeConfig = {
     gettingStartedTitle: 'Getting Started',
     gettingStartedSubtitle:
       '初回 install から最初の MFE registration、native-safety verification、runtime loading まで進める入門ガイドです。',
+    easyWayTitle: '簡単な使い方',
+    easyWaySubtitle:
+      'generic、bundle、OTA の 3 つのメニューから current project に合う path を選びます。',
     optionsTitle: 'Options reference',
     optionsSubtitle:
       'Host config、MFE config、registry manifest、runtime Provider と hooks の使用可能な option をすべて説明します。',
     hotTitle: 'Hot Updater 設定',
     hotSubtitle:
       '既存の OTA engine を置き換えず、Hot Updater の前段に native-safety check を追加する route です。',
+    metroBundleTitle: 'Metro / Bundle archive',
+    metroBundleSubtitle:
+      'withMfe で Metro を merge し、rnm bundle archive を Host custom loader に接続する方法です。',
     packageTitle: 'Package manager 一覧',
     packageSubtitle:
       'Repository は Bun 優先ですが、consumer project は Bun、npm、pnpm、Yarn、Deno を使用できます。',
@@ -139,10 +157,14 @@ const localeConfig = {
     readonly docsEyebrow: string;
     readonly gettingStartedTitle: string;
     readonly gettingStartedSubtitle: string;
+    readonly easyWayTitle: string;
+    readonly easyWaySubtitle: string;
     readonly optionsTitle: string;
     readonly optionsSubtitle: string;
     readonly hotTitle: string;
     readonly hotSubtitle: string;
+    readonly metroBundleTitle: string;
+    readonly metroBundleSubtitle: string;
     readonly packageTitle: string;
     readonly packageSubtitle: string;
     readonly nativeTitle: string;
@@ -220,6 +242,25 @@ export function LocalizedGettingStartedRoute({
   );
 }
 
+export function LocalizedEasyWayRoute({
+  locale,
+}: {
+  readonly locale: LocaleCode;
+}) {
+  const config = localeConfig[locale];
+
+  return (
+    <ShellSection>
+      <PageHeader
+        title={config.easyWayTitle}
+        subtitle={config.easyWaySubtitle}
+        eyebrow={config.docsEyebrow}
+      />
+      <SectionList sections={config.guide.easyWaySections} />
+    </ShellSection>
+  );
+}
+
 export function LocalizedOptionsRoute({
   locale,
 }: {
@@ -254,6 +295,25 @@ export function LocalizedHotUpdaterRoute({
         eyebrow={config.docsEyebrow}
       />
       <SectionList sections={config.guide.hotUpdaterSections} />
+    </ShellSection>
+  );
+}
+
+export function LocalizedMetroBundleRoute({
+  locale,
+}: {
+  readonly locale: LocaleCode;
+}) {
+  const config = localeConfig[locale];
+
+  return (
+    <ShellSection>
+      <PageHeader
+        title={config.metroBundleTitle}
+        subtitle={config.metroBundleSubtitle}
+        eyebrow={config.docsEyebrow}
+      />
+      <SectionList sections={config.guide.metroBundleSections} />
     </ShellSection>
   );
 }
@@ -324,8 +384,10 @@ function LocalizedRouteCards({
 }) {
   const hrefs = [
     `${basePath}/docs/getting-started`,
+    `${basePath}/docs/easy-way`,
     `${basePath}/docs/options`,
     `${basePath}/docs/hot-updater`,
+    `${basePath}/docs/metro-bundle-archive`,
     `${basePath}/docs/package-managers`,
     `${basePath}/docs/native-contract`,
     `${basePath}/docs/global-state`,

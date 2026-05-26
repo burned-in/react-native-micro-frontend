@@ -52,7 +52,7 @@
 安装 CLI 后在 MFE project 中运行。它会执行 React Native bundling，并只把 `index.bundle`、`assets/` 和 `manifest.json` 打进 archive。
 
 ```bash
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 也可以通过各 runner 运行同一命令：`bunx ... bundle`、`npx ... bundle`、`pnpm dlx ... bundle`、`yarn dlx ... bundle`、`deno run -A ... bundle`。

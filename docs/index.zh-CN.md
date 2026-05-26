@@ -14,19 +14,20 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## 文档
 
-| 文档 | 用途 |
-| --- | --- |
-| [简体中文 README](README.zh-CN.md) | 主要指南和示例。 |
-| [Getting Started](getting-started.zh-CN.md) | 安装、配置、注册、校验并加载第一个 MFE。 |
-| [选项参考](options.zh-CN.md) | Host config、MFE config、registry 与 runtime 的全部选项。 |
-| [English](../README.md) | English official guide. |
-| [韩文](README.ko.md) | 韩文官方文档。 |
-| [日文](README.ja.md) | 日文官方文档。 |
-| [包管理器](package-managers.zh-CN.md) | Bun、npm、pnpm、Yarn、Deno 命令矩阵。 |
-| [Native contract](native-contract.md) | native compatibility 说明。 |
-| [全局状态](/zh-cn/docs/global-state) | Host 向 MFE 提供并读取 sharedState 的指南。 |
-| [Hot Updater 设置](/zh-cn/docs/hot-updater) | Hot Updater 路由指南。 |
-
+| 文档                                                    | 用途                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| [简体中文 README](README.zh-CN.md)                      | 主要指南和示例。                                             |
+| [Getting Started](getting-started.zh-CN.md)             | 安装、配置、注册、校验并加载第一个 MFE。                     |
+| [Easy Way](easy-way.zh-CN.md)                           | 在 Generic、无 OTA publish 的 Bundle、OTA delivery 中选择。  |
+| [选项参考](options.zh-CN.md)                            | Host config、MFE config、registry 与 runtime 的全部选项。    |
+| [Metro / Bundle archive](metro-bundle-archive.zh-CN.md) | 使用 `withMfe` merge Metro，并加载 portable bundle archive。 |
+| [English](../README.md)                                 | English official guide.                                      |
+| [韩文](README.ko.md)                                    | 韩文官方文档。                                               |
+| [日文](README.ja.md)                                    | 日文官方文档。                                               |
+| [包管理器](package-managers.zh-CN.md)                   | Bun、npm、pnpm、Yarn、Deno 命令矩阵。                        |
+| [Native contract](native-contract.md)                   | native compatibility 说明。                                  |
+| [全局状态](/zh-cn/docs/global-state)                    | Host 向 MFE 提供并读取 sharedState 的指南。                  |
+| [Hot Updater 设置](/zh-cn/docs/hot-updater)             | Hot Updater 路由指南。                                       |
 
 ## Easy Way
 
@@ -42,10 +43,10 @@ rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.
 
 ```bash
 # 在 MFE project 中运行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-它会创建只包含 `index.bundle`、`assets/` 和 `manifest.json` 的 `.tar.gz`；设置 `--update-registry` 时写入 `bundleArchiveUrl`。
+它会创建只包含 `index.bundle`、`assets/` 和 `manifest.json` 的 `.tar.gz`；不传 `--update-registry` 时保持 bundle-only/no-OTA 流程。
 
 ### 3. OTA — Hot Updater/custom delivery
 

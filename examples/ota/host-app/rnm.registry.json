@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "mfes": {
+    "mfe-feature": {
+      "name": "mfe-feature",
+      "version": "1.0.0",
+      "entry": "./src/index.tsx",
+      "path": "../../mfe-feature",
+      "ota": {
+        "enabled": true,
+        "mode": "manual",
+        "provider": "hot-updater"
+      },
+      "nativeChangePolicy": "ask",
+      "status": "active",
+      "otaBundleUrl": "hot-updater://mfe-feature/production"
+    }
+  }
+}

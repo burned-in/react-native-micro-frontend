@@ -226,7 +226,7 @@ module.exports = (async () => {
 Run this in the MFE project when you want a Hot-Updater-like archive that can be copied into a Host project.
 
 ```bash
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 The command executes the local React Native `bundle`, writes only `index.bundle`, `assets/`, and `manifest.json`, compresses them into `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`, copies the archive to `<host>/.bundle/rnm/`, and updates `bundleArchiveUrl` in `rnm.registry.json` when `--update-registry` is set.
@@ -279,7 +279,7 @@ Use this when you want a portable archive that can be copied into the Host proje
 
 ```bash
 # in mfe-feature/
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
 ```tsx
@@ -288,7 +288,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; `--update-registry` writes `bundleArchiveUrl`. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine.
+`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; without `--update-registry` it stays bundle-only/no-OTA. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine. Add `--update-registry` only if you want `bundleArchiveUrl` in `rnm.registry.json`.
 
 ### Menu 3. OTA — publish through Hot Updater or a custom OTA pipeline
 

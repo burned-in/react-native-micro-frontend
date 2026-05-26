@@ -28,10 +28,14 @@ const copy = {
     docs: 'Complete React Native micro frontend documentation: install, configure, register modules, share host state, verify native contracts, and publish safely.',
     gettingStarted:
       'Getting started guide for React Native micro frontends: install packages, declare host policy, register a module, verify native safety, and load it at runtime.',
+    easyWay:
+      'Easy Way guide for React Native micro frontends: choose Generic, Bundle without OTA publish, or OTA delivery with Hot Updater/custom pipelines.',
     options:
       'Complete options reference for React Native micro frontend Host config, MFE config, registry manifests, runtime providers, hooks, and screen APIs.',
     hotUpdater:
       'Configure Hot Updater for native-safe React Native micro frontend OTA delivery with verification before publish.',
+    metroBundle:
+      'Configure Metro with withMfe and load portable rnm bundle archives through a Host-owned bundle archive loader.',
     packageManagers:
       'Use Bun, npm, pnpm, Yarn, and Deno with the same React Native micro frontend install and release workflow.',
     nativeContract:
@@ -46,10 +50,14 @@ const copy = {
     docs: '설치, 설정, MFE 등록, Host 상태 전달, native contract 검증, 안전한 배포까지 정리한 한국어 문서입니다.',
     gettingStarted:
       'React Native MFE를 처음 시작하기 위한 설치, Host policy 설정, module 등록, native safety 검증, runtime 로딩 가이드입니다.',
+    easyWay:
+      'React Native MFE Easy Way 가이드입니다. Generic, OTA 없는 Bundle, Hot Updater/custom OTA delivery 중 맞는 경로를 고릅니다.',
     options:
       'Host config, MFE config, registry manifest, runtime Provider, hook, screen API의 모든 옵션을 정리한 레퍼런스입니다.',
     hotUpdater:
       'Hot Updater 앞단에 native-safety verification을 추가해 React Native MFE OTA를 안전하게 배포하는 방법입니다.',
+    metroBundle:
+      'withMfe로 Metro를 설정하고 Host-owned bundle archive loader로 portable rnm bundle archive를 로드하는 방법입니다.',
     packageManagers:
       'Bun, npm, pnpm, Yarn, Deno에서 동일한 React Native micro frontend workflow를 실행하는 방법입니다.',
     nativeContract:
@@ -64,10 +72,14 @@ const copy = {
     docs: '完整的简体中文文档：安装、配置、注册 MFE、传递 Host 状态、校验 native contract 并安全发布。',
     gettingStarted:
       'React Native MFE 入门指南：安装 package、声明 Host policy、注册 module、校验 native safety 并通过 runtime 加载。',
+    easyWay:
+      'React Native MFE Easy Way 指南：在 Generic、无 OTA publish 的 Bundle、Hot Updater/custom OTA delivery 中选择合适路径。',
     options:
       '完整选项参考：Host config、MFE config、registry manifest、runtime Provider、hooks 与 screen API。',
     hotUpdater:
       '在 Hot Updater 前加入 native-safety verification，安全发布 React Native MFE OTA。',
+    metroBundle:
+      '使用 withMfe 配置 Metro，并通过 Host-owned bundle archive loader 加载 portable rnm bundle archive。',
     packageManagers:
       '使用 Bun、npm、pnpm、Yarn、Deno 执行同一套 React Native micro frontend workflow。',
     nativeContract:
@@ -82,10 +94,14 @@ const copy = {
     docs: 'install、config、MFE registration、Host state、native contract verification、安全な publish までの日本語ドキュメントです。',
     gettingStarted:
       'React Native MFE の入門ガイドです。install、Host policy、module registration、native safety verification、runtime loading を説明します。',
+    easyWay:
+      'React Native MFE Easy Way guide です。Generic、OTA publish なしの Bundle、Hot Updater/custom OTA delivery から選びます。',
     options:
       'Host config、MFE config、registry manifest、runtime Provider、hooks、screen API の全 option reference です。',
     hotUpdater:
       'Hot Updater の前段に native-safety verification を追加し、React Native MFE OTA を安全に公開します。',
+    metroBundle:
+      'withMfe で Metro を設定し、Host-owned bundle archive loader で portable rnm bundle archive を読み込みます。',
     packageManagers:
       'Bun、npm、pnpm、Yarn、Deno で同じ React Native micro frontend workflow を実行します。',
     nativeContract:
@@ -99,8 +115,10 @@ type SeoSection =
   | 'overview'
   | 'docs'
   | 'gettingStarted'
+  | 'easyWay'
   | 'options'
   | 'hotUpdater'
+  | 'metroBundle'
   | 'packageManagers'
   | 'nativeContract'
   | 'globalState';
@@ -109,8 +127,10 @@ const titles: Record<SeoSection, string> = {
   overview: 'Native-safe React Native Micro Frontends',
   docs: 'Documentation',
   gettingStarted: 'Getting Started',
+  easyWay: 'Easy Way',
   options: 'Options Reference',
   hotUpdater: 'Hot Updater Setup',
+  metroBundle: 'Metro / Bundle Archive',
   packageManagers: 'Package Manager Matrix',
   nativeContract: 'Native Contract Guide',
   globalState: 'Global State Guide',
@@ -122,8 +142,10 @@ const localizedTitles = {
     overview: 'Native-safe React Native Micro Frontend',
     docs: '한국어 문서',
     gettingStarted: 'Getting Started',
+    easyWay: '쉬운 사용법',
     options: '옵션 레퍼런스',
     hotUpdater: 'Hot Updater 설정',
+    metroBundle: 'Metro / Bundle Archive',
     packageManagers: '패키지 매니저 표',
     nativeContract: 'Native Contract 가이드',
     globalState: '전역 상태 가이드',
@@ -132,8 +154,10 @@ const localizedTitles = {
     overview: 'Native-safe React Native Micro Frontend',
     docs: '简体中文文档',
     gettingStarted: 'Getting Started',
+    easyWay: '简单用法',
     options: '选项参考',
     hotUpdater: 'Hot Updater 设置',
+    metroBundle: 'Metro / Bundle Archive',
     packageManagers: '包管理器矩阵',
     nativeContract: 'Native Contract 指南',
     globalState: '全局状态指南',
@@ -142,8 +166,10 @@ const localizedTitles = {
     overview: 'Native-safe React Native Micro Frontend',
     docs: '日本語ドキュメント',
     gettingStarted: 'Getting Started',
+    easyWay: '簡単な使い方',
     options: 'Options reference',
     hotUpdater: 'Hot Updater 設定',
+    metroBundle: 'Metro / Bundle Archive',
     packageManagers: 'Package Manager 一覧',
     nativeContract: 'Native Contract ガイド',
     globalState: 'Global State ガイド',
@@ -305,8 +331,10 @@ function getSection(pathname: string): SeoSection {
   const route = stripLocalePrefix(pathname);
 
   if (route.startsWith('/docs/getting-started')) return 'gettingStarted';
+  if (route.startsWith('/docs/easy-way')) return 'easyWay';
   if (route.startsWith('/docs/options')) return 'options';
   if (route.startsWith('/docs/hot-updater')) return 'hotUpdater';
+  if (route.startsWith('/docs/metro-bundle-archive')) return 'metroBundle';
   if (route.startsWith('/docs/package-managers')) return 'packageManagers';
   if (route.startsWith('/docs/native-contract')) return 'nativeContract';
   if (route.startsWith('/docs/global-state')) return 'globalState';

@@ -4,7 +4,7 @@
 
 独立开发功能模块，验证 native compatibility，并且只在 host binary 可以安全运行时才发布 OTA 更新。
 
-相关文档：[官方文档首页](index.zh-CN.md) · [Getting Started](getting-started.zh-CN.md) · [选项参考](options.zh-CN.md) · [包管理器矩阵](package-managers.zh-CN.md)
+相关文档：[官方文档首页](index.zh-CN.md) · [Getting Started](getting-started.zh-CN.md) · [Easy Way](easy-way.zh-CN.md) · [Metro / Bundle archive](metro-bundle-archive.zh-CN.md) · [选项参考](options.zh-CN.md) · [包管理器矩阵](package-managers.zh-CN.md)
 
 ```txt
 React Native Micro Frontend
@@ -23,16 +23,16 @@ React Native Micro Frontend
 
 ## 核心能力
 
-| 能力 | 说明 |
-| --- | --- |
-| MFE registry | 用一个可预测的 registry 管理 feature module、entry point、OTA policy 和 runtime status。 |
-| Native contract | 将 React Native version、Hermes、New Architecture、native dependency、Podfile、Gradle、AndroidManifest、Info.plist 相关输入固定为 hash。 |
-| OTA gate | 当 native assumptions 与 host binary 不一致时阻止 OTA。 |
-| Runtime policy | 拒绝加载 blocked/incompatible MFE，并安全 fallback。 |
-| Metro integration | `withMfe` merge Metro config，自动把 registered MFE root 与 shared package 映射到 Host `node_modules`；`rnm build` 仍会打印可审查的 bundle command。 |
-| Bundle archive | `rnm bundle` 执行 React Native bundling，只归档 `index.bundle`、Metro `assets/` 和 `manifest.json`，用于 Host copy/CDN delivery。 |
-| Hot Updater adapter | 复用现有 Hot Updater 发布流程。 |
-| Package manager support | 支持 Bun、npm、pnpm、Yarn、Deno 的使用方 workflow。 |
+| 能力                    | 说明                                                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MFE registry            | 用一个可预测的 registry 管理 feature module、entry point、OTA policy 和 runtime status。                                                             |
+| Native contract         | 将 React Native version、Hermes、New Architecture、native dependency、Podfile、Gradle、AndroidManifest、Info.plist 相关输入固定为 hash。             |
+| OTA gate                | 当 native assumptions 与 host binary 不一致时阻止 OTA。                                                                                              |
+| Runtime policy          | 拒绝加载 blocked/incompatible MFE，并安全 fallback。                                                                                                 |
+| Metro integration       | `withMfe` merge Metro config，自动把 registered MFE root 与 shared package 映射到 Host `node_modules`；`rnm build` 仍会打印可审查的 bundle command。 |
+| Bundle archive          | `rnm bundle` 执行 React Native bundling，只归档 `index.bundle`、Metro `assets/` 和 `manifest.json`，用于 Host copy/CDN delivery。                    |
+| Hot Updater adapter     | 复用现有 Hot Updater 发布流程。                                                                                                                      |
+| Package manager support | 支持 Bun、npm、pnpm、Yarn、Deno 的使用方 workflow。                                                                                                  |
 
 ## 快速开始
 
@@ -108,7 +108,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 ```bash
 # 在 mfe-feature/ 中执行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
 ```tsx
@@ -117,7 +117,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；`--update-registry` 会写入 `bundleArchiveUrl`。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。
+`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；不传 `--update-registry` 时它保持 bundle-only/no-OTA 流程。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。只有明确要把 `bundleArchiveUrl` 写入 registry 时才添加 `--update-registry`。
 
 ### 菜单 3. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 
@@ -196,7 +196,6 @@ bun run build
 - `bun test`：运行 OTA 规则、native hash、native diff、package manager 检测的回归测试。
 - `bun run typecheck`：验证整个 monorepo 的 TypeScript 类型。
 - `bun run build`：输出各 package 的 `dist/` 和 declaration 文件。
-
 
 ## 包管理器支持
 
@@ -484,7 +483,7 @@ module.exports = (async () => {
       resolver: {
         assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
       },
-    }),
+    })
   );
 })();
 ```
@@ -500,7 +499,7 @@ module.exports = (async () => {
 
 ```bash
 # 在 MFE project 中执行
-rnm bundle --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 含义：
@@ -594,9 +593,15 @@ import {
 
 type MfeModule = MicroFrontendModule;
 
-declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
-declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
-declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest
+): Promise<TModule>;
 
 const loadMfeModule = createMicroFrontendLoader<MfeModule>({
   hotUpdater: loadWithHotUpdater,
@@ -670,10 +675,7 @@ const sharedState: HostSharedState = {
 
 export function MountedFeatureModule({ registry }) {
   return (
-    <MicroFrontendProvider
-      registry={registry}
-      sharedState={sharedState}
-    >
+    <MicroFrontendProvider registry={registry} sharedState={sharedState}>
       <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
@@ -687,7 +689,8 @@ export function FeatureModuleHeader() {
 
   return (
     <Text>
-      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2={String(checkoutV2)}
+      {isMfe ? "MFE" : "Host"} · {host.locale} · {userId} · checkoutV2=
+      {String(checkoutV2)}
     </Text>
   );
 }
@@ -801,7 +804,6 @@ pnpm version:all 0.2.0
 yarn version:all 0.2.0
 deno task version:all 0.2.0
 ```
-
 
 含义：
 
