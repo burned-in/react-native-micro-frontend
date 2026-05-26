@@ -30,6 +30,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -116,6 +117,7 @@ File: `host-app/rnm.registry.json`
 | `MfeManifest.nativeHash` | `string` | 任意。MFE build/sync 時に取得した native hash。 |
 | `MfeManifest.embeddedBundlePath` | `string` | 任意の local embedded JS bundle path。 |
 | `MfeManifest.otaBundleUrl` | `string` | 任意の OTA URL または provider-specific bundle key。 |
+| `MfeManifest.bundleArchiveUrl` | `string` | `rnm bundle` または `rnm build --archive` が生成した compressed bundle archive URL/path です。 |
 
 ## Runtime options
 
@@ -123,16 +125,16 @@ File: `host-app/rnm.registry.json`
 | --- | --- | --- |
 | `MicroFrontendProvider.registry` | `MfeRegistry` | 必須の registry snapshot。通常は `rnm.registry.json` から import、または Host storage から load します。 |
 | `MicroFrontendProvider.sharedState` | `Record<string, unknown>` | MFE hooks に公開する小さな Host-owned state snapshot。 |
-| `MicroFrontendProvider.isMfe` | `boolean` | subtree が Host-mounted MFE であることを示します。`useIsMfe()` が読み取ります。 |
+| `MicroFrontendProvider.isMfe` | `boolean` | custom renderer 用の manual override です。`MicroFrontendComponent` は loaded MFE subtree を自動的に mark します。 |
 | `MicroFrontendProvider.children` | `ReactNode` | runtime hooks を使える React subtree。 |
 | `useMicroFrontend(name)` | `RuntimeMfeState` | registered MFE 1 つの status、manifest、reason を返します。 |
 | `RuntimeMfeState.status` | `"ready" \| "loading" \| "blocked" \| "missing"` | `ready` のみ Host loader に渡します。他の state は fallback を render します。 |
 | `useMicroFrontendSharedState<T>()` | `T` | Host-provided shared state snapshot を読み取ります。 |
 | `useIsMfe()` | `boolean` | shared components が mounted MFE subtree 内で実行されているかを示します。 |
-| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 再利用可能な Host loader を作ります。まず registry config の `ota.provider`、`embeddedBundlePath`、`otaBundleUrl` を読みます。 |
-| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | Host callback で module 1 つを resolve します。optional options で provider、embedded path、OTA URL を直接指定できます。 |
+| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 再利用可能な Host loader を作ります。まず registry config の `ota.provider`、`embeddedBundlePath`、`otaBundleUrl`、`bundleArchiveUrl` を読みます。 |
+| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | Host callback で module 1 つを resolve します。optional options で provider、embedded path、OTA URL、bundle archive URL を直接指定できます。 |
 | `MicroFrontendComponent.name` | `string` | Registered MFE name。 |
 | `MicroFrontendComponent.load` | `ConfiguredMicroFrontendLoader` | `createMicroFrontendLoader()` で作った Host loader、または互換 loader です。 |
-| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 値を `rnm.registry.json` に保存しない場合、mount ごとに provider/path/url を直接指定します。 |
+| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 値を `rnm.registry.json` に保存しない場合、mount ごとに provider/path/url/archive を直接指定します。 |
 | `MicroFrontendComponent.fallback` | `ReactNode | ((state) => ReactNode)` | missing、blocked、loading、unavailable の時に render されます。 |
 | `MicroFrontendComponent.errorFallback` | `ReactNode | ((error, state) => ReactNode)` | bundle load 失敗時の任意 UI です。 |

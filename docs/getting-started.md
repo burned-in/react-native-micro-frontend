@@ -132,7 +132,7 @@ export default function MfeFeature() {
 
 The runtime package enforces registry safety: missing module, blocked module, and native hash mismatch. It does **not** download or evaluate JavaScript bundles by itself. The Host App still owns the actual Hot Updater, embedded-bundle, or custom bundle loader.
 
-Use `MicroFrontendComponent` with a loader made by `createMicroFrontendLoader()`. The loader reads the registry config first (`ota.provider`, `embeddedBundlePath`, `otaBundleUrl`). If a value is not in `rnm.registry.json`, pass direct optional metadata with `loadOptions` or as the second argument to the created loader.
+Use `MicroFrontendComponent` with a loader made by `createMicroFrontendLoader()`. The loader reads the registry config first (`ota.provider`, `embeddedBundlePath`, `otaBundleUrl`, `bundleArchiveUrl`). If a value is not in `rnm.registry.json`, pass direct optional metadata with `loadOptions` or as the second argument to the created loader.
 
 ```tsx
 import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
@@ -192,10 +192,123 @@ export function App() {
 // <MicroFrontendComponent
 //   name="mfe-feature"
 //   load={loadMfeModule}
-//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   loadOptions={{ provider: "custom", bundleArchiveUrl: "https://cdn.example.com/mfe.ios.ota.tar.gz" }}
 //   fallback={(state) => <Loading reason={state.reason} />}
 // />
 ```
+
+## 6. Merge Metro config with `withMfe`
+
+Add the helper to the Host App `metro.config.js` so MFE roots and shared packages are discovered from `rnm.registry.json`.
+
+```js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  return withMfe(
+    __dirname,
+    mergeConfig(defaultConfig, {
+      resolver: {
+        assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
+      },
+    }),
+  );
+})();
+```
+
+`withMfe` adds registered active MFE roots to `watchFolders`, maps shared packages to Host `node_modules`, keeps existing `extraNodeModules` overrides, and lets manual aliases win.
+
+## 7. Bundle only the files a Host needs
+
+Run this in the MFE project when you want a Hot-Updater-like archive that can be copied into a Host project.
+
+```bash
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+The command executes the local React Native `bundle`, writes only `index.bundle`, `assets/`, and `manifest.json`, compresses them into `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`, copies the archive to `<host>/.bundle/rnm/`, and updates `bundleArchiveUrl` in `rnm.registry.json` when `--update-registry` is set.
+
+Use `bundleArchiveUrl` with a custom loader that downloads, verifies, unpacks, and evaluates the archive with your OTA/runtime engine. The runtime selects the custom loader, but does not execute remote JavaScript by itself.
+
+
+## 8. Easy Way: generic, bundle, OTA menus
+
+### Menu 1. Generic — use it like a normal TypeScript module
+
+Use this when the Host App and MFE project are in the same workspace and Metro can bundle the MFE source directly. This is the easiest path for local development or app-store-bundled feature modules.
+
+```bash
+# in host-app/
+rnm init
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+```js
+// host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
+})();
+```
+
+```tsx
+// Host loader: keep imports static so Metro can include the local MFE.
+const localModules = {
+  "mfe-feature": () => import("../mfe-feature/src/index"),
+};
+
+const loadMfeModule = createMicroFrontendLoader({
+  fallback: async (manifest) => {
+    const load = localModules[manifest.name as keyof typeof localModules];
+    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
+    return await load();
+  },
+});
+```
+
+Then render with `MicroFrontendProvider` + `MicroFrontendComponent`. You do not need to pass `isMfe`; loaded MFE subtrees are marked automatically.
+
+### Menu 2. Bundle — package only the files the Host needs
+
+Use this when you want a portable archive that can be copied into the Host project, attached to a release, or uploaded to your own storage.
+
+```bash
+# in mfe-feature/
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
+```
+
+`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; `--update-registry` writes `bundleArchiveUrl`. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine.
+
+### Menu 3. OTA — publish through Hot Updater or a custom OTA pipeline
+
+Use this when the MFE should be delivered remotely after native-safety verification. The library verifies the native contract first; Hot Updater or your OTA engine still owns distribution and JavaScript evaluation.
+
+```bash
+# in host-app/
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  custom: loadWithCustomOta,
+});
+```
+
+Use `hotUpdater` when `ota.provider` is `hot-updater`; use `custom` when your registry points to a custom OTA URL or archive. If verification fails because native assumptions changed, ship a store release instead of OTA.
 
 Next:
 

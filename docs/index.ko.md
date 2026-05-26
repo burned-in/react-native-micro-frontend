@@ -27,6 +27,36 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [전역 상태](/ko/docs/global-state) | Host에서 MFE로 sharedState를 제공하고 가져오는 방법. |
 | [Hot Updater 설정](/ko/docs/hot-updater) | Hot Updater route 문서. |
 
+
+## Easy Way
+
+### 1. Generic — 일반 TS 모듈 방식
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+`metro.config.js`에 `withMfe`를 넣고, Host loader에서 static import로 local MFE를 연결합니다. `isMfe`는 `MicroFrontendComponent` 안에서 자동 적용됩니다.
+
+### 2. Bundle — portable archive
+
+```bash
+# MFE project에서 실행
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+`index.bundle`, `assets/`, `manifest.json`만 들어 있는 `.tar.gz`를 만들고, `--update-registry`가 있으면 `bundleArchiveUrl`을 기록합니다.
+
+### 3. OTA — Hot Updater/custom delivery
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+`createMicroFrontendLoader({ hotUpdater, custom })`로 연결합니다. OTA engine은 native-safety verification 통과 후 배포와 evaluation을 담당합니다.
+
 ## 핵심 흐름
 
 ```txt
@@ -43,4 +73,6 @@ MFE 등록
 - **Bun-first, ecosystem-friendly**: repository runtime은 Bun 우선이고, consumer project는 Bun, npm, pnpm, Yarn, Deno를 사용할 수 있습니다.
 - **No hidden native patches**: generated file과 manual integration을 review 가능하게 유지합니다.
 - **Hot Updater compatible**: compatibility check를 통과한 뒤 Hot Updater로 OTA delivery를 위임합니다.
+- **Metro-ready by default**: `withMfe`가 Metro config를 merge하고 registered MFE root와 shared package alias를 자동 구성합니다.
+- **Portable bundle archives**: `rnm bundle`이 `index.bundle`, `assets/`, `manifest.json`만 묶어 Host copy/CDN upload에 쓰게 합니다.
 - **Host-provided shared state**: Host가 session, locale, feature flag를 MFE에 안전하게 제공합니다.

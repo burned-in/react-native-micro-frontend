@@ -1,4 +1,7 @@
-import { generateMfeBundleCommand } from '@bunin/react-native-micro-frontend-metro-adapter';
+import {
+  generateMfeBundleArchiveCommands,
+  generateMfeBundleCommand,
+} from '@bunin/react-native-micro-frontend-metro-adapter';
 import type { CliPrinter } from '../cli-output.printer.js';
 
 /**
@@ -22,7 +25,8 @@ export function runBuildCommand(
     return 1;
   }
 
-  const platform = flags.platform === 'android' ? 'android' : 'ios';
+  const platform: 'ios' | 'android' =
+    flags.platform === 'android' ? 'android' : 'ios';
   const buildType = typeof flags.type === 'string' ? flags.type : 'ota';
   const entryFile =
     typeof flags.entry === 'string' ? flags.entry : './src/index.tsx';
@@ -31,16 +35,32 @@ export function runBuildCommand(
   const bundleOutput = `dist/${name}.${platform}.${buildType}.bundle`;
   const assetsDest = `dist/${name}.${platform}.assets`;
 
-  const command = generateMfeBundleCommand({
+  const bundleInput = {
     entryFile,
     platform,
     dev,
     bundleOutput,
     assetsDest,
-  });
+  };
 
   printer.log(`[OK] Metro bundle command for ${name}`);
-  printer.log(command.join(' '));
+
+  if (flags.archive === true) {
+    const archiveOutput = `dist/${name}.${platform}.${buildType}.tar.gz`;
+    const commands = generateMfeBundleArchiveCommands({
+      ...bundleInput,
+      archiveOutput,
+    });
+
+    for (const command of commands) {
+      printer.log(command.join(' '));
+    }
+
+    printer.log(`[OK] Bundle archive output: ${archiveOutput}`);
+    return 0;
+  }
+
+  printer.log(generateMfeBundleCommand(bundleInput).join(' '));
 
   return 0;
 }

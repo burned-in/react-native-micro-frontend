@@ -34,7 +34,8 @@ It does **not** replace Hot Updater. Hot Updater remains the OTA delivery engine
 | Native contract | Hashes React Native version, Hermes, New Architecture, native dependencies, Podfile, Gradle, AndroidManifest, and Info.plist-sensitive inputs. |
 | OTA gate | Blocks OTA when native assumptions no longer match the host binary. |
 | Runtime policy | Refuses blocked or incompatible MFEs and falls back safely in the host app. |
-| Metro integration | Generates inspectable Metro bundle commands without requiring Re.Pack or Module Federation. |
+| Metro integration | `withMfe` merges Metro config, watches registered MFE roots, and automatically maps shared packages to Host `node_modules`; `rnm build` still prints inspectable bundle commands. |
+| Bundle archive | `rnm bundle` runs React Native bundling and archives only `index.bundle`, Metro `assets/`, and `manifest.json` for Host copy/CDN delivery. |
 | Hot Updater adapter | Reuses existing Hot Updater deployments instead of replacing them. |
 | Package manager support | Supports Bun, npm, pnpm, Yarn, and Deno for consumer workflows. |
 
@@ -66,6 +67,82 @@ export default defineReactNativeMicroFrontendConfig({
   mfes: {},
 });
 ```
+
+## Easy Way: generic, bundle, OTA menus
+
+### Menu 1. Generic — use it like a normal TypeScript module
+
+Use this when the Host App and MFE project are in the same workspace and Metro can bundle the MFE source directly. This is the easiest path for local development or app-store-bundled feature modules.
+
+```bash
+# in host-app/
+rnm init
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+```js
+// host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
+})();
+```
+
+```tsx
+// Host loader: keep imports static so Metro can include the local MFE.
+const localModules = {
+  "mfe-feature": () => import("../mfe-feature/src/index"),
+};
+
+const loadMfeModule = createMicroFrontendLoader({
+  fallback: async (manifest) => {
+    const load = localModules[manifest.name as keyof typeof localModules];
+    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
+    return await load();
+  },
+});
+```
+
+Then render with `MicroFrontendProvider` + `MicroFrontendComponent`. You do not need to pass `isMfe`; loaded MFE subtrees are marked automatically.
+
+### Menu 2. Bundle — package only the files the Host needs
+
+Use this when you want a portable archive that can be copied into the Host project, attached to a release, or uploaded to your own storage.
+
+```bash
+# in mfe-feature/
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
+```
+
+`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; `--update-registry` writes `bundleArchiveUrl`. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine.
+
+### Menu 3. OTA — publish through Hot Updater or a custom OTA pipeline
+
+Use this when the MFE should be delivered remotely after native-safety verification. The library verifies the native contract first; Hot Updater or your OTA engine still owns distribution and JavaScript evaluation.
+
+```bash
+# in host-app/
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  custom: loadWithCustomOta,
+});
+```
+
+Use `hotUpdater` when `ota.provider` is `hot-updater`; use `custom` when your registry points to a custom OTA URL or archive. If verification fails because native assumptions changed, ship a store release instead of OTA.
 
 ## Documentation
 
@@ -432,6 +509,50 @@ Meaning:
 - does not use Re.Pack
 - separates command generation from execution so CI can inspect the exact command
 
+### 6a. Merge Metro config with `withMfe`
+
+```js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  return withMfe(
+    __dirname,
+    mergeConfig(defaultConfig, {
+      resolver: {
+        assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
+      },
+    }),
+  );
+})();
+```
+
+Meaning:
+
+- reads `rnm.registry.json` automatically
+- adds active MFE project roots to Metro `watchFolders`
+- maps shared dependencies such as `react`, `react-native`, `@bunin/react-native-micro-frontend`, and Host/MFE dependency intersections to Host `node_modules`
+- preserves your existing `resolver.extraNodeModules` overrides, so manual aliases still win
+
+### 6b. Build a minimal compressed bundle archive
+
+```bash
+# In the MFE project
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+Meaning:
+
+- runs the local React Native `bundle` command instead of only printing it
+- writes only `index.bundle`, Metro `assets/`, and `manifest.json`
+- compresses those files to `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`
+- when `--host` is provided, copies the archive to `<host>/.bundle/rnm/`
+- when `--update-registry` is also provided, updates Host `rnm.registry.json` with `bundleArchiveUrl`
+
+For CI-only command inspection, keep using `rnm build <mfe> --archive`.
+
 ### 7. Publish through Hot Updater after verification
 
 ```bash
@@ -541,8 +662,8 @@ Meaning:
 - the host app owns where the registry comes from
 - the runtime refuses blocked or nativeHash-mismatched MFEs
 - MFE entry modules should default-export their root component
-- `createMicroFrontendLoader()` reads registry config first: `ota.provider`, `embeddedBundlePath`, and `otaBundleUrl`
-- pass `loadOptions` or the created loader's second argument when a mount point needs direct provider/path/url settings
+- `createMicroFrontendLoader()` reads registry config first: `ota.provider`, `embeddedBundlePath`, `otaBundleUrl`, and `bundleArchiveUrl`
+- pass `loadOptions` or the created loader's second argument when a mount point needs direct provider/path/url/archive settings
 - `MicroFrontendComponent` renders fallback while missing, blocked, loading, or failed, then renders `module.default` when the Host loader succeeds
 
 ## Host-provided global state
@@ -590,7 +711,6 @@ const sharedState: HostSharedState = {
 export function MountedFeatureModule({ registry }) {
   return (
     <MicroFrontendProvider
-      isMfe
       registry={registry}
       sharedState={sharedState}
     >
@@ -617,7 +737,7 @@ Meaning:
 
 - the host remains the source of truth
 - feature modules get global state through the runtime hook, not by importing the host store
-- `useIsMfe()` returns `false` outside a provider or in the host shell, and `true` when the host marks the mounted feature subtree with `isMfe`
+- `MicroFrontendComponent` automatically marks the loaded feature subtree as an MFE, so `useIsMfe()` is `true` inside mounted MFEs and `false` in the host shell. Use `MicroFrontendProvider isMfe` only for custom renderers that bypass `MicroFrontendComponent`.
 - keep the shared type in a tiny shared contract package or file that both host and MFE can import
 - mutations should go back through host-owned commands, callbacks, or events
 - large caches, secrets, and native-only handles should not be placed in `sharedState`

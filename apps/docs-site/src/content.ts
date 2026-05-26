@@ -83,6 +83,14 @@ export const features: readonly Feature[] = [
     body: 'The library wraps and verifies Hot Updater workflows instead of replacing your existing OTA delivery engine.',
   },
   {
+    title: 'Metro auto wiring',
+    body: 'withMfe reads rnm.registry.json, watches registered MFE roots, and maps shared packages to the Host node_modules automatically.',
+  },
+  {
+    title: 'Minimal bundle archives',
+    body: 'rnm bundle runs React Native bundling and archives only index.bundle, Metro assets, and manifest.json for Host copy or CDN delivery.',
+  },
+  {
     title: 'Host-provided state',
     body: 'The host can intentionally provide session, locale, feature flags, or analytics context to feature modules through runtime hooks.',
   },
@@ -144,6 +152,54 @@ bunx @bunin/react-native-micro-frontend-cli init`,
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production`,
+  },
+
+  {
+    eyebrow: 'Easy Way',
+    title: 'Pick the menu you need: generic, bundle, or OTA.',
+    body: [
+      'Generic treats the MFE like a normal TypeScript module: Metro bundles a local or sibling project through withMfe and a static import map.',
+      'Bundle creates a portable archive containing only index.bundle, assets, and manifest.json, then can copy it to the Host and write bundleArchiveUrl.',
+      'OTA keeps Hot Updater or your custom OTA engine in charge of distribution after native-safety verification passes.',
+    ],
+    code: `# 1. Generic: normal TS module style
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+
+# host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
+})();
+
+# 2. Bundle: portable archive
+# in mfe-feature/
+rnm bundle --platform ios --host ../host-app --update-registry
+
+# 3. OTA: verified remote delivery
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production`,
+  },
+  {
+    eyebrow: 'Metro and bundles',
+    title: 'Use withMfe for Metro, and rnm bundle for portable artifacts.',
+    body: [
+      'withMfe merges your Metro config with MFE watchFolders and shared-package aliases from rnm.registry.json, so manual extraNodeModules setup is no longer the default path.',
+      'When you need a Hot-Updater-like artifact, run rnm bundle in the MFE project. It packages only index.bundle, assets, and manifest.json, then can copy the archive into the Host project.',
+    ],
+    code: `// host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  return withMfe(__dirname, mergeConfig(defaultConfig, {}));
+})();
+
+# in mfe-feature/
+rnm bundle --platform ios --host ../host-app --update-registry`,
   },
 ];
 
@@ -247,7 +303,7 @@ export default function MfeFeature() {
     title: 'Mount through the runtime safety gate and a host loader.',
     body: [
       'The runtime package checks missing modules, blocked modules, and native hash mismatches. It does not download or evaluate JavaScript bundles by itself.',
-      'Use createMicroFrontendLoader() and MicroFrontendComponent. The loader reads registry config first (ota.provider, embeddedBundlePath, otaBundleUrl), and loadOptions can supply direct per-mount metadata.',
+      'Use createMicroFrontendLoader() and MicroFrontendComponent. The loader reads registry config first (ota.provider, embeddedBundlePath, otaBundleUrl, bundleArchiveUrl), and loadOptions can supply direct per-mount metadata.',
     ],
     code: `import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
 import {
@@ -306,9 +362,85 @@ export function App() {
 // <MicroFrontendComponent
 //   name="mfe-feature"
 //   load={loadMfeModule}
-//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   loadOptions={{ provider: "custom", bundleArchiveUrl: "https://cdn.example.com/mfe.ios.ota.tar.gz" }}
 //   fallback={(state) => <Loading reason={state.reason} />}
 // />`,
+  },
+  {
+    eyebrow: 'Step 6',
+    title: 'Merge Metro config with withMfe.',
+    body: [
+      'Add withMfe in the Host App metro.config.js. It reads rnm.registry.json, adds active MFE roots to watchFolders, and maps shared packages to the Host node_modules automatically.',
+      'Pass your existing mergeConfig result into withMfe. Existing resolver.extraNodeModules overrides are preserved and still take precedence.',
+    ],
+    code: `const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  return withMfe(
+    __dirname,
+    mergeConfig(defaultConfig, {
+      resolver: {
+        assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
+      },
+    }),
+  );
+})();`,
+  },
+  {
+    eyebrow: 'Step 7',
+    title: 'Bundle only the files the Host needs.',
+    body: [
+      'Run rnm bundle inside the MFE project when you want a Hot-Updater-like archive. It executes React Native bundling, writes index.bundle, assets, and manifest.json, then compresses only those files.',
+      'Use --host to copy the archive into the Host project and --update-registry to set bundleArchiveUrl in rnm.registry.json. Your custom loader still owns download, verification, unpacking, and JS evaluation.',
+    ],
+    code: `# in mfe-feature/
+rnm bundle --platform ios --host ../host-app --update-registry
+
+# output
+# dist/rnm-bundles/mfe-feature/ios/index.bundle
+# dist/rnm-bundles/mfe-feature/ios/assets/
+# dist/rnm-bundles/mfe-feature/ios/manifest.json
+# dist/rnm-bundles/mfe-feature/ios/mfe-feature.ios.ota.tar.gz`,
+  },
+
+  {
+    eyebrow: 'Easy Way',
+    title: 'Use one of three menus: generic, bundle, or OTA.',
+    body: [
+      'Generic is the normal TypeScript-module style. Register with OTA disabled, add withMfe to metro.config.js, and keep the Host loader import static so Metro can include the MFE source.',
+      'Bundle is the portable archive style. Run rnm bundle in the MFE project to produce only index.bundle, assets, manifest.json, and a .tar.gz; use bundleArchiveUrl with a custom loader.',
+      'OTA is the remote delivery style. Register with hot-updater or custom OTA metadata, run verify before publish, and let the OTA engine distribute and evaluate JavaScript only after native-safety checks pass.',
+      'You do not need to pass an isMfe prop. MicroFrontendComponent automatically marks the loaded subtree as MFE context.',
+    ],
+    code: `# 1. Generic: normal TS module style
+# host-app/
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+
+const localModules = {
+  "mfe-feature": () => import("../mfe-feature/src/index"),
+};
+
+# 2. Bundle: portable archive
+# mfe-feature/
+rnm bundle --platform ios --host ../host-app --update-registry
+
+const bundleLoader = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
+
+# 3. OTA: Hot Updater or custom OTA
+# host-app/
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+
+const otaLoader = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  custom: loadWithCustomOta,
+});`,
   },
 ];
 
@@ -338,6 +470,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -530,7 +663,10 @@ MfeManifest.embeddedBundlePath?: string
   Optional local embedded JS bundle path.
 
 MfeManifest.otaBundleUrl?: string
-  Optional OTA URL or provider-specific bundle key.`,
+  Optional OTA URL or provider-specific bundle key.
+
+MfeManifest.bundleArchiveUrl?: string
+  Optional compressed bundle archive URL/path produced by rnm bundle or rnm build --archive.`,
   },
   {
     eyebrow: 'Runtime',
@@ -546,7 +682,7 @@ MicroFrontendProvider.sharedState?: Record<string, unknown>
   Small Host-owned state snapshot exposed to MFE hooks.
 
 MicroFrontendProvider.isMfe?: boolean
-  Marks the subtree as a Host-mounted MFE. useIsMfe() reads this flag.
+  Optional manual override for custom renderers. MicroFrontendComponent marks loaded MFE subtrees automatically.
 
 MicroFrontendProvider.children: ReactNode
   React subtree that can use runtime hooks.
@@ -564,10 +700,10 @@ useIsMfe(): boolean
   Tells shared components whether they are running in a mounted MFE subtree.
 
 createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
-  Creates a reusable Host loader. It reads registry config first: ota.provider, embeddedBundlePath, otaBundleUrl.
+  Creates a reusable Host loader. It reads registry config first: ota.provider, embeddedBundlePath, otaBundleUrl, bundleArchiveUrl.
 
 loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
-  Resolves one module with Host callbacks. Optional options can directly supply provider, embeddedBundlePath, or otaBundleUrl.
+  Resolves one module with Host callbacks. Optional options can directly supply provider, embeddedBundlePath, otaBundleUrl, or bundleArchiveUrl.
 
 MicroFrontendComponent.name: string
   Registered MFE name.
@@ -576,7 +712,7 @@ MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
   Host loader created by createMicroFrontendLoader(), or your compatible loader.
 
 MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
-  Direct per-mount provider/path/url overrides when values are not stored in rnm.registry.json.
+  Direct per-mount provider/path/url/archive overrides when values are not stored in rnm.registry.json.
 
 MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
   Rendered when missing, blocked, loading, or unavailable.
@@ -606,6 +742,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -774,7 +911,10 @@ MfeManifest.embeddedBundlePath?: string
   선택적인 local embedded JS bundle path입니다.
 
 MfeManifest.otaBundleUrl?: string
-  선택적인 OTA URL 또는 provider-specific bundle key입니다.`,
+  선택적인 OTA URL 또는 provider-specific bundle key입니다.
+
+MfeManifest.bundleArchiveUrl?: string
+  rnm bundle 또는 rnm build --archive가 만든 compressed bundle archive URL/path입니다.`,
     runtime: `MicroFrontendProvider.registry: MfeRegistry
   필수 registry snapshot입니다. 보통 rnm.registry.json에서 import하거나 Host storage에서 load합니다.
 
@@ -782,7 +922,7 @@ MicroFrontendProvider.sharedState?: Record<string, unknown>
   MFE hooks에 노출하는 작은 Host-owned state snapshot입니다.
 
 MicroFrontendProvider.isMfe?: boolean
-  subtree가 Host-mounted MFE임을 표시합니다. useIsMfe()가 이 flag를 읽습니다.
+  custom renderer용 수동 override입니다. MicroFrontendComponent가 loaded MFE subtree를 자동 표시합니다.
 
 MicroFrontendProvider.children: ReactNode
   runtime hooks를 사용할 수 있는 React subtree입니다.
@@ -800,10 +940,10 @@ useIsMfe(): boolean
   shared component가 mounted MFE subtree 안에서 실행 중인지 알려 줍니다.
 
 createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
-  재사용 가능한 Host loader를 만듭니다. 먼저 registry config인 ota.provider, embeddedBundlePath, otaBundleUrl을 읽습니다.
+  재사용 가능한 Host loader를 만듭니다. 먼저 registry config인 ota.provider, embeddedBundlePath, otaBundleUrl, bundleArchiveUrl을 읽습니다.
 
 loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
-  Host callback으로 module 하나를 resolve합니다. optional options로 provider, embeddedBundlePath, otaBundleUrl을 직접 줄 수 있습니다.
+  Host callback으로 module 하나를 resolve합니다. optional options로 provider, embeddedBundlePath, otaBundleUrl, bundleArchiveUrl을 직접 줄 수 있습니다.
 
 MicroFrontendComponent.name: string
   Registered MFE name입니다.
@@ -812,7 +952,7 @@ MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
   createMicroFrontendLoader()로 만든 Host loader 또는 호환 loader입니다.
 
 MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
-  값을 rnm.registry.json에 저장하지 않을 때 mount별 provider/path/url을 직접 지정합니다.
+  값을 rnm.registry.json에 저장하지 않을 때 mount별 provider/path/url/archive를 직접 지정합니다.
 
 MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
   missing, blocked, loading, unavailable 상태에서 render됩니다.
@@ -839,6 +979,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -1007,7 +1148,10 @@ MfeManifest.embeddedBundlePath?: string
   可选 local embedded JS bundle path。
 
 MfeManifest.otaBundleUrl?: string
-  可选 OTA URL 或 provider-specific bundle key。`,
+  可选 OTA URL 或 provider-specific bundle key。
+
+MfeManifest.bundleArchiveUrl?: string
+  rnm bundle 或 rnm build --archive 生成的 compressed bundle archive URL/path。`,
     runtime: `MicroFrontendProvider.registry: MfeRegistry
   必需的 registry snapshot，通常从 rnm.registry.json import，或从 Host storage load。
 
@@ -1015,7 +1159,7 @@ MicroFrontendProvider.sharedState?: Record<string, unknown>
   暴露给 MFE hooks 的小型 Host-owned state snapshot。
 
 MicroFrontendProvider.isMfe?: boolean
-  标记 subtree 是 Host-mounted MFE。useIsMfe() 会读取此 flag。
+  custom renderer 的手动 override。MicroFrontendComponent 会自动标记 loaded MFE subtree。
 
 MicroFrontendProvider.children: ReactNode
   可以使用 runtime hooks 的 React subtree。
@@ -1033,10 +1177,10 @@ useIsMfe(): boolean
   告诉 shared component 是否运行在 mounted MFE subtree 中。
 
 createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
-  创建可复用的 Host loader。它会优先读取 registry config：ota.provider、embeddedBundlePath、otaBundleUrl。
+  创建可复用的 Host loader。它会优先读取 registry config：ota.provider、embeddedBundlePath、otaBundleUrl、bundleArchiveUrl。
 
 loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
-  使用 Host callback resolve 一个 module。optional options 可直接提供 provider、embeddedBundlePath 或 otaBundleUrl。
+  使用 Host callback resolve 一个 module。optional options 可直接提供 provider、embeddedBundlePath、otaBundleUrl 或 bundleArchiveUrl。
 
 MicroFrontendComponent.name: string
   Registered MFE name。
@@ -1045,7 +1189,7 @@ MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
   由 createMicroFrontendLoader() 创建的 Host loader，或兼容 loader。
 
 MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
-  当值不存储在 rnm.registry.json 时，为单个 mount 点直接覆盖 provider/path/url。
+  当值不存储在 rnm.registry.json 时，为单个 mount 点直接覆盖 provider/path/url/archive。
 
 MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
   missing、blocked、loading 或 unavailable 时 render。
@@ -1072,6 +1216,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -1240,7 +1385,10 @@ MfeManifest.embeddedBundlePath?: string
   任意の local embedded JS bundle path です。
 
 MfeManifest.otaBundleUrl?: string
-  任意の OTA URL または provider-specific bundle key です。`,
+  任意の OTA URL または provider-specific bundle key です。
+
+MfeManifest.bundleArchiveUrl?: string
+  rnm bundle または rnm build --archive が生成した compressed bundle archive URL/path です。`,
     runtime: `MicroFrontendProvider.registry: MfeRegistry
   必須の registry snapshot です。通常は rnm.registry.json から import、または Host storage から load します。
 
@@ -1248,7 +1396,7 @@ MicroFrontendProvider.sharedState?: Record<string, unknown>
   MFE hooks に公開する小さな Host-owned state snapshot です。
 
 MicroFrontendProvider.isMfe?: boolean
-  subtree が Host-mounted MFE であることを示します。useIsMfe() がこの flag を読みます。
+  custom renderer 用の manual override です。MicroFrontendComponent は loaded MFE subtree を自動的に mark します。
 
 MicroFrontendProvider.children: ReactNode
   runtime hooks を使える React subtree です。
@@ -1266,10 +1414,10 @@ useIsMfe(): boolean
   shared component が mounted MFE subtree 内で実行されているかを示します。
 
 createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
-  再利用可能な Host loader を作ります。まず registry config の ota.provider、embeddedBundlePath、otaBundleUrl を読みます。
+  再利用可能な Host loader を作ります。まず registry config の ota.provider、embeddedBundlePath、otaBundleUrl、bundleArchiveUrl を読みます。
 
 loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
-  Host callback で module 1 つを resolve します。optional options で provider、embeddedBundlePath、otaBundleUrl を直接指定できます。
+  Host callback で module 1 つを resolve します。optional options で provider、embeddedBundlePath、otaBundleUrl、bundleArchiveUrl を直接指定できます。
 
 MicroFrontendComponent.name: string
   Registered MFE name です。
@@ -1278,7 +1426,7 @@ MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
   createMicroFrontendLoader() で作った Host loader、または互換 loader です。
 
 MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
-  値を rnm.registry.json に保存しない場合、mount ごとに provider/path/url を直接指定します。
+  値を rnm.registry.json に保存しない場合、mount ごとに provider/path/url/archive を直接指定します。
 
 MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
   missing、blocked、loading、unavailable の時に render されます。
@@ -1324,7 +1472,7 @@ rnm publish mfe-feature --package-manager bun --channel production`,
     title: 'Load feature modules through an explicit runtime policy.',
     body: [
       'The runtime reads the registry and refuses blocked modules, missing modules, and native-hash mismatches. The host owns the fallback UI and actual bundle loader.',
-      'Use createMicroFrontendLoader() to bind Host transports once, then mount with MicroFrontendComponent. Pass loadOptions when a mount point needs direct provider/path/url settings.',
+      'Use createMicroFrontendLoader() to bind Host transports once, then mount with MicroFrontendComponent. Pass loadOptions when a mount point needs direct provider/path/url/archive settings.',
     ],
     code: `import {
   MicroFrontendComponent,
@@ -1381,7 +1529,7 @@ const sharedState: HostSharedState = {
 
 export function MountedFeatureModule({ registry }) {
   return (
-    <MicroFrontendProvider isMfe registry={registry} sharedState={sharedState}>
+    <MicroFrontendProvider registry={registry} sharedState={sharedState}>
       <FeatureModuleHeader />
     </MicroFrontendProvider>
   );
@@ -1558,12 +1706,20 @@ export const localizedGuides = {
         body: '처음 설치부터 첫 MFE 검증과 runtime 로딩까지 따라가는 시작 가이드입니다.',
       },
       {
+        title: '쉬운 사용법',
+        body: 'generic, bundle, OTA 세 가지 Easy Way 메뉴를 바로 비교합니다.',
+      },
+      {
         title: 'Options reference',
         body: 'Host config, MFE config, registry, runtime API의 가능한 옵션을 정리합니다.',
       },
       {
         title: 'Hot Updater 설정',
         body: '기존 Hot Updater를 유지하면서 native-safety check를 앞단에 둡니다.',
+      },
+      {
+        title: 'Metro / bundle archive',
+        body: 'withMfe로 Metro 공유 dependency를 자동 구성하고 rnm bundle로 필요한 파일만 archive합니다.',
       },
       {
         title: '패키지 매니저',
@@ -1633,6 +1789,35 @@ export const localizedGuides = {
           'createMicroFrontendLoader()와 MicroFrontendComponent를 사용합니다. loader는 registry config를 먼저 읽고, loadOptions로 mount 지점별 값을 직접 줄 수 있습니다.',
         ],
         code: gettingStartedSections[5]?.code ?? '',
+      },
+      {
+        eyebrow: '6단계',
+        title: 'withMfe로 Metro config를 merge합니다.',
+        body: [
+          'Host App metro.config.js에 withMfe를 추가합니다. rnm.registry.json을 읽어 active MFE root를 watchFolders에 넣고 shared package를 Host node_modules로 자동 매핑합니다.',
+          '기존 mergeConfig 결과를 withMfe에 넘기면 됩니다. 기존 resolver.extraNodeModules override는 보존되고 계속 우선합니다.',
+        ],
+        code: gettingStartedSections[6]?.code ?? '',
+      },
+      {
+        eyebrow: '7단계',
+        title: 'Host가 필요한 파일만 bundle로 묶습니다.',
+        body: [
+          'Hot-Updater-like archive가 필요하면 MFE project에서 rnm bundle을 실행합니다. React Native bundling을 실행하고 index.bundle, assets, manifest.json만 압축합니다.',
+          '--host로 Host project에 복사하고 --update-registry로 rnm.registry.json의 bundleArchiveUrl을 설정합니다. download, verification, unpacking, JS evaluation은 custom loader가 담당합니다.',
+        ],
+        code: gettingStartedSections[7]?.code ?? '',
+      },
+      {
+        eyebrow: 'Easy Way',
+        title: 'generic, bundle, OTA 세 가지 메뉴 중 하나를 고릅니다.',
+        body: [
+          'Generic은 일반 TypeScript module처럼 쓰는 방식입니다. OTA를 끄고 등록한 뒤 withMfe를 metro.config.js에 추가하고 Host loader에서 static import map으로 연결합니다.',
+          'Bundle은 portable archive 방식입니다. MFE project에서 rnm bundle을 실행해 index.bundle, assets, manifest.json, .tar.gz만 만들고 bundleArchiveUrl을 custom loader에 연결합니다.',
+          'OTA는 원격 배포 방식입니다. hot-updater 또는 custom OTA metadata로 등록하고 publish 전에 verify를 실행하며, native-safety check 통과 후 OTA engine이 배포와 evaluation을 담당합니다.',
+          'isMfe prop은 따로 넘길 필요가 없습니다. MicroFrontendComponent가 loaded subtree를 자동으로 MFE context로 표시합니다.',
+        ],
+        code: gettingStartedSections[8]?.code ?? '',
       },
     ],
     optionsSections: [
@@ -1730,6 +1915,16 @@ beerware spirit: appreciated`,
         ],
         code: docsSections[3]?.code ?? '',
       },
+      {
+        eyebrow: 'Easy Way',
+        title: 'generic, bundle, OTA 메뉴로 사용 방식을 나눕니다.',
+        body: [
+          'Generic은 local/sibling project를 일반 TS module처럼 Metro로 바로 묶는 방식입니다.',
+          'Bundle은 rnm bundle로 필요한 파일만 archive하고 bundleArchiveUrl과 custom loader로 연결하는 방식입니다.',
+          'OTA는 verify를 통과한 뒤 Hot Updater 또는 custom OTA pipeline으로 원격 배포하는 방식입니다.',
+        ],
+        code: gettingStartedSections[8]?.code ?? '',
+      },
     ],
     hotUpdaterSections: [
       {
@@ -1791,12 +1986,20 @@ beerware spirit: appreciated`,
         body: '从安装到第一个 MFE 校验与 runtime 加载的入门指南。',
       },
       {
+        title: '简单用法',
+        body: '直接比较 generic、bundle、OTA 三种 Easy Way 菜单。',
+      },
+      {
         title: 'Options reference',
         body: '整理 Host config、MFE config、registry 与 runtime API 的所有可用选项。',
       },
       {
         title: 'Hot Updater 设置',
         body: '保留现有 Hot Updater，并在前面加入 native-safety check。',
+      },
+      {
+        title: 'Metro / bundle archive',
+        body: '用 withMfe 自动配置 Metro shared dependency，并用 rnm bundle 只 archive 必要文件。',
       },
       {
         title: '包管理器',
@@ -1860,6 +2063,35 @@ beerware spirit: appreciated`,
           '使用 createMicroFrontendLoader() 和 MicroFrontendComponent。loader 会优先读取 registry config，也可以用 loadOptions 为某个 mount 点直接传入 metadata。',
         ],
         code: gettingStartedSections[5]?.code ?? '',
+      },
+      {
+        eyebrow: '步骤 6',
+        title: '使用 withMfe merge Metro config。',
+        body: [
+          '在 Host App metro.config.js 中添加 withMfe。它读取 rnm.registry.json，把 active MFE root 加入 watchFolders，并自动把 shared package 映射到 Host node_modules。',
+          '把现有 mergeConfig 结果传给 withMfe 即可。已有 resolver.extraNodeModules override 会被保留并继续优先。',
+        ],
+        code: gettingStartedSections[6]?.code ?? '',
+      },
+      {
+        eyebrow: '步骤 7',
+        title: '只 bundle Host 需要的文件。',
+        body: [
+          '需要 Hot-Updater-like archive 时，在 MFE project 中运行 rnm bundle。它执行 React Native bundling，只压缩 index.bundle、assets 和 manifest.json。',
+          '用 --host 复制到 Host project，用 --update-registry 设置 rnm.registry.json 的 bundleArchiveUrl。download、verification、unpacking、JS evaluation 仍由 custom loader 负责。',
+        ],
+        code: gettingStartedSections[7]?.code ?? '',
+      },
+      {
+        eyebrow: 'Easy Way',
+        title: '在 generic、bundle、OTA 三个菜单中选择一个。',
+        body: [
+          'Generic 是像普通 TypeScript module 一样使用的方式。注册时关闭 OTA，在 metro.config.js 中加入 withMfe，并在 Host loader 中用 static import map 连接。',
+          'Bundle 是 portable archive 方式。在 MFE project 中运行 rnm bundle，只生成 index.bundle、assets、manifest.json 和 .tar.gz，并通过 custom loader 使用 bundleArchiveUrl。',
+          'OTA 是远程发布方式。使用 hot-updater 或 custom OTA metadata 注册，publish 前运行 verify，并在 native-safety check 通过后由 OTA engine 负责分发和 evaluation。',
+          '不需要传 isMfe prop。MicroFrontendComponent 会自动把 loaded subtree 标记为 MFE context。',
+        ],
+        code: gettingStartedSections[8]?.code ?? '',
       },
     ],
     optionsSections: [
@@ -1957,6 +2189,16 @@ beerware spirit: appreciated`,
         ],
         code: docsSections[3]?.code ?? '',
       },
+      {
+        eyebrow: 'Easy Way',
+        title: '按 generic、bundle、OTA 菜单区分使用方式。',
+        body: [
+          'Generic 是把 local/sibling project 像普通 TS module 一样交给 Metro 直接 bundle。',
+          'Bundle 是用 rnm bundle 只 archive 必要文件，并通过 bundleArchiveUrl 与 custom loader 连接。',
+          'OTA 是 verify 通过后，通过 Hot Updater 或 custom OTA pipeline 远程发布。',
+        ],
+        code: gettingStartedSections[8]?.code ?? '',
+      },
     ],
     hotUpdaterSections: [
       {
@@ -2018,12 +2260,20 @@ beerware spirit: appreciated`,
         body: 'install から最初の MFE verification と runtime loading まで進める入門ガイドです。',
       },
       {
+        title: '簡単な使い方',
+        body: 'generic、bundle、OTA の 3 つの Easy Way メニューをすぐ比較します。',
+      },
+      {
         title: 'Options reference',
         body: 'Host config、MFE config、registry、runtime API の使用可能な option を整理します。',
       },
       {
         title: 'Hot Updater 設定',
         body: '既存の Hot Updater を維持し、その前段に native-safety check を置きます。',
+      },
+      {
+        title: 'Metro / bundle archive',
+        body: 'withMfe で Metro shared dependency を自動設定し、rnm bundle で必要 files だけを archive します。',
       },
       {
         title: 'Package managers',
@@ -2093,6 +2343,35 @@ beerware spirit: appreciated`,
           'createMicroFrontendLoader() と MicroFrontendComponent を使います。loader は registry config を先に読み、loadOptions で mount ごとの metadata も直接渡せます。',
         ],
         code: gettingStartedSections[5]?.code ?? '',
+      },
+      {
+        eyebrow: 'Step 6',
+        title: 'withMfe で Metro config を merge します。',
+        body: [
+          'Host App metro.config.js に withMfe を追加します。rnm.registry.json を読み、active MFE root を watchFolders に追加し、shared package を Host node_modules に自動 map します。',
+          '既存の mergeConfig result を withMfe に渡します。既存の resolver.extraNodeModules override は保持され、引き続き優先されます。',
+        ],
+        code: gettingStartedSections[6]?.code ?? '',
+      },
+      {
+        eyebrow: 'Step 7',
+        title: 'Host が必要な files だけを bundle します。',
+        body: [
+          'Hot-Updater-like archive が必要な場合は MFE project で rnm bundle を実行します。React Native bundling を実行し、index.bundle、assets、manifest.json だけを圧縮します。',
+          '--host で Host project へ copy し、--update-registry で rnm.registry.json の bundleArchiveUrl を設定します。download、verification、unpacking、JS evaluation は custom loader が担当します。',
+        ],
+        code: gettingStartedSections[7]?.code ?? '',
+      },
+      {
+        eyebrow: 'Easy Way',
+        title: 'generic、bundle、OTA の 3 つのメニューから選びます。',
+        body: [
+          'Generic は通常の TypeScript module のように使う方式です。OTA を無効にして登録し、metro.config.js に withMfe を追加し、Host loader で static import map に接続します。',
+          'Bundle は portable archive 方式です。MFE project で rnm bundle を実行し、index.bundle、assets、manifest.json、.tar.gz だけを作成して bundleArchiveUrl を custom loader に接続します。',
+          'OTA は remote delivery 方式です。hot-updater または custom OTA metadata で登録し、publish 前に verify を実行し、native-safety check 通過後は OTA engine が配布と evaluation を担当します。',
+          'isMfe prop を渡す必要はありません。MicroFrontendComponent が loaded subtree を自動で MFE context として mark します。',
+        ],
+        code: gettingStartedSections[8]?.code ?? '',
       },
     ],
     optionsSections: [
@@ -2189,6 +2468,16 @@ beerware spirit: appreciated`,
           'source of truth は Host に残します。Feature module は global store を直接所有せず、host command、event、typed callback で変更を依頼します。',
         ],
         code: docsSections[3]?.code ?? '',
+      },
+      {
+        eyebrow: 'Easy Way',
+        title: 'generic、bundle、OTA メニューで使い方を分けます。',
+        body: [
+          'Generic は local/sibling project を通常の TS module のように Metro で直接 bundle する方式です。',
+          'Bundle は rnm bundle で必要 files だけを archive し、bundleArchiveUrl と custom loader で接続する方式です。',
+          'OTA は verify 通過後に Hot Updater または custom OTA pipeline で remote delivery する方式です。',
+        ],
+        code: gettingStartedSections[8]?.code ?? '',
       },
     ],
     hotUpdaterSections: [

@@ -90,9 +90,9 @@ export function useMicroFrontendSharedState<
 /**
  * Returns true when the current component is rendered inside an MFE runtime.
  *
- * Host apps can pass `isMfe` to MicroFrontendProvider when mounting a feature
- * module. Components rendered outside the provider, or inside a host-shell
- * provider, receive `false`.
+ * MicroFrontendComponent marks the loaded feature subtree as an MFE
+ * automatically. Host apps only need to pass `isMfe` manually for custom
+ * loaders that render a feature without MicroFrontendComponent.
  *
  * @returns Whether the current provider subtree is an MFE.
  */

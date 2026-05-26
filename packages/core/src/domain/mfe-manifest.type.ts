@@ -35,6 +35,8 @@ export interface MfeManifest {
   readonly embeddedBundlePath?: string;
   /** Optional OTA bundle URL or provider-specific key. */
   readonly otaBundleUrl?: string;
+  /** Optional compressed bundle archive URL or provider-specific key. */
+  readonly bundleArchiveUrl?: string;
 }
 
 /** Registry file consumed by the host runtime and CLI. */

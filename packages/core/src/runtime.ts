@@ -80,6 +80,8 @@ export interface MicroFrontendDirectLoadOptions {
   readonly embeddedBundlePath?: string;
   /** Overrides or supplies `manifest.otaBundleUrl`. */
   readonly otaBundleUrl?: string;
+  /** Overrides or supplies `manifest.bundleArchiveUrl`. */
+  readonly bundleArchiveUrl?: string;
 }
 
 /** Host loader callbacks plus optional direct metadata overrides. */
@@ -101,8 +103,8 @@ export type ConfiguredMicroFrontendLoader<TModule> = (
  *
  * Loader selection order:
  * 1. Hot Updater callback when `ota.provider` is `hot-updater`
- * 2. Embedded callback when `embeddedBundlePath` exists
- * 3. Custom callback when `ota.provider` is `custom` or `otaBundleUrl` exists
+ * 2. Custom callback when `ota.provider` is `custom`, `otaBundleUrl`, or `bundleArchiveUrl` exists
+ * 3. Embedded callback when `embeddedBundlePath` exists
  * 4. Fallback callback
  *
  * @param manifest Registry manifest that passed the runtime safety gate.
@@ -130,8 +132,8 @@ export async function loadMicroFrontendModule<TModule>(
  * Creates a reusable Host loader with shared transport callbacks.
  *
  * Registry config is used by default. Per-call `options` can directly supply or
- * override provider, embedded path, or OTA URL when an app does not store those
- * values in `rnm.registry.json`.
+ * override provider, embedded path, OTA URL, or bundle archive URL when an app
+ * does not store those values in `rnm.registry.json`.
  *
  * @param defaultOptions Shared Host loader callbacks and optional metadata.
  * @returns Function suitable for MicroFrontendComponent's `load` prop.
@@ -162,6 +164,9 @@ function resolveMicroFrontendLoadManifest(
     ...(options.otaBundleUrl !== undefined
       ? { otaBundleUrl: options.otaBundleUrl }
       : {}),
+    ...(options.bundleArchiveUrl !== undefined
+      ? { bundleArchiveUrl: options.bundleArchiveUrl }
+      : {}),
   };
 }
 
@@ -173,15 +178,17 @@ function selectMicroFrontendBundleLoader<TModule>(
     return loaders.hotUpdater;
   }
 
-  if (manifest.embeddedBundlePath && loaders.embedded) {
-    return loaders.embedded;
-  }
-
   if (
-    (manifest.ota.provider === 'custom' || manifest.otaBundleUrl) &&
+    (manifest.ota.provider === 'custom' ||
+      manifest.otaBundleUrl ||
+      manifest.bundleArchiveUrl) &&
     loaders.custom
   ) {
     return loaders.custom;
+  }
+
+  if (manifest.embeddedBundlePath && loaders.embedded) {
+    return loaders.embedded;
   }
 
   return loaders.fallback;
@@ -364,9 +371,9 @@ export function useMicroFrontendSharedState<
 /**
  * Returns true when the current component is rendered inside an MFE runtime.
  *
- * Host apps can pass `isMfe` to MicroFrontendProvider when mounting a feature
- * module. Components rendered outside the provider, or inside a host-shell
- * provider, receive `false`.
+ * MicroFrontendComponent marks the loaded feature subtree as an MFE
+ * automatically. Host apps only need to pass `isMfe` manually for custom
+ * loaders that render a feature without MicroFrontendComponent.
  *
  * @returns Whether the current provider subtree is an MFE.
  */
@@ -420,6 +427,7 @@ export interface MicroFrontendComponentProps<
 export function MicroFrontendComponent<
   TProps extends object = Record<string, never>,
 >(props: MicroFrontendComponentProps<TProps>): ReactElement {
+  const runtime = useContext(MicroFrontendContext);
   const mfe = useMicroFrontend(props.name);
   const [loaded, setLoaded] = useState<LoadedMicroFrontendState<TProps>>({
     Component: null,
@@ -486,8 +494,19 @@ export function MicroFrontendComponent<
   }
 
   const componentProps = props.componentProps ?? ({} as TProps);
+  const component = React.createElement(loaded.Component, componentProps);
 
-  return React.createElement(loaded.Component, componentProps);
+  if (!runtime) return component;
+
+  return React.createElement(
+    MicroFrontendContext.Provider,
+    {
+      value: createMicroFrontendRuntime(runtime.registry, runtime.sharedState, {
+        isMfe: true,
+      }),
+    },
+    component,
+  );
 }
 
 function renderMicroFrontendFallback(

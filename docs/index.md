@@ -27,6 +27,36 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [Global state](/docs/global-state) | Host-to-MFE sharedState providing and reading guide. |
 | [Hot Updater setup](/docs/hot-updater) | Routed website guide for Hot Updater configuration. |
 
+
+## Easy Way
+
+### 1. Generic — normal TS module style
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+Use `withMfe` in `metro.config.js`, then map the local MFE through a static import in the Host loader. `isMfe` is automatic inside `MicroFrontendComponent`.
+
+### 2. Bundle — portable archive
+
+```bash
+# run in the MFE project
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+This creates a `.tar.gz` containing only `index.bundle`, `assets/`, and `manifest.json`; `--update-registry` writes `bundleArchiveUrl`.
+
+### 3. OTA — Hot Updater/custom delivery
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+Use `createMicroFrontendLoader({ hotUpdater, custom })`; the OTA engine distributes and evaluates code after native-safety verification passes.
+
 ## Core flow
 
 ```txt
@@ -43,4 +73,6 @@ register MFE
 - **Bun-first, ecosystem-friendly**: Bun is the preferred repository runtime; consumer projects can use Bun, npm, pnpm, Yarn, or Deno.
 - **No hidden native patches**: generated files and manual integration stay reviewable.
 - **Hot Updater compatible**: OTA delivery is delegated to Hot Updater after compatibility checks pass.
+- **Metro-ready by default**: `withMfe` merges Metro config, watches registered MFE roots, and maps shared packages to Host `node_modules`.
+- **Portable bundle archives**: `rnm bundle` packages only `index.bundle`, `assets/`, and `manifest.json` for Host copy/CDN upload.
 - **Host-provided shared state**: the host can provide session, locale, and feature flags to feature modules without exposing the whole app store.

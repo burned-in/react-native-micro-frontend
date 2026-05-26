@@ -27,6 +27,36 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [全局状态](/zh-cn/docs/global-state) | Host 向 MFE 提供并读取 sharedState 的指南。 |
 | [Hot Updater 设置](/zh-cn/docs/hot-updater) | Hot Updater 路由指南。 |
 
+
+## Easy Way
+
+### 1. Generic — 普通 TS module 方式
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+在 `metro.config.js` 中使用 `withMfe`，并在 Host loader 中通过 static import 连接本地 MFE。`isMfe` 会在 `MicroFrontendComponent` 内自动应用。
+
+### 2. Bundle — portable archive
+
+```bash
+# 在 MFE project 中运行
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+它会创建只包含 `index.bundle`、`assets/` 和 `manifest.json` 的 `.tar.gz`；设置 `--update-registry` 时写入 `bundleArchiveUrl`。
+
+### 3. OTA — Hot Updater/custom delivery
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+使用 `createMicroFrontendLoader({ hotUpdater, custom })` 连接。OTA engine 在 native-safety verification 通过后负责分发和 evaluation。
+
 ## 核心流程
 
 ```txt
@@ -43,4 +73,6 @@ bunx @bunin/react-native-micro-frontend-cli init
 - **Bun-first, ecosystem-friendly**：仓库 runtime 优先使用 Bun，consumer project 可使用 Bun、npm、pnpm、Yarn、Deno。
 - **No hidden native patches**：generated file 和 manual integration 保持可审查。
 - **Hot Updater compatible**：compatibility check 通过后再委托 Hot Updater 进行 OTA delivery。
+- **Metro-ready by default**：`withMfe` merge Metro config，并自动配置 registered MFE root 与 shared package alias。
+- **Portable bundle archives**：`rnm bundle` 只打包 `index.bundle`、`assets/` 和 `manifest.json`，用于 Host copy/CDN upload。
 - **Host-provided shared state**：Host 可安全地向 MFE 提供 session、locale、feature flags。

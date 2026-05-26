@@ -30,6 +30,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -116,6 +117,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | `MfeManifest.nativeHash` | `string` | 可选。MFE build 或 sync 时捕获的 native hash。 |
 | `MfeManifest.embeddedBundlePath` | `string` | 可选。local embedded JS bundle path。 |
 | `MfeManifest.otaBundleUrl` | `string` | 可选。OTA URL 或 provider-specific bundle key。 |
+| `MfeManifest.bundleArchiveUrl` | `string` | `rnm bundle` 或 `rnm build --archive` 生成的压缩 bundle archive URL/path。 |
 
 ## Runtime 选项
 
@@ -123,16 +125,16 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | --- | --- | --- |
 | `MicroFrontendProvider.registry` | `MfeRegistry` | 必需的 registry snapshot，通常来自 `rnm.registry.json` 或 Host storage。 |
 | `MicroFrontendProvider.sharedState` | `Record<string, unknown>` | 暴露给 MFE hooks 的小型 Host-owned state snapshot。 |
-| `MicroFrontendProvider.isMfe` | `boolean` | 标记 subtree 是 Host-mounted MFE。`useIsMfe()` 读取此值。 |
+| `MicroFrontendProvider.isMfe` | `boolean` | custom renderer 的手动 override。`MicroFrontendComponent` 会自动标记 loaded MFE subtree。 |
 | `MicroFrontendProvider.children` | `ReactNode` | 可以使用 runtime hooks 的 React subtree。 |
 | `useMicroFrontend(name)` | `RuntimeMfeState` | 返回一个 registered MFE 的 status、manifest 与 reason。 |
 | `RuntimeMfeState.status` | `"ready" \| "loading" \| "blocked" \| "missing"` | 只有 `ready` 可以交给 Host loader；其他状态应 render fallback。 |
 | `useMicroFrontendSharedState<T>()` | `T` | 读取 Host-provided shared state snapshot。 |
 | `useIsMfe()` | `boolean` | 告诉 shared components 是否运行在 mounted MFE subtree 中。 |
-| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 创建可复用的 Host loader。它会优先读取 registry config：`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`。 |
-| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | 使用 Host callback resolve 一个 module。optional options 可直接提供 provider、embedded path 或 OTA URL。 |
+| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 创建可复用的 Host loader。它会优先读取 registry config：`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`、`bundleArchiveUrl`。 |
+| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | 使用 Host callback resolve 一个 module。optional options 可直接提供 provider、embedded path、OTA URL 或 bundle archive URL。 |
 | `MicroFrontendComponent.name` | `string` | Registered MFE name。 |
 | `MicroFrontendComponent.load` | `ConfiguredMicroFrontendLoader` | 由 `createMicroFrontendLoader()` 创建的 Host loader，或兼容 loader。 |
-| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 当值不存储在 `rnm.registry.json` 时，为单个 mount 点直接覆盖 provider/path/url。 |
+| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 当值不存储在 `rnm.registry.json` 时，为单个 mount 点直接覆盖 provider/path/url/archive。 |
 | `MicroFrontendComponent.fallback` | `ReactNode | ((state) => ReactNode)` | missing、blocked、loading 或 unavailable 时 render。 |
 | `MicroFrontendComponent.errorFallback` | `ReactNode | ((error, state) => ReactNode)` | bundle load 失败时的可选 UI。 |

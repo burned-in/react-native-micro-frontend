@@ -46,3 +46,13 @@
 | `deno` | `deno run -A npm:hot-updater deploy -p ios -c production` |
 
 `rnm publish`는 OTA eligibility를 통과한 뒤에만 배포 명령을 출력합니다.
+
+## Bundle archive 명령
+
+CLI를 설치한 뒤 MFE project에서 실행하세요. React Native bundling을 실행하고 `index.bundle`, `assets/`, `manifest.json`만 archive로 묶습니다.
+
+```bash
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+각 runner에서도 같은 방식으로 실행할 수 있습니다: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, `deno run -A ... bundle`.

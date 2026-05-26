@@ -29,7 +29,8 @@ React Native Micro Frontend
 | Native contract | 将 React Native version、Hermes、New Architecture、native dependency、Podfile、Gradle、AndroidManifest、Info.plist 相关输入固定为 hash。 |
 | OTA gate | 当 native assumptions 与 host binary 不一致时阻止 OTA。 |
 | Runtime policy | 拒绝加载 blocked/incompatible MFE，并安全 fallback。 |
-| Metro integration | 不依赖 Re.Pack 或 Module Federation，生成可审计的 Metro bundle command。 |
+| Metro integration | `withMfe` merge Metro config，自动把 registered MFE root 与 shared package 映射到 Host `node_modules`；`rnm build` 仍会打印可审查的 bundle command。 |
+| Bundle archive | `rnm bundle` 执行 React Native bundling，只归档 `index.bundle`、Metro `assets/` 和 `manifest.json`，用于 Host copy/CDN delivery。 |
 | Hot Updater adapter | 复用现有 Hot Updater 发布流程。 |
 | Package manager support | 支持 Bun、npm、pnpm、Yarn、Deno 的使用方 workflow。 |
 
@@ -61,6 +62,82 @@ export default defineReactNativeMicroFrontendConfig({
   mfes: {},
 });
 ```
+
+## Easy Way：generic、bundle、OTA 菜单
+
+### 菜单 1. Generic — 像普通 TypeScript module 一样使用
+
+当 Host App 与 MFE project 在同一个 workspace 中，并且 Metro 可以直接 bundle MFE source 时使用。这是 local development 或随 app store binary 一起发布 feature module 的最简单路径。
+
+```bash
+# 在 host-app/ 中执行
+rnm init
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+```js
+// host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
+})();
+```
+
+```tsx
+// Host loader: 保持 static import map，让 Metro 能包含本地 MFE。
+const localModules = {
+  "mfe-feature": () => import("../mfe-feature/src/index"),
+};
+
+const loadMfeModule = createMicroFrontendLoader({
+  fallback: async (manifest) => {
+    const load = localModules[manifest.name as keyof typeof localModules];
+    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
+    return await load();
+  },
+});
+```
+
+然后使用 `MicroFrontendProvider` 和 `MicroFrontendComponent` 渲染。不需要手动传 `isMfe`；loaded MFE subtree 会自动标记为 MFE。
+
+### 菜单 2. Bundle — 只 archive Host 需要的文件
+
+当你想把 MFE 做成 portable archive，复制到 Host project，或上传到 release artifact/CDN/storage 时使用。
+
+```bash
+# 在 mfe-feature/ 中执行
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
+```
+
+`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；`--update-registry` 会写入 `bundleArchiveUrl`。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。
+
+### 菜单 3. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
+
+当 MFE 通过 native-safety verification 后需要远程发布时使用。本库先验证 native contract；实际 distribution 和 JavaScript evaluation 仍由 Hot Updater 或你的 OTA engine 负责。
+
+```bash
+# 在 host-app/ 中执行
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  custom: loadWithCustomOta,
+});
+```
+
+当 `ota.provider` 为 `hot-updater` 时使用 `hotUpdater` loader；当 registry 指向 custom OTA URL/archive 时使用 `custom` loader。如果 native assumption 变化导致验证失败，应走 Store release，而不是 OTA。
 
 ## 它解决什么问题？
 
@@ -392,6 +469,50 @@ rnm build mfe-feature \
 - 不使用 Re.Pack
 - 将命令生成与执行分离，方便 CI 检查
 
+### 6a. 使用 `withMfe` merge Metro config
+
+```js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  return withMfe(
+    __dirname,
+    mergeConfig(defaultConfig, {
+      resolver: {
+        assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
+      },
+    }),
+  );
+})();
+```
+
+含义：
+
+- 自动读取 `rnm.registry.json`
+- 将 active MFE project root 添加到 Metro `watchFolders`
+- 将 `react`、`react-native`、`@bunin/react-native-micro-frontend` 以及 Host/MFE 共同 dependency 固定到 Host `node_modules`
+- 保留现有 `resolver.extraNodeModules` override，手动 alias 优先
+
+### 6b. 只把必要文件打成 compressed bundle archive
+
+```bash
+# 在 MFE project 中执行
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+含义：
+
+- 不只是打印命令，而是执行本地 React Native `bundle`
+- 只输出 `index.bundle`、Metro `assets/` 和 `manifest.json`
+- 只压缩这些文件到 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`
+- 提供 `--host` 时，将 archive 复制到 `<host>/.bundle/rnm/`
+- 同时提供 `--update-registry` 时，更新 Host `rnm.registry.json` 的 `bundleArchiveUrl`
+
+如果 CI 只需要检查命令，继续使用 `rnm build <mfe> --archive`。
+
 ### 7. 通过 Hot Updater 发布
 
 ```bash
@@ -501,7 +622,7 @@ export function App({ registry }) {
 - Host App 决定 registry 的来源。
 - runtime 会拒绝 blocked 或 nativeHash mismatch 的 MFE。
 - MFE entry module 必须 default export root component。
-- `createMicroFrontendLoader()` 会优先读取 registry config：`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`。
+- `createMicroFrontendLoader()` 会优先读取 registry config：`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`、`bundleArchiveUrl`。
 - 如果某个 mount 点需要直接指定 provider/path/url，可以使用 `loadOptions` 或创建出的 loader 的第二个参数。
 - `MicroFrontendComponent` 在 missing、blocked、loading、failed 时显示 fallback；Host loader 成功后渲染 `module.default`。
 
@@ -550,7 +671,6 @@ const sharedState: HostSharedState = {
 export function MountedFeatureModule({ registry }) {
   return (
     <MicroFrontendProvider
-      isMfe
       registry={registry}
       sharedState={sharedState}
     >
@@ -577,7 +697,7 @@ export function FeatureModuleHeader() {
 
 - Host 仍然是 source of truth。
 - MFE 通过 runtime hook 获取全局状态，而不是直接 import Host store。
-- `useIsMfe()` 在 provider 外或 Host shell 中返回 `false`；Host 为 mounted feature subtree 设置 `isMfe` 后返回 `true`。
+- `MicroFrontendComponent` 会自动把 loaded feature subtree 标记为 MFE，因此 mounted MFE 内的 `useIsMfe()` 为 `true`，Host shell 中为 `false`。只有绕过 `MicroFrontendComponent` 的 custom renderer 才需要直接使用 `MicroFrontendProvider isMfe`。
 - 将 `HostSharedState` type 放在 Host 与 MFE 都能 import 的小型 shared contract package 或文件中。
 - 状态变更应通过 Host commands、callbacks 或 events 回传。
 - 大型 cache、secret、native-only handle 不应放入 `sharedState`。

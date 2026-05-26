@@ -46,3 +46,13 @@ The repository release workflow still uses Bun internally for testing, building,
 | `deno` | `deno run -A npm:hot-updater deploy -p ios -c production` |
 
 `rnm publish` prints deploy commands only after OTA eligibility passes.
+
+## Bundle archive command
+
+Run this from the MFE project after installing the CLI. It executes React Native bundling and archives only `index.bundle`, `assets/`, and `manifest.json`.
+
+```bash
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+Use the same command through each runner: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, or `deno run -A ... bundle`.

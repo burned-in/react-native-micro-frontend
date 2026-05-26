@@ -3,6 +3,7 @@ import { parseCliArgs } from '../src/cli-args.parser.js';
 import { createConsolePrinter } from '../src/cli-output.printer.js';
 import { runAddCommand } from '../src/commands/add.command.js';
 import { runBuildCommand } from '../src/commands/build.command.js';
+import { runBundleCommand } from '../src/commands/bundle.command.js';
 import { runDiffCommand } from '../src/commands/diff.command.js';
 import { runDoctorCommand } from '../src/commands/doctor.command.js';
 import { runInitCommand } from '../src/commands/init.command.js';
@@ -35,6 +36,8 @@ const exitCode = (() => {
       return runSyncCommand(root, args.positional[0], args.flags, printer);
     case 'build':
       return runBuildCommand(args.positional[0], args.flags, printer);
+    case 'bundle':
+      return runBundleCommand(root, args.positional[0], args.flags, printer);
     case 'publish':
       return runPublishCommand(root, args.positional[0], args.flags, printer);
     case 'integrate':
@@ -43,7 +46,7 @@ const exitCode = (() => {
       return runRollbackCommand(root, args.flags, printer);
     default:
       printer.log(
-        'rnm commands: init, add, diff, sync, verify, build, publish, status, doctor, integrate, rollback',
+        'rnm commands: init, add, diff, sync, verify, build, bundle, publish, status, doctor, integrate, rollback',
       );
       return 0;
   }

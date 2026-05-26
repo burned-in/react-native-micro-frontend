@@ -23,6 +23,9 @@
       "@bunin/react-native-micro-frontend/runtime": [
         "packages/core/src/runtime.ts"
       ],
+      "@bunin/react-native-micro-frontend/metro": [
+        "packages/core/src/metro.ts"
+      ],
       "@bunin/react-native-micro-frontend-native-contract": [
         "packages/native-contract/src/index.ts"
       ],

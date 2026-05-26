@@ -12,7 +12,8 @@
         "provider": "hot-updater"
       },
       "nativeChangePolicy": "ask",
-      "status": "active"
+      "status": "active",
+      "bundleArchiveUrl": "https://cdn.example.com/mfe-feature.ios.tar.gz"
     }
   }
 }

@@ -30,6 +30,7 @@ host-app/rnm.registry.json
   mfes[name].status
   mfes[name].nativeHash
   mfes[name].otaBundleUrl
+  mfes[name].bundleArchiveUrl
 
 mfe-feature/mfe.config.ts
   name
@@ -116,6 +117,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 | `MfeManifest.nativeHash` | `string` | 선택 사항. MFE build/sync 때 캡처한 native hash입니다. |
 | `MfeManifest.embeddedBundlePath` | `string` | 선택 사항. local embedded JS bundle path입니다. |
 | `MfeManifest.otaBundleUrl` | `string` | 선택 사항. OTA URL 또는 provider-specific bundle key입니다. |
+| `MfeManifest.bundleArchiveUrl` | `string` | `rnm bundle` 또는 `rnm build --archive`가 만든 압축 bundle archive URL/path입니다. |
 
 ## Runtime 옵션
 
@@ -123,16 +125,16 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 | --- | --- | --- |
 | `MicroFrontendProvider.registry` | `MfeRegistry` | 필수 registry snapshot입니다. 보통 `rnm.registry.json`에서 import하거나 Host storage에서 load합니다. |
 | `MicroFrontendProvider.sharedState` | `Record<string, unknown>` | MFE hooks에 노출하는 작은 Host-owned state snapshot입니다. |
-| `MicroFrontendProvider.isMfe` | `boolean` | subtree가 Host-mounted MFE임을 표시합니다. `useIsMfe()`가 이 값을 읽습니다. |
+| `MicroFrontendProvider.isMfe` | `boolean` | custom renderer용 수동 override입니다. `MicroFrontendComponent`는 loaded MFE subtree를 자동 표시합니다. |
 | `MicroFrontendProvider.children` | `ReactNode` | runtime hooks를 사용할 수 있는 React subtree입니다. |
 | `useMicroFrontend(name)` | `RuntimeMfeState` | 등록된 MFE 하나의 status, manifest, reason을 반환합니다. |
 | `RuntimeMfeState.status` | `"ready" \| "loading" \| "blocked" \| "missing"` | `ready`만 Host loader로 넘기고, 나머지는 fallback을 render하세요. |
 | `useMicroFrontendSharedState<T>()` | `T` | Host가 제공한 shared state snapshot을 읽습니다. |
 | `useIsMfe()` | `boolean` | shared component가 mounted MFE subtree 안에서 실행 중인지 알려 줍니다. |
-| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 재사용 가능한 Host loader를 만듭니다. 먼저 registry config인 `ota.provider`, `embeddedBundlePath`, `otaBundleUrl`을 읽습니다. |
-| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | Host callback으로 module 하나를 resolve합니다. optional options로 provider, embedded path, OTA URL을 직접 줄 수 있습니다. |
+| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 재사용 가능한 Host loader를 만듭니다. 먼저 registry config인 `ota.provider`, `embeddedBundlePath`, `otaBundleUrl`, `bundleArchiveUrl`을 읽습니다. |
+| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | Host callback으로 module 하나를 resolve합니다. optional options로 provider, embedded path, OTA URL, bundle archive URL을 직접 줄 수 있습니다. |
 | `MicroFrontendComponent.name` | `string` | 등록된 MFE name입니다. |
 | `MicroFrontendComponent.load` | `ConfiguredMicroFrontendLoader` | `createMicroFrontendLoader()`로 만든 Host loader 또는 호환 loader입니다. |
-| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 값을 `rnm.registry.json`에 저장하지 않을 때 mount별 provider/path/url을 직접 지정합니다. |
+| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 값을 `rnm.registry.json`에 저장하지 않을 때 mount별 provider/path/url/archive를 직접 지정합니다. |
 | `MicroFrontendComponent.fallback` | `ReactNode | ((state) => ReactNode)` | missing, blocked, loading, unavailable 상태에서 render됩니다. |
 | `MicroFrontendComponent.errorFallback` | `ReactNode | ((error, state) => ReactNode)` | bundle load 실패 시 보여 줄 선택 UI입니다. |

@@ -1,6 +1,6 @@
 {
   "name": "@bunin/react-native-micro-frontend-metro-adapter",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "bunin contributors",
   "homepage": "https://rnmfe.bunin.app/",
   "repository": {
@@ -20,6 +20,9 @@
     "dist",
     "README.md"
   ],
+  "dependencies": {
+    "@bunin/react-native-micro-frontend": "workspace:*"
+  },
   "publishConfig": {
     "access": "public"
   },

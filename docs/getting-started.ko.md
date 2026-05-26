@@ -132,7 +132,7 @@ export default function MfeFeature() {
 
 runtime package는 missing module, blocked module, native hash mismatch를 막는 registry safety gate를 담당합니다. JavaScript bundle download나 evaluation은 직접 하지 않습니다. 실제 loader는 Hot Updater, embedded bundle, custom loader 중 Host App이 선택합니다.
 
-`createMicroFrontendLoader()`로 loader를 만들고 `MicroFrontendComponent`에 전달하세요. loader는 먼저 `rnm.registry.json`의 config 값(`ota.provider`, `embeddedBundlePath`, `otaBundleUrl`)을 읽습니다. registry에 넣을 수 없는 값은 `loadOptions` 또는 생성된 loader의 두 번째 인자로 직접 설정할 수 있습니다.
+`createMicroFrontendLoader()`로 loader를 만들고 `MicroFrontendComponent`에 전달하세요. loader는 먼저 `rnm.registry.json`의 config 값(`ota.provider`, `embeddedBundlePath`, `otaBundleUrl`, `bundleArchiveUrl`)을 읽습니다. registry에 넣을 수 없는 값은 `loadOptions` 또는 생성된 loader의 두 번째 인자로 직접 설정할 수 있습니다.
 
 ```tsx
 import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
@@ -192,7 +192,7 @@ export function App() {
 // <MicroFrontendComponent
 //   name="mfe-feature"
 //   load={loadMfeModule}
-//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   loadOptions={{ provider: "custom", bundleArchiveUrl: "https://cdn.example.com/mfe.ios.ota.tar.gz" }}
 //   fallback={(state) => <Loading reason={state.reason} />}
 // />
 ```
@@ -203,3 +203,116 @@ export function App() {
 - [`native-contract.md`](native-contract.md): OTA 차단 기준
 - [`package-managers.ko.md`](package-managers.ko.md): npm, pnpm, Yarn, Bun, Deno 명령
 - 웹 `/ko/docs/global-state`: Host-provided global state
+
+## 6. `withMfe`로 Metro config merge
+
+Host App `metro.config.js`에 helper를 추가하면 `rnm.registry.json` 기준으로 MFE root와 shared package가 자동으로 잡힙니다.
+
+```js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  const defaultConfig = getDefaultConfig(__dirname);
+
+  return withMfe(
+    __dirname,
+    mergeConfig(defaultConfig, {
+      resolver: {
+        assetExts: [...defaultConfig.resolver.assetExts, "lottie"],
+      },
+    }),
+  );
+})();
+```
+
+`withMfe`는 registered active MFE root를 `watchFolders`에 추가하고, shared package를 Host `node_modules`로 고정하며, 기존 `extraNodeModules` override를 보존해 수동 alias가 우선하게 합니다.
+
+## 7. Host가 필요한 파일만 bundle로 묶기
+
+Hot Updater처럼 archive를 만들어 Host project로 가져가려면 MFE project에서 실행하세요.
+
+```bash
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+이 명령은 local React Native `bundle`을 실행하고 `index.bundle`, `assets/`, `manifest.json`만 생성한 뒤 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`로 압축합니다. `--host`를 주면 `<host>/.bundle/rnm/`로 복사하고, `--update-registry`를 주면 `rnm.registry.json`의 `bundleArchiveUrl`을 업데이트합니다.
+
+`bundleArchiveUrl`은 archive를 다운로드/검증/압축해제/evaluate하는 custom loader와 함께 사용하세요. runtime은 custom loader를 선택해 주지만 remote JavaScript를 직접 실행하지 않습니다.
+
+
+## 8. Easy Way: generic, bundle, OTA 메뉴
+
+### 메뉴 1. Generic — 일반 TS 모듈처럼 사용
+
+Host App과 MFE project가 같은 workspace에 있고 Metro가 MFE source를 직접 bundle할 수 있을 때 사용합니다. local development나 앱스토어에 함께 포함되는 feature module에 가장 쉬운 경로입니다.
+
+```bash
+# host-app/에서 실행
+rnm init
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
+```
+
+```js
+// host-app/metro.config.js
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+module.exports = (async () => {
+  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
+  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
+})();
+```
+
+```tsx
+// Host loader: Metro가 local MFE를 포함할 수 있게 import는 static map으로 유지합니다.
+const localModules = {
+  "mfe-feature": () => import("../mfe-feature/src/index"),
+};
+
+const loadMfeModule = createMicroFrontendLoader({
+  fallback: async (manifest) => {
+    const load = localModules[manifest.name as keyof typeof localModules];
+    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
+    return await load();
+  },
+});
+```
+
+이후 `MicroFrontendProvider`와 `MicroFrontendComponent`로 렌더링하세요. `isMfe`는 직접 넣지 않아도 됩니다. loaded MFE subtree는 자동으로 MFE로 표시됩니다.
+
+### 메뉴 2. Bundle — Host가 필요한 파일만 archive
+
+MFE를 portable archive로 만들어 Host project에 복사하거나 release artifact/CDN/storage에 올리고 싶을 때 사용합니다.
+
+```bash
+# mfe-feature/에서 실행
+rnm bundle --platform ios --host ../host-app --update-registry
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
+```
+
+`rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고, `--update-registry`는 `bundleArchiveUrl`을 기록합니다. custom loader는 archive 다운로드/읽기, 검증, 압축 해제, runtime engine을 통한 evaluation을 담당합니다.
+
+### 메뉴 3. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
+
+native-safety verification을 통과한 MFE를 원격으로 배포할 때 사용합니다. 이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution과 JavaScript evaluation은 Hot Updater 또는 OTA engine이 담당합니다.
+
+```bash
+# host-app/에서 실행
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+```
+
+```tsx
+const loadMfeModule = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  custom: loadWithCustomOta,
+});
+```
+
+`ota.provider`가 `hot-updater`이면 `hotUpdater` loader를, custom OTA URL/archive를 registry에 넣는다면 `custom` loader를 사용하세요. native assumption이 바뀌어 검증이 실패하면 OTA 대신 Store release를 진행해야 합니다.

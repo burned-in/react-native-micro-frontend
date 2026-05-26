@@ -7,6 +7,7 @@ import {
 } from '@bunin/react-native-micro-frontend/runtime';
 import { Text, View } from 'react-native';
 import registryJson from '../rnm.registry.json';
+import { loadBundleArchive } from './bundleArchiveLoader.example';
 
 type MfeFeatureProps = {
   readonly title?: string;
@@ -19,6 +20,7 @@ const loadMfeModule = createMicroFrontendLoader<MfeFeatureModule>({
   // The example uses a local dynamic import so the component can run in a
   // monorepo/dev fixture without extra OTA infrastructure.
   hotUpdater: async () => import('../../mfe-feature/src/index'),
+  custom: loadBundleArchive,
 });
 
 function Loading(props: { readonly reason?: string }) {

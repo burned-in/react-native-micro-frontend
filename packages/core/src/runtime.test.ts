@@ -40,6 +40,12 @@ describe('createMicroFrontendRuntime', () => {
 
     expect(runtime.isMfe).toBe(true);
   });
+
+  test('keeps explicit runtime flags for custom provider use', () => {
+    const runtime = createMicroFrontendRuntime(registry, {}, { isMfe: false });
+
+    expect(runtime.isMfe).toBe(false);
+  });
 });
 
 describe('loadMicroFrontendModule', () => {
@@ -114,6 +120,70 @@ describe('loadMicroFrontendModule', () => {
       }),
     ).resolves.toEqual({
       default: 'https://cdn.example.com/mfe-feature.bundle',
+    });
+  });
+
+  test('uses the custom loader for compressed bundle archive metadata', async () => {
+    const manifest: MfeManifest = {
+      ...activeManifest,
+      ota: {
+        enabled: true,
+        mode: 'manual',
+        provider: 'custom',
+      },
+      bundleArchiveUrl: 'https://cdn.example.com/mfe-feature.ios.tar.gz',
+    };
+
+    await expect(
+      loadMicroFrontendModule(manifest, {
+        custom: (mfe) => ({
+          default: mfe.bundleArchiveUrl,
+        }),
+      }),
+    ).resolves.toEqual({
+      default: 'https://cdn.example.com/mfe-feature.ios.tar.gz',
+    });
+  });
+
+  test('prefers custom bundle archive metadata over stale embedded paths', async () => {
+    const calls: string[] = [];
+    const module = await loadMicroFrontendModule(
+      {
+        ...activeManifest,
+        embeddedBundlePath: '../old/index.tsx',
+        bundleArchiveUrl: '.bundle/rnm/mfe-feature.ios.ota.tar.gz',
+        ota: { enabled: true, mode: 'manual', provider: 'custom' },
+      },
+      {
+        embedded: async () => {
+          calls.push('embedded');
+          return { default: 'embedded' };
+        },
+        custom: async () => {
+          calls.push('custom');
+          return { default: 'custom' };
+        },
+      },
+    );
+
+    expect(module.default).toBe('custom');
+    expect(calls).toEqual(['custom']);
+  });
+
+  test('allows direct per-call archive metadata options', async () => {
+    const load = createMicroFrontendLoader({
+      custom: (manifest) => ({
+        default: manifest.bundleArchiveUrl,
+      }),
+    });
+
+    await expect(
+      load(activeManifest, {
+        provider: 'custom',
+        bundleArchiveUrl: 'https://cdn.example.com/override.tar.gz',
+      }),
+    ).resolves.toEqual({
+      default: 'https://cdn.example.com/override.tar.gz',
     });
   });
 
