@@ -84,6 +84,10 @@ export default defineReactNativeMicroFrontendConfig({
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater の代わりに Expo EAS Update を使う
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 `rnm add` は Host App の `rnm.registry.json` を作成または更新します。`entry` は MFE project root から見た file path で、Metro bundle entry であり、Host resolver が後で load する module の場所でもあります。
@@ -317,3 +321,16 @@ const loadMfeModule = createMicroFrontendLoader({
 ```
 
 `ota.provider` が `hot-updater` の場合は `hotUpdater` loader を使い、custom OTA URL/archive を registry に置く場合は `custom` loader を使います。native assumption が変わって verification が失敗した場合は、OTA ではなく Store release を行います。
+
+
+## Expo Host App
+
+Expo managed、prebuild、bare/prebuilt project をすべてサポートします。package integration は React Native CLI project と同じです。native folders が既にある場合、`rnm aos` と `rnm ios` は generated Gradle/Podfile include files を patch します。`ios/` または `android/` がまだ無い場合、RNM は Expo config plugin を生成します。
+
+```bash
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+npx expo prebuild
+```
+
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish` は不足している package/AOS/iOS additions を監視します。対話的に apply/skip するか、`--yes` で自動適用、`--skip-integration` で watcher を省略できます。

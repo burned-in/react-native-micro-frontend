@@ -19,12 +19,13 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [简体中文 README](README.zh-CN.md)                      | 主要指南和示例。                                             |
 | [Getting Started](getting-started.zh-CN.md)             | 安装、配置、注册、校验并加载第一个 MFE。                     |
 | [Easy Way](easy-way.zh-CN.md)                           | 在 Generic、无 OTA publish 的 Bundle、OTA delivery 中选择。  |
+| [Expo 支持](getting-started.zh-CN.md#expo-host-app)     | Expo managed/prebuild/bare Host App 支持 package、AOS、iOS integration watcher。 |
 | [选项参考](options.zh-CN.md)                            | Host config、MFE config、registry 与 runtime 的全部选项。    |
 | [Metro / Bundle archive](metro-bundle-archive.zh-CN.md) | 使用 `withMfe` merge Metro，并加载 portable bundle archive。 |
 | [English](../README.md)                                 | English official guide.                                      |
 | [韩文](README.ko.md)                                    | 韩文官方文档。                                               |
 | [日文](README.ja.md)                                    | 日文官方文档。                                               |
-| [包管理器](package-managers.zh-CN.md)                   | Bun、npm、pnpm、Yarn、Deno 命令矩阵。                        |
+| [包管理器与 CLI](package-managers.zh-CN.md)             | Bun、npm、pnpm、Yarn、Deno 运行矩阵和 RNM CLI 命令。          |
 | [Native contract](native-contract.md)                   | native compatibility 说明。                                  |
 | [全局状态](/zh-cn/docs/global-state)                    | Host 向 MFE 提供并读取 sharedState 的指南。                  |
 | [Hot Updater 设置](/zh-cn/docs/hot-updater)             | Hot Updater 路由指南。                                       |
@@ -54,6 +55,10 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# 使用 Expo EAS Update 代替 Hot Updater
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 使用 `createMicroFrontendLoader({ hotUpdater, custom })` 连接。OTA engine 在 native-safety verification 通过后负责分发和 evaluation。

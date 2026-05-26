@@ -45,7 +45,7 @@ const localeConfig = {
       'withMfe로 Metro를 merge하고, rnm bundle archive를 Host custom loader에 연결하는 방법입니다.',
     packageTitle: '패키지 매니저 표',
     packageSubtitle:
-      'Repository는 Bun 우선이지만 consumer project는 Bun, npm, pnpm, Yarn, Deno를 사용할 수 있습니다.',
+      'Repository는 Bun 우선이지만 consumer project는 Bun, npm, pnpm, Yarn, Deno로 설치, 통합, 검증, bundle, publish를 실행할 수 있습니다.',
     nativeTitle: 'Native contract',
     nativeSubtitle:
       'native hash가 무엇을 의미하고 왜 안전하지 않은 JavaScript update를 막아야 하는지 설명합니다.',
@@ -87,7 +87,7 @@ const localeConfig = {
       '使用 withMfe merge Metro，并把 rnm bundle archive 接入 Host custom loader。',
     packageTitle: '包管理器矩阵',
     packageSubtitle:
-      'Repository 优先使用 Bun，但 consumer project 可使用 Bun、npm、pnpm、Yarn、Deno。',
+      'Repository 优先使用 Bun，但 consumer project 可用 Bun、npm、pnpm、Yarn、Deno 执行安装、集成、校验、bundle 与 publish。',
     nativeTitle: 'Native contract',
     nativeSubtitle:
       '说明 native hash 的含义，以及为什么必须阻止不安全的 JavaScript update。',
@@ -129,7 +129,7 @@ const localeConfig = {
       'withMfe で Metro を merge し、rnm bundle archive を Host custom loader に接続する方法です。',
     packageTitle: 'Package manager 一覧',
     packageSubtitle:
-      'Repository は Bun 優先ですが、consumer project は Bun、npm、pnpm、Yarn、Deno を使用できます。',
+      'Repository は Bun 優先ですが、consumer project は Bun、npm、pnpm、Yarn、Deno で install、integration、verify、bundle、publish を実行できます。',
     nativeTitle: 'Native contract',
     nativeSubtitle:
       'native hash の意味と、安全でない JavaScript update を止める理由を説明します。',
@@ -333,6 +333,7 @@ export function LocalizedPackageManagersRoute({
         eyebrow={config.docsEyebrow}
       />
       <MatrixTable rows={installMatrix} headers={config.tableHeaders} />
+      <SectionList sections={config.guide.cliCommandSections} />
     </ShellSection>
   );
 }

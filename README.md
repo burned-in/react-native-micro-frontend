@@ -37,6 +37,7 @@ It does **not** replace Hot Updater. Hot Updater remains the OTA delivery engine
 | Bundle archive          | `rnm bundle` runs React Native bundling and archives only `index.bundle`, Metro `assets/`, and `manifest.json` for Host copy/CDN delivery.                                        |
 | Hot Updater adapter     | Reuses existing Hot Updater deployments instead of replacing them.                                                                                                                |
 | Package manager support | Supports Bun, npm, pnpm, Yarn, and Deno for consumer workflows.                                                                                                                   |
+| Expo support          | Supports Expo managed, prebuild, and bare/prebuilt Host Apps; the watcher can generate an Expo config plugin when native folders do not exist yet.                                  |
 
 ## Quick start
 
@@ -132,6 +133,11 @@ Use this when the MFE should be delivered remotely after native-safety verificat
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Expo EAS Update instead
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+# rnm add also shows/applies missing Host packages such as expo and expo-updates
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 ```tsx
@@ -396,6 +402,21 @@ Meaning:
 - the workflow itself uses Bun for tests, builds, pack, and publish
 - CI should install Bun even when the outer command is `npm`, `pnpm`, `yarn`, or `deno task`
 - `pnpm-workspace.yaml` and `.npmrc` keep pnpm usable even though the repository declares Bun as the preferred `packageManager`.
+
+## CLI command map
+
+For exact options, run `rnm --help` or `rnm <command> --help`. The integration commands added for Host setup are:
+
+| Command | Purpose |
+| --- | --- |
+| `rnm package <mfe>` | Add missing JS/native package dependencies after confirmation. |
+| `rnm aos <mfe>` / `rnm android <mfe>` | Add Android Gradle projects, dependencies, and permissions. |
+| `rnm ios <mfe>` | Add iOS Podfile integration. |
+| `rnm all <mfe>` | Run `package -> AOS -> iOS` in order. |
+| `rnm integrate all <mfe>` | Explicit backward-compatible integration route. |
+| `rnm expo <mfe>` | Print an Expo EAS Update deploy command after integration watcher and OTA safety checks. |
+
+`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`, and `rnm expo` run the integration watcher automatically. Use `--yes` to apply additions in automation or `--skip-integration` to skip the watcher. See [Package managers and CLI commands](docs/package-managers.md) for the full command reference.
 
 ## CLI examples
 

@@ -55,7 +55,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | `reactNative.hermes` | `"required" \| "optional" \| "disabled"` | Hermes 是必需、可选还是禁用。 |
 | `reactNative.newArchitecture` | `"required" \| "supported" \| "disabled"` | New Architecture compatibility policy。 |
 | `ota.enabled` | `boolean` | 在 Host policy 层启用或关闭 OTA delivery。 |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | Host 选择的 OTA provider integration。 |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Host 选择的 OTA provider integration。 |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | publish command 的生成或 gate 方式。 |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | 如何处理已有 Hot Updater config。 |
 | `ota.existingHotUpdater.configPath` | `string` | 可选。`hot-updater.config.ts` 或 `.js` 路径。 |
@@ -82,7 +82,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | `reactNative` | `{ minVersion; hermes; newArchitecture }` | 可选的 MFE native/runtime assumptions。 |
 | `ota.enabled` | `boolean` | compatibility check 通过时，此 MFE 是否可通过 OTA publish。 |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | MFE-level OTA mode。 |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | 可选的 MFE-level OTA provider override。 |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | 可选的 MFE-level OTA provider override。 |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | 检测到 native changes 时此 MFE 的行为。 |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | 此 MFE 的 package-manager behavior。 |
 | `packageManager.explicit` | `"bun" \| "deno" \| "npm" \| "pnpm" \| "yarn"` | 此 MFE 的明确 package manager。 |
@@ -110,7 +110,7 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | `MfeManifest.path` | `string` | Host App root 到 MFE project root 的路径。 |
 | `MfeManifest.ota.enabled` | `boolean` | 此 registered MFE 是否启用 OTA。 |
 | `MfeManifest.ota.mode` | `"auto" \| "manual" \| "disabled"` | Runtime/publish OTA mode。 |
-| `MfeManifest.ota.provider` | `"hot-updater" \| "none" \| "custom"` | 此 registered MFE 使用的 provider。 |
+| `MfeManifest.ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | 此 registered MFE 使用的 provider。 |
 | `MfeManifest.nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | 为此 MFE 捕获的 native-change policy。 |
 | `MfeManifest.status` | `"active" \| "blocked" \| "disabled"` | Runtime status。blocked/disabled modules 不应 render。 |
 | `MfeManifest.blockedReason` | `string` | 可选。fallback UI 或 logs 中显示的人类可读原因。 |

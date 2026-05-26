@@ -21,6 +21,8 @@ export const navItems: readonly NavItem[] = [
   { label: 'Docs', href: '/docs' },
   { label: 'Getting started', href: '/docs/getting-started' },
   { label: 'Easy Way', href: '/docs/easy-way' },
+  { label: 'CLI', href: '/docs/package-managers' },
+  { label: 'Expo', href: '/docs/getting-started#expo-host-apps' },
   { label: 'Options', href: '/docs/options' },
   { label: 'Hot Updater', href: '/docs/hot-updater' },
   { label: 'Metro / Bundle', href: '/docs/metro-bundle-archive' },
@@ -71,6 +73,91 @@ export const installMatrix = [
   },
 ] as const;
 
+export const cliCommandSections: readonly DocSection[] = [
+  {
+    eyebrow: 'CLI reference',
+    title: 'Ask for help from any RNM command.',
+    body: [
+      'Every command has a friendly English help page. Use it when you need the exact options supported by the installed CLI version.',
+      'The short -h alias works the same as --help, and command names are normalized so AOS/android aliases route consistently.',
+    ],
+    code: `rnm --help
+rnm help
+rnm add --help
+rnm all -h`,
+  },
+  {
+    eyebrow: 'Host integration',
+    title:
+      'Add package, Android, and iOS integration separately or all at once.',
+    body: [
+      'Use rnm package to add missing JS/native package dependencies, rnm aos or rnm android for Gradle projects/dependencies/permissions, and rnm ios for Podfile additions.',
+      'Use rnm all when you want the safe default order: package -> AOS -> iOS. Expo managed projects generate rnm.expo-plugin.cjs and rnm.expo-integration.json when native folders do not exist yet.',
+      'Use rnm expo when you want Expo EAS Update deployment after the same integration watcher and OTA eligibility gate.',
+    ],
+    code: `rnm package mfe-feature --dry-run
+rnm aos mfe-feature --yes
+rnm android mfe-feature --yes
+rnm ios mfe-feature --yes
+rnm all mfe-feature --yes
+rnm expo mfe-feature --channel production --platform all
+
+# Backward-compatible explicit route
+rnm integrate all mfe-feature --yes`,
+  },
+  {
+    eyebrow: 'Watcher behavior',
+    title:
+      'add, bundle, verify, and publish watch for missing integration additions.',
+    body: [
+      'rnm add, rnm bundle --host, rnm verify, rnm publish, and rnm expo run the package -> AOS -> iOS watcher before continuing.',
+      'In an interactive terminal RNM asks whether to apply detected additions. Use --yes for automation, --dry-run to inspect direct integration commands, or --skip-integration when you intentionally want only the original command.',
+    ],
+    code: `rnm add mfe-feature --path ../mfe-feature
+rnm bundle mfe-feature --platform ios --host ../host-app
+rnm verify mfe-feature
+rnm publish mfe-feature --package-manager bun --channel production
+rnm expo mfe-feature --channel production --platform all
+
+# CI / scripted modes
+rnm add mfe-feature --path ../mfe-feature --yes
+rnm verify mfe-feature --skip-integration`,
+  },
+  {
+    eyebrow: 'Expo support',
+    title:
+      'The same RNM CLI commands support Expo managed, prebuild, and bare Hosts.',
+    body: [
+      'In bare/prebuilt projects, RNM writes generated Podfile and Gradle include files. In managed projects without ios/android folders, RNM writes rnm.expo-plugin.cjs and rnm.expo-integration.json.',
+      'After RNM applies the additions, run Expo prebuild normally. For Expo EAS Update delivery, register the MFE with --ota-provider expo; rnm add will also show missing Host packages such as expo and expo-updates before you use rnm expo or rnm publish --provider expo.',
+    ],
+    code: `rnm add mfe-feature --path ../mfe-feature --yes
+rnm all mfe-feature --yes
+npx expo prebuild
+
+# Expo EAS Update after RNM safety checks
+rnm add mfe-feature --path ../mfe-feature --ota-provider expo --ota-mode manual --yes
+rnm expo mfe-feature --channel production --platform all --non-interactive
+rnm publish mfe-feature --provider expo --channel production --platform all --non-interactive`,
+  },
+  {
+    eyebrow: 'Lifecycle',
+    title:
+      'Use the remaining commands for build, safety checks, status, and recovery.',
+    body: [
+      'rnm init creates the host files, rnm build prints bundle commands, rnm diff compares native contracts, rnm sync records native-change decisions, and rnm rollback restores .bak files.',
+      'rnm status and rnm doctor are read-only checks you can run before CI or while debugging a Host App setup.',
+    ],
+    code: `rnm init --dry-run
+rnm build mfe-feature --platform ios --archive
+rnm diff mfe-feature
+rnm sync mfe-feature --block-native
+rnm status
+rnm doctor
+rnm rollback --yes`,
+  },
+];
+
 export const features: readonly Feature[] = [
   {
     title: 'Native-safe OTA',
@@ -99,6 +186,10 @@ export const features: readonly Feature[] = [
   {
     title: 'Package-manager neutral',
     body: 'Consumer projects can use Bun, npm, pnpm, Yarn, or Deno while the repository release pipeline remains Bun-first.',
+  },
+  {
+    title: 'Expo supported',
+    body: 'Expo managed, prebuild, and bare/prebuilt Host Apps use the same package, AOS, and iOS integration watcher; managed apps receive an Expo config plugin.',
   },
   {
     title: 'Reviewable integration',
@@ -150,6 +241,21 @@ bun add -d @bunin/react-native-micro-frontend-cli
 bunx @bunin/react-native-micro-frontend-cli init`,
   },
   {
+    eyebrow: 'CLI commands',
+    title: 'Use direct commands for package, AOS, iOS, all, and watcher flows.',
+    body: [
+      'The CLI exposes first-class integration commands: rnm package, rnm aos/rnm android, rnm ios, and rnm all. The all command always runs package -> AOS -> iOS.',
+      'rnm add, rnm bundle --host, rnm verify, rnm publish, and rnm expo automatically watch for missing integration additions. Use --yes to apply them in automation or --skip-integration to keep the original command only.',
+    ],
+    code: `rnm package mfe-feature --dry-run
+rnm aos mfe-feature --yes
+rnm ios mfe-feature --yes
+rnm all mfe-feature --yes
+
+rnm add mfe-feature --path ../mfe-feature --yes
+rnm verify mfe-feature --skip-integration`,
+  },
+  {
     eyebrow: 'First module',
     title: 'A beginner-friendly path from empty host to verified module.',
     body: [
@@ -188,6 +294,17 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 # 3. OTA: verified remote delivery
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production`,
+  },
+  {
+    eyebrow: 'Expo',
+    title: 'Expo managed, prebuild, and bare Hosts are supported.',
+    body: [
+      'Use the same Generic, Bundle, or OTA menu in Expo projects. package integration works through package.json, AOS/iOS integration uses generated native files when ios/android folders exist, and managed projects get an Expo config plugin.',
+      'The integration watcher runs during rnm add, rnm bundle --host, rnm verify, rnm publish, and rnm expo. Apply detected additions, skip them interactively, use --yes for automation, or use --skip-integration when you only want the original command.',
+    ],
+    code: `rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+npx expo prebuild`,
   },
   {
     eyebrow: 'Examples',
@@ -430,7 +547,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
     body: [
       'Generic is the normal TypeScript-module style. Register with OTA disabled, add withMfe to metro.config.js, and keep the Host loader import static so Metro can include the MFE source.',
       'Bundle is the portable archive style. Run rnm bundle in the MFE project to produce only index.bundle, assets, manifest.json, and a .tar.gz; use bundleArchiveUrl with a custom loader.',
-      'OTA is the remote delivery style. Register with hot-updater or custom OTA metadata, run verify before publish, and let the OTA engine distribute and evaluate JavaScript only after native-safety checks pass.',
+      'OTA is the remote delivery style. Register with hot-updater, Expo, or custom OTA metadata, run verify before publish, and let the OTA engine distribute and evaluate JavaScript only after native-safety checks pass.',
       'You do not need to pass an isMfe prop. MicroFrontendComponent automatically marks the loaded subtree as MFE context.',
     ],
     code: `# 1. Generic: normal TS module style
@@ -454,6 +571,10 @@ const bundleLoader = createMicroFrontendLoader({
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Expo EAS Update route
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 
 const otaLoader = createMicroFrontendLoader({
   hotUpdater: loadWithHotUpdater,
@@ -509,10 +630,11 @@ const loadMfeModule = createMicroFrontendLoader({
   },
   {
     eyebrow: 'Menu 3',
-    title: 'OTA: publish through Hot Updater or a custom OTA pipeline.',
+    title:
+      'OTA: publish through Hot Updater, Expo EAS Update, or a custom OTA pipeline.',
     body: [
       'Choose OTA when the MFE should be delivered remotely after native-safety verification.',
-      'The library verifies the native contract first. Hot Updater or your custom OTA engine still owns distribution, download, and JavaScript evaluation.',
+      'The library verifies the native contract first. Hot Updater, Expo EAS Update, or your custom OTA engine still owns distribution, download, and JavaScript evaluation.',
       'If verification fails because native assumptions changed, ship a store release instead of pushing OTA.',
     ],
     code: `# host-app/
@@ -520,10 +642,33 @@ rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
 
+# Expo EAS Update instead
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
+
 const loadMfeModule = createMicroFrontendLoader({
   hotUpdater: loadWithHotUpdater,
   custom: loadWithCustomOta,
 });`,
+  },
+  {
+    eyebrow: 'Menu 4',
+    title: 'Expo: managed or prebuild Host Apps.',
+    body: [
+      'Expo Host Apps are supported for generic, bundle, and OTA workflows. Run the same commands and let the RNM watcher handle package, AOS, and iOS additions.',
+      'For Expo EAS Update delivery, use --ota-provider expo. During rnm add, the package watcher shows missing Host packages such as expo and expo-updates, then rnm expo prints the EAS Update command after safety checks pass.',
+      'When ios/ or android/ already exists, RNM patches generated Podfile/Gradle include files. When those folders do not exist yet, RNM writes rnm.expo-plugin.cjs and rnm.expo-integration.json, then adds the plugin to app.json when possible.',
+      'rnm add, rnm bundle --host, rnm verify, rnm publish, and rnm expo run the watcher automatically. Use --yes to apply in CI or --skip-integration to bypass it.',
+    ],
+    code: `# host-app/
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+
+# Expo managed/prebuild
+npx expo prebuild
+
+# Expo EAS Update deployment
+rnm expo mfe-feature --channel production --platform all --non-interactive`,
   },
 ];
 
@@ -644,7 +789,7 @@ reactNative.newArchitecture: "required" | "supported" | "disabled"
 ota.enabled: boolean
   Enables or disables OTA delivery at the Host policy level.
 
-ota.provider: "hot-updater" | "none" | "custom"
+ota.provider: "hot-updater" | "expo" | "none" | "custom"
   OTA provider integration selected by the Host.
 
 ota.mode: "auto" | "manual" | "disabled"
@@ -714,7 +859,7 @@ ota.enabled: boolean
 ota.mode: "auto" | "manual" | "disabled"
   MFE-level OTA mode.
 
-ota.provider?: "hot-updater" | "none" | "custom"
+ota.provider?: "hot-updater" | "expo" | "none" | "custom"
   Optional MFE-level OTA provider override.
 
 nativeChangePolicy: "ask" | "block" | "apply-and-disable-ota"
@@ -786,7 +931,7 @@ MfeManifest.ota.enabled: boolean
 MfeManifest.ota.mode: "auto" | "manual" | "disabled"
   Runtime/publish OTA mode for this registered MFE.
 
-MfeManifest.ota.provider: "hot-updater" | "none" | "custom"
+MfeManifest.ota.provider: "hot-updater" | "expo" | "none" | "custom"
   Provider used for this registered MFE.
 
 MfeManifest.nativeChangePolicy:
@@ -908,7 +1053,7 @@ reactNative.newArchitecture: "required" | "supported" | "disabled"
 ota.enabled: boolean
   Host policy 레벨에서 OTA delivery를 켜거나 끕니다.
 
-ota.provider: "hot-updater" | "none" | "custom"
+ota.provider: "hot-updater" | "expo" | "none" | "custom"
   Host가 선택한 OTA provider integration입니다.
 
 ota.mode: "auto" | "manual" | "disabled"
@@ -970,7 +1115,7 @@ ota.enabled: boolean
 ota.mode: "auto" | "manual" | "disabled"
   MFE-level OTA mode입니다.
 
-ota.provider?: "hot-updater" | "none" | "custom"
+ota.provider?: "hot-updater" | "expo" | "none" | "custom"
   선택적인 MFE-level OTA provider override입니다.
 
 nativeChangePolicy: "ask" | "block" | "apply-and-disable-ota"
@@ -1034,7 +1179,7 @@ MfeManifest.ota.enabled: boolean
 MfeManifest.ota.mode: "auto" | "manual" | "disabled"
   이 registered MFE의 runtime/publish OTA mode입니다.
 
-MfeManifest.ota.provider: "hot-updater" | "none" | "custom"
+MfeManifest.ota.provider: "hot-updater" | "expo" | "none" | "custom"
   이 registered MFE가 사용하는 provider입니다.
 
 MfeManifest.nativeChangePolicy:
@@ -1145,7 +1290,7 @@ reactNative.newArchitecture: "required" | "supported" | "disabled"
 ota.enabled: boolean
   在 Host policy level 启用或关闭 OTA delivery。
 
-ota.provider: "hot-updater" | "none" | "custom"
+ota.provider: "hot-updater" | "expo" | "none" | "custom"
   Host 选择的 OTA provider integration。
 
 ota.mode: "auto" | "manual" | "disabled"
@@ -1207,7 +1352,7 @@ ota.enabled: boolean
 ota.mode: "auto" | "manual" | "disabled"
   MFE-level OTA mode。
 
-ota.provider?: "hot-updater" | "none" | "custom"
+ota.provider?: "hot-updater" | "expo" | "none" | "custom"
   可选的 MFE-level OTA provider override。
 
 nativeChangePolicy: "ask" | "block" | "apply-and-disable-ota"
@@ -1271,7 +1416,7 @@ MfeManifest.ota.enabled: boolean
 MfeManifest.ota.mode: "auto" | "manual" | "disabled"
   此 registered MFE 的 runtime/publish OTA mode。
 
-MfeManifest.ota.provider: "hot-updater" | "none" | "custom"
+MfeManifest.ota.provider: "hot-updater" | "expo" | "none" | "custom"
   此 registered MFE 使用的 provider。
 
 MfeManifest.nativeChangePolicy:
@@ -1382,7 +1527,7 @@ reactNative.newArchitecture: "required" | "supported" | "disabled"
 ota.enabled: boolean
   Host policy level で OTA delivery を有効または無効にします。
 
-ota.provider: "hot-updater" | "none" | "custom"
+ota.provider: "hot-updater" | "expo" | "none" | "custom"
   Host が選択する OTA provider integration です。
 
 ota.mode: "auto" | "manual" | "disabled"
@@ -1444,7 +1589,7 @@ ota.enabled: boolean
 ota.mode: "auto" | "manual" | "disabled"
   MFE-level OTA mode です。
 
-ota.provider?: "hot-updater" | "none" | "custom"
+ota.provider?: "hot-updater" | "expo" | "none" | "custom"
   任意の MFE-level OTA provider override です。
 
 nativeChangePolicy: "ask" | "block" | "apply-and-disable-ota"
@@ -1508,7 +1653,7 @@ MfeManifest.ota.enabled: boolean
 MfeManifest.ota.mode: "auto" | "manual" | "disabled"
   この registered MFE の runtime/publish OTA mode です。
 
-MfeManifest.ota.provider: "hot-updater" | "none" | "custom"
+MfeManifest.ota.provider: "hot-updater" | "expo" | "none" | "custom"
   この registered MFE が使う provider です。
 
 MfeManifest.nativeChangePolicy:
@@ -1800,6 +1945,7 @@ export type LocalizedGuide = {
   readonly metroBundleSections: readonly DocSection[];
   readonly optionsSections: readonly DocSection[];
   readonly hotUpdaterSections: readonly DocSection[];
+  readonly cliCommandSections: readonly DocSection[];
   readonly globalStateSections: readonly DocSection[];
   readonly nativeContractSections: readonly DocSection[];
 };
@@ -1868,7 +2014,7 @@ export const localizedGuides = {
       },
       {
         title: '패키지 매니저',
-        body: 'Bun, npm, pnpm, Yarn, Deno에서 같은 workflow를 실행합니다.',
+        body: 'Bun, npm, pnpm, Yarn, Deno 실행법과 RNM CLI command를 정리합니다.',
       },
       {
         title: 'Native contract',
@@ -1988,13 +2134,29 @@ export const localizedGuides = {
       },
       {
         eyebrow: '메뉴 3',
-        title: 'OTA: Hot Updater 또는 custom OTA pipeline으로 배포합니다.',
+        title:
+          'OTA: Hot Updater, Expo EAS Update 또는 custom OTA pipeline으로 배포합니다.',
         body: [
           'native-safety verification을 통과한 MFE를 원격 배포해야 할 때 선택합니다.',
-          '이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution/download/evaluation은 Hot Updater 또는 custom OTA engine이 담당합니다.',
+          '이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution/download/evaluation은 Hot Updater, Expo EAS Update 또는 custom OTA engine이 담당합니다.',
           'native assumption이 바뀌어 검증이 실패하면 OTA 대신 Store release를 진행합니다.',
         ],
         code: easyWaySections[2]?.code ?? '',
+      },
+      {
+        eyebrow: '메뉴 4',
+        title: 'Expo: managed 또는 prebuild Host App입니다.',
+        body: [
+          'Expo Host App도 generic, bundle, OTA workflow를 모두 지원합니다. 같은 명령을 실행하고 RNM watcher가 package, AOS, iOS 추가 항목을 처리하게 하세요. `--ota-provider expo`로 등록하면 `rnm add`가 `expo`, `expo-updates` 같은 Host 누락 패키지도 보여줍니다.',
+          'ios/ 또는 android/가 이미 있으면 generated Podfile/Gradle include 파일을 patch합니다. 아직 없으면 rnm.expo-plugin.cjs와 rnm.expo-integration.json을 만들고 가능한 경우 app.json에 plugin을 추가합니다.',
+          'rnm add, rnm bundle --host, rnm verify, rnm publish, rnm expo는 watcher를 자동 실행합니다. Expo EAS Update 배포는 --ota-provider expo 등록 후 rnm expo를 사용하세요. CI에서는 --yes, 생략하려면 --skip-integration을 사용합니다.',
+        ],
+        code: `# host-app/
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+
+# Expo managed/prebuild
+npx expo prebuild`,
       },
     ],
     metroBundleSections: [
@@ -2024,6 +2186,56 @@ export const localizedGuides = {
           'production loadBundleArchive는 archive 읽기/download, integrity 검증, index.bundle/assets/manifest.json 압축 해제, Host runtime 또는 OTA engine을 통한 evaluation을 담당해야 합니다. bundle path에서 MFE source import로 우회하지 마세요.',
         ],
         code: metroBundleSections[2]?.code ?? '',
+      },
+    ],
+    cliCommandSections: [
+      {
+        eyebrow: 'CLI reference',
+        title: '모든 RNM command에서 help를 확인합니다.',
+        body: [
+          '설치된 CLI version이 지원하는 정확한 option은 각 command의 help에서 확인할 수 있습니다.',
+          '-h는 --help와 동일하며, AOS/android alias처럼 command name은 일관되게 route됩니다.',
+        ],
+        code: cliCommandSections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'Host integration',
+        title:
+          'package, Android, iOS integration을 따로 또는 한 번에 추가합니다.',
+        body: [
+          'rnm package는 누락된 JS/native package dependency를 추가하고, rnm aos 또는 rnm android는 Gradle project/dependency/permission을, rnm ios는 Podfile addition을 처리합니다.',
+          'rnm all은 안전한 기본 순서인 package -> AOS -> iOS로 실행합니다. Expo managed project에서 native folder가 아직 없으면 rnm.expo-plugin.cjs와 rnm.expo-integration.json을 생성합니다.',
+        ],
+        code: cliCommandSections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'Watcher behavior',
+        title: 'add, bundle, verify, publish는 누락 integration을 감시합니다.',
+        body: [
+          'rnm add, rnm bundle --host, rnm verify, rnm publish, rnm expo는 원래 작업을 계속하기 전에 package -> AOS -> iOS watcher를 실행합니다.',
+          '대화형 terminal에서는 적용 여부를 묻습니다. 자동화에서는 --yes, 직접 integration command에서는 --dry-run, watcher를 빼려면 --skip-integration을 사용합니다.',
+        ],
+        code: cliCommandSections[2]?.code ?? '',
+      },
+      {
+        eyebrow: 'Expo 지원',
+        title:
+          '같은 RNM CLI 명령어가 Expo managed, prebuild, bare Host를 지원합니다.',
+        body: [
+          'bare/prebuilt project에서는 generated Podfile/Gradle include file을 작성합니다. ios/android folder가 없는 managed project에서는 rnm.expo-plugin.cjs와 rnm.expo-integration.json을 만듭니다.',
+          'RNM이 추가 항목을 적용한 뒤 Expo prebuild를 평소처럼 실행하세요. add, bundle --host, verify, publish watcher 동작은 동일합니다.',
+        ],
+        code: cliCommandSections[3]?.code ?? '',
+      },
+      {
+        eyebrow: 'Lifecycle',
+        title:
+          '나머지 command로 build, safety check, 상태 확인, 복구를 처리합니다.',
+        body: [
+          'rnm init은 host file을 만들고, rnm build는 bundle command를 출력하며, rnm diff는 native contract를 비교하고, rnm sync는 native-change decision을 기록합니다.',
+          'rnm status와 rnm doctor는 읽기 전용 점검 command이고, rnm rollback은 .bak file을 복구합니다.',
+        ],
+        code: cliCommandSections[4]?.code ?? '',
       },
     ],
     optionsSections: [
@@ -2132,6 +2344,17 @@ beerware spirit: appreciated`,
         code: gettingStartedSections[8]?.code ?? '',
       },
       {
+        eyebrow: 'Expo',
+        title: 'Expo managed, prebuild, bare Host App을 지원합니다.',
+        body: [
+          'Expo에서도 generic, bundle, OTA 메뉴를 그대로 사용합니다. package는 package.json으로, AOS/iOS는 native folder 존재 여부에 따라 generated file 또는 Expo config plugin으로 통합합니다.',
+          'rnm add, rnm bundle --host, rnm verify, rnm publish, rnm expo가 누락된 추가 항목을 감시합니다. 적용, 건너뛰기, --yes 자동 적용, --skip-integration 생략을 선택할 수 있습니다.',
+        ],
+        code: `rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+npx expo prebuild`,
+      },
+      {
         eyebrow: 'Examples',
         title: 'examples 폴더를 general TS, bundle, OTA로 분리했습니다.',
         body: [
@@ -2219,7 +2442,7 @@ beerware spirit: appreciated`,
       },
       {
         title: '包管理器',
-        body: '用 Bun、npm、pnpm、Yarn、Deno 执行同一套 workflow。',
+        body: '整理 Bun、npm、pnpm、Yarn、Deno 的运行方式和 RNM CLI command。',
       },
       { title: 'Native contract', body: '判断哪些变更必须走 Store release。' },
       { title: '全局状态', body: '在 MFE 中类型安全地读取 Host sharedState。' },
@@ -2333,13 +2556,29 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: '菜单 3',
-        title: 'OTA：通过 Hot Updater 或 custom OTA pipeline 发布。',
+        title:
+          'OTA：通过 Hot Updater、Expo EAS Update 或 custom OTA pipeline 发布。',
         body: [
           '当 MFE 通过 native-safety verification 后需要远程交付时选择 OTA。',
-          '本库先验证 native contract；实际 distribution、download 和 JavaScript evaluation 仍由 Hot Updater 或 custom OTA engine 负责。',
+          '本库先验证 native contract；实际 distribution、download 和 JavaScript evaluation 仍由 Hot Updater、Expo EAS Update 或 custom OTA engine 负责。',
           '如果 verification 因 native assumptions 改变而失败，应发布 Store release，而不是继续推 OTA。',
         ],
         code: easyWaySections[2]?.code ?? '',
+      },
+      {
+        eyebrow: '菜单 4',
+        title: 'Expo：managed 或 prebuild Host App。',
+        body: [
+          'Expo Host App 同样支持 generic、bundle、OTA workflows。运行相同命令，让 RNM watcher 处理 package、AOS、iOS additions。使用 `--ota-provider expo` 注册时，`rnm add` 也会显示 Host 缺失的 `expo`、`expo-updates` 等包。',
+          '如果 ios/ 或 android/ 已存在，RNM 会 patch generated Podfile/Gradle include files。还不存在时，RNM 会生成 rnm.expo-plugin.cjs 和 rnm.expo-integration.json，并在可行时加入 app.json。',
+          'rnm add、rnm bundle --host、rnm verify、rnm publish、rnm expo 会自动运行 watcher。Expo EAS Update 发布请先用 --ota-provider expo 注册，然后运行 rnm expo。CI 中使用 --yes，想跳过则使用 --skip-integration。',
+        ],
+        code: `# host-app/
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+
+# Expo managed/prebuild
+npx expo prebuild`,
       },
     ],
     metroBundleSections: [
@@ -2369,6 +2608,53 @@ beerware spirit: appreciated`,
           'production loadBundleArchive 应负责读取/下载 archive、校验 integrity、解压 index.bundle/assets/manifest.json，并通过 Host runtime 或 OTA engine evaluate。不要在 bundle path 中退回到 import MFE source。',
         ],
         code: metroBundleSections[2]?.code ?? '',
+      },
+    ],
+    cliCommandSections: [
+      {
+        eyebrow: 'CLI reference',
+        title: '可在任何 RNM command 中查看 help。',
+        body: [
+          '每个 command 都有英文 help 页面，可查看当前安装的 CLI version 支持的准确 options。',
+          '-h 与 --help 等效，AOS/android alias 等 command name 会被一致 route。',
+        ],
+        code: cliCommandSections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'Host integration',
+        title: '分别或一次性添加 package、Android、iOS integration。',
+        body: [
+          'rnm package 添加缺失的 JS/native package dependency；rnm aos 或 rnm android 处理 Gradle project/dependency/permission；rnm ios 处理 Podfile addition。',
+          '需要默认安全顺序时使用 rnm all：package -> AOS -> iOS。Expo managed project 没有 native folders 时会生成 rnm.expo-plugin.cjs 和 rnm.expo-integration.json。',
+        ],
+        code: cliCommandSections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'Watcher behavior',
+        title: 'add、bundle、verify、publish 会监视缺失 integration。',
+        body: [
+          'rnm add、rnm bundle --host、rnm verify、rnm publish、rnm expo 会在继续原本任务前运行 package -> AOS -> iOS watcher。',
+          '交互式 terminal 会询问是否应用。自动化使用 --yes，直接 integration command 可用 --dry-run，想跳过 watcher 则使用 --skip-integration。',
+        ],
+        code: cliCommandSections[2]?.code ?? '',
+      },
+      {
+        eyebrow: 'Expo 支持',
+        title: '同一套 RNM CLI 命令支持 Expo managed、prebuild、bare Host。',
+        body: [
+          'bare/prebuilt project 中 RNM 会写入 generated Podfile/Gradle include files。没有 ios/android folders 的 managed project 中，RNM 会生成 rnm.expo-plugin.cjs 和 rnm.expo-integration.json。',
+          'RNM 应用 additions 后照常运行 Expo prebuild。add、bundle --host、verify、publish 的 watcher 行为一致。',
+        ],
+        code: cliCommandSections[3]?.code ?? '',
+      },
+      {
+        eyebrow: 'Lifecycle',
+        title: '其余 command 负责 build、safety check、状态查看与恢复。',
+        body: [
+          'rnm init 创建 host files，rnm build 输出 bundle command，rnm diff 比较 native contracts，rnm sync 记录 native-change decision。',
+          'rnm status 和 rnm doctor 是只读检查 command，rnm rollback 用于恢复 .bak files。',
+        ],
+        code: cliCommandSections[4]?.code ?? '',
       },
     ],
     optionsSections: [
@@ -2564,7 +2850,7 @@ beerware spirit: appreciated`,
       },
       {
         title: 'Package managers',
-        body: 'Bun、npm、pnpm、Yarn、Deno で同じ workflow を実行します。',
+        body: 'Bun、npm、pnpm、Yarn、Deno の実行方法と RNM CLI command を整理します。',
       },
       {
         title: 'Native contract',
@@ -2684,13 +2970,29 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'メニュー 3',
-        title: 'OTA: Hot Updater または custom OTA pipeline で配布します。',
+        title:
+          'OTA: Hot Updater、Expo EAS Update または custom OTA pipeline で配布します。',
         body: [
           'native-safety verification を通過した MFE を remote delivery する必要がある場合に OTA を選びます。',
-          'この library は native contract を先に検証します。実際の distribution、download、JavaScript evaluation は Hot Updater または custom OTA engine が担当します。',
+          'この library は native contract を先に検証します。実際の distribution、download、JavaScript evaluation は Hot Updater、Expo EAS Update または custom OTA engine が担当します。',
           'native assumptions が変わって verification が失敗した場合は、OTA ではなく Store release を行います。',
         ],
         code: easyWaySections[2]?.code ?? '',
+      },
+      {
+        eyebrow: 'メニュー 4',
+        title: 'Expo: managed または prebuild Host App です。',
+        body: [
+          'Expo Host App も generic、bundle、OTA workflows をすべてサポートします。同じ command を実行し、RNM watcher に package、AOS、iOS additions を処理させます。`--ota-provider expo` で登録すると、`rnm add` は `expo`、`expo-updates` など Host に不足している package も表示します。',
+          'ios/ または android/ が既にある場合は generated Podfile/Gradle include files を patch します。まだ無い場合は rnm.expo-plugin.cjs と rnm.expo-integration.json を生成し、可能なら app.json に plugin を追加します。',
+          'rnm add、rnm bundle --host、rnm verify、rnm publish、rnm expo は watcher を自動実行します。Expo EAS Update 配信は --ota-provider expo で登録し、rnm expo を使います。CI では --yes、スキップする場合は --skip-integration を使います。',
+        ],
+        code: `# host-app/
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+
+# Expo managed/prebuild
+npx expo prebuild`,
       },
     ],
     metroBundleSections: [
@@ -2720,6 +3022,56 @@ beerware spirit: appreciated`,
           'production loadBundleArchive は archive の read/download、integrity verification、index.bundle/assets/manifest.json の unpack、Host runtime または OTA engine による evaluation を担当します。bundle path で MFE source import に戻さないでください。',
         ],
         code: metroBundleSections[2]?.code ?? '',
+      },
+    ],
+    cliCommandSections: [
+      {
+        eyebrow: 'CLI reference',
+        title: 'どの RNM command でも help を確認できます。',
+        body: [
+          '各 command には英語の help page があり、install 済み CLI version が対応する正確な options を確認できます。',
+          '-h は --help と同じです。AOS/android alias などの command name も一貫して route されます。',
+        ],
+        code: cliCommandSections[0]?.code ?? '',
+      },
+      {
+        eyebrow: 'Host integration',
+        title:
+          'package、Android、iOS integration を個別または一括で追加します。',
+        body: [
+          'rnm package は不足している JS/native package dependency を追加し、rnm aos または rnm android は Gradle project/dependency/permission を、rnm ios は Podfile addition を処理します。',
+          '安全な既定順序が必要な場合は rnm all を使います: package -> AOS -> iOS。Expo managed project で native folders がまだ無い場合は rnm.expo-plugin.cjs と rnm.expo-integration.json を生成します。',
+        ],
+        code: cliCommandSections[1]?.code ?? '',
+      },
+      {
+        eyebrow: 'Watcher behavior',
+        title: 'add、bundle、verify、publish は不足 integration を監視します。',
+        body: [
+          'rnm add、rnm bundle --host、rnm verify、rnm publish、rnm expo は元の処理を続ける前に package -> AOS -> iOS watcher を実行します。',
+          'interactive terminal では適用するか確認します。automation では --yes、直接 integration command では --dry-run、watcher を省く場合は --skip-integration を使います。',
+        ],
+        code: cliCommandSections[2]?.code ?? '',
+      },
+      {
+        eyebrow: 'Expo support',
+        title:
+          '同じ RNM CLI command が Expo managed、prebuild、bare Host をサポートします。',
+        body: [
+          'bare/prebuilt project では generated Podfile/Gradle include files を書きます。ios/android folders が無い managed project では rnm.expo-plugin.cjs と rnm.expo-integration.json を生成します。',
+          'RNM が additions を適用した後は、通常どおり Expo prebuild を実行してください。add、bundle --host、verify、publish の watcher behavior は同じです。',
+        ],
+        code: cliCommandSections[3]?.code ?? '',
+      },
+      {
+        eyebrow: 'Lifecycle',
+        title:
+          'その他の command で build、safety check、状態確認、復旧を行います。',
+        body: [
+          'rnm init は host files を作成し、rnm build は bundle command を出力し、rnm diff は native contracts を比較し、rnm sync は native-change decision を記録します。',
+          'rnm status と rnm doctor は read-only check command で、rnm rollback は .bak files を復旧します。',
+        ],
+        code: cliCommandSections[4]?.code ?? '',
       },
     ],
     optionsSections: [

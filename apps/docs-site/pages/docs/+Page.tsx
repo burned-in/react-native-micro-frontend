@@ -31,9 +31,9 @@ const guideCards = [
     body: 'Merge Metro with withMfe and load rnm bundle archives through a Host loader.',
   },
   {
-    title: 'Package managers',
+    title: 'Package managers & CLI',
     href: '/docs/package-managers',
-    body: 'Run the same workflow with Bun, npm, pnpm, Yarn, or Deno.',
+    body: 'Run install, integration, verify, bundle, and publish commands with any supported package manager.',
   },
   {
     title: 'Native contract',

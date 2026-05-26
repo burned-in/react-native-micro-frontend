@@ -84,6 +84,10 @@ export default defineReactNativeMicroFrontendConfig({
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# 使用 Expo EAS Update 代替 Hot Updater
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 `rnm add` 会在 Host App 中创建或更新 `rnm.registry.json`。`entry` 值是相对于 MFE project root 的文件路径，也是 Metro bundle entry 和 Host resolver 后续加载的 module 位置。
@@ -317,3 +321,16 @@ const loadMfeModule = createMicroFrontendLoader({
 ```
 
 当 `ota.provider` 为 `hot-updater` 时使用 `hotUpdater` loader；当 registry 指向 custom OTA URL/archive 时使用 `custom` loader。如果 native assumption 变化导致验证失败，应走 Store release，而不是 OTA。
+
+
+## Expo Host App
+
+支持 Expo managed、prebuild、bare/prebuilt project。package integration 与 React Native CLI project 相同。native folders 已存在时，`rnm aos` 和 `rnm ios` 会 patch generated Gradle/Podfile include files。还没有 `ios/` 或 `android/` 时，RNM 会生成 Expo config plugin。
+
+```bash
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+npx expo prebuild
+```
+
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish` 会监视缺失的 package/AOS/iOS additions。可以交互式应用/跳过，也可以使用 `--yes` 自动应用，或用 `--skip-integration` 跳过 watcher。

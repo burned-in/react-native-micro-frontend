@@ -55,7 +55,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 | `reactNative.hermes` | `"required" \| "optional" \| "disabled"` | Hermes를 필수, 허용, 비활성 중 하나로 정합니다. |
 | `reactNative.newArchitecture` | `"required" \| "supported" \| "disabled"` | New Architecture compatibility policy입니다. |
 | `ota.enabled` | `boolean` | Host policy 레벨에서 OTA delivery를 켜거나 끕니다. |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | Host가 사용할 OTA provider integration입니다. |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Host가 사용할 OTA provider integration입니다. |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | publish command를 자동 생성할지, 수동 gate로 둘지, 비활성화할지 정합니다. |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | 기존 Hot Updater config 처리 방식입니다. |
 | `ota.existingHotUpdater.configPath` | `string` | 선택 사항. `hot-updater.config.ts` 또는 `.js` 경로입니다. |
@@ -82,7 +82,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 | `reactNative` | `{ minVersion; hermes; newArchitecture }` | 선택 사항. MFE native/runtime assumption입니다. |
 | `ota.enabled` | `boolean` | compatibility check 통과 시 이 MFE가 OTA publish 가능한지 정합니다. |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | MFE-level OTA mode입니다. |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | 선택 사항. MFE-level OTA provider override입니다. |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | 선택 사항. MFE-level OTA provider override입니다. |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | native 변경 감지 시 MFE 처리 방식입니다. |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | 이 MFE의 package-manager 동작입니다. |
 | `packageManager.explicit` | `"bun" \| "deno" \| "npm" \| "pnpm" \| "yarn"` | 이 MFE의 명시적 package manager입니다. |
@@ -110,7 +110,7 @@ Host config의 `mfes`는 보통 비워 둡니다. Runtime 등록은 `rnm add`가
 | `MfeManifest.path` | `string` | Host App root 기준 MFE project root 경로입니다. |
 | `MfeManifest.ota.enabled` | `boolean` | 등록된 MFE의 OTA 활성 여부입니다. |
 | `MfeManifest.ota.mode` | `"auto" \| "manual" \| "disabled"` | Runtime/publish OTA mode입니다. |
-| `MfeManifest.ota.provider` | `"hot-updater" \| "none" \| "custom"` | 등록된 MFE의 provider입니다. |
+| `MfeManifest.ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | 등록된 MFE의 provider입니다. |
 | `MfeManifest.nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | 이 MFE에 캡처된 native-change policy입니다. |
 | `MfeManifest.status` | `"active" \| "blocked" \| "disabled"` | Runtime status입니다. blocked/disabled module은 render하지 않아야 합니다. |
 | `MfeManifest.blockedReason` | `string` | 선택 사항. fallback UI나 log에 보여줄 사람이 읽는 이유입니다. |

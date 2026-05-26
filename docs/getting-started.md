@@ -84,6 +84,10 @@ Meaning:
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Expo EAS Update instead
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 `rnm add` creates or updates `rnm.registry.json` in the Host App. The `entry` value is the file inside the MFE project root that Metro bundles and the host resolver later loads.
@@ -316,3 +320,16 @@ Next:
 - read [`native-contract.md`](native-contract.md) to understand OTA blocking
 - read [`package-managers.md`](package-managers.md) for npm, pnpm, Yarn, Bun, and Deno commands
 - open `/docs/global-state` on the website for host-provided global state
+
+
+## Expo Host Apps
+
+Expo is supported for managed, prebuild, and bare/prebuilt projects. Package integration works the same way as React Native CLI projects. When native folders already exist, `rnm aos` and `rnm ios` patch the generated Gradle/Podfile include files. When `ios/` or `android/` do not exist yet, RNM generates an Expo config plugin instead.
+
+```bash
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+npx expo prebuild
+```
+
+`rnm add`, `rnm bundle --host`, `rnm verify`, and `rnm publish` watch for missing package/AOS/iOS additions. You can apply them, skip them interactively, pass `--yes`, or pass `--skip-integration`.

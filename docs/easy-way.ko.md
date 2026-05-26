@@ -60,6 +60,10 @@ native-safety verification 이후 원격 배포가 필요할 때 사용합니다
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater 대신 Expo EAS Update 사용
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 ```tsx
@@ -70,3 +74,24 @@ const loadMfeModule = createMicroFrontendLoader({
 ```
 
 native assumption이 바뀌어 verification이 실패하면 OTA 대신 Store release를 진행하세요.
+
+## 4. Expo — managed 또는 prebuild Host App
+
+Expo Host App도 지원합니다. Generic, Bundle, OTA 메뉴는 그대로 쓰고 RNM integration watcher가 native 추가 항목을 처리하게 하세요. MFE를 `--ota-provider expo`로 등록하면 `rnm add`가 `expo`, `expo-updates` 같은 Host 누락 패키지도 보여주고 적용할 수 있습니다.
+
+```bash
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature
+# package -> AOS -> iOS
+```
+
+`ios/` 또는 `android/`가 아직 없는 Expo managed project에서는 RNM이 `rnm.expo-plugin.cjs`와 `rnm.expo-integration.json`을 만들고, 가능한 경우 `app.json`에 plugin을 추가합니다. 이후 Expo prebuild를 평소처럼 실행합니다.
+
+```bash
+npx expo prebuild
+
+# RNM safety check 이후 Expo EAS Update로 배포
+rnm expo mfe-feature --channel production --platform all --non-interactive
+```
+
+`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`, `rnm expo`도 integration watcher를 실행합니다. 비대화형 자동 적용은 `--yes`, watcher 생략은 `--skip-integration`을 사용하세요.

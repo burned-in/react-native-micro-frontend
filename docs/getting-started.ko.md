@@ -84,6 +84,10 @@ export default defineReactNativeMicroFrontendConfig({
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater 대신 Expo EAS Update 사용
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 `rnm add`는 Host App의 `rnm.registry.json`을 만들거나 갱신합니다. `entry` 값은 MFE project root 기준의 파일이며, Metro가 bundle할 시작점이자 Host resolver가 나중에 load할 module 위치입니다.
@@ -316,3 +320,16 @@ const loadMfeModule = createMicroFrontendLoader({
 ```
 
 `ota.provider`가 `hot-updater`이면 `hotUpdater` loader를, custom OTA URL/archive를 registry에 넣는다면 `custom` loader를 사용하세요. native assumption이 바뀌어 검증이 실패하면 OTA 대신 Store release를 진행해야 합니다.
+
+
+## Expo Host App
+
+Expo managed, prebuild, bare/prebuilt project를 모두 지원합니다. package 통합은 React Native CLI project와 동일하게 동작합니다. native folder가 이미 있으면 `rnm aos`와 `rnm ios`가 generated Gradle/Podfile include 파일을 patch합니다. `ios/` 또는 `android/`가 아직 없으면 RNM이 Expo config plugin을 생성합니다.
+
+```bash
+rnm add mfe-feature --path ../mfe-feature
+rnm all mfe-feature --yes
+npx expo prebuild
+```
+
+`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`는 누락된 package/AOS/iOS 추가 항목을 감시합니다. 대화형으로 적용/건너뛰기, `--yes` 자동 적용, `--skip-integration` watcher 생략을 선택할 수 있습니다.

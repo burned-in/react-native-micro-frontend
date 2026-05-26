@@ -19,12 +19,13 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [日本語 README](README.ja.md)                        | メインガイドと例。                                                       |
 | [Getting Started](getting-started.ja.md)             | install、config、register、verify、最初の MFE loading guide。            |
 | [Easy Way](easy-way.ja.md)                           | Generic、OTA publish なしの Bundle、OTA delivery から選ぶ guide。        |
+| [Expo サポート](getting-started.ja.md#expo-host-app)    | Expo managed/prebuild/bare Host App で package、AOS、iOS integration watcher を使えます。 |
 | [Options reference](options.ja.md)                   | Host config、MFE config、registry、runtime の全 options。                |
 | [Metro / Bundle archive](metro-bundle-archive.ja.md) | `withMfe` で Metro を merge し、portable bundle archive を読み込みます。 |
 | [英語](../README.md)                                 | 英語公式ガイド。                                                         |
 | [韓国語](README.ko.md)                               | 韓国語公式ドキュメント。                                                 |
 | [簡体中国語](README.zh-CN.md)                        | 簡体中国語公式ドキュメント。                                             |
-| [パッケージマネージャ](package-managers.ja.md)       | Bun、npm、pnpm、Yarn、Deno コマンド一覧。                                |
+| [Package managers & CLI](package-managers.ja.md)   | Bun、npm、pnpm、Yarn、Deno の実行一覧と RNM CLI command。             |
 | [Native contract](native-contract.md)                | native compatibility notes。                                             |
 | [Global state](/jp/docs/global-state)                | Host から MFE へ sharedState を提供して読み取るガイド。                  |
 | [Hot Updater 設定](/jp/docs/hot-updater)             | Hot Updater route guide.                                                 |
@@ -54,6 +55,10 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater の代わりに Expo EAS Update を使う
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 `createMicroFrontendLoader({ hotUpdater, custom })` で接続します。OTA engine は native-safety verification 通過後の配布と evaluation を担当します。

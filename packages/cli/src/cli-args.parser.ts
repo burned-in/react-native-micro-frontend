@@ -12,7 +12,8 @@ export interface ParsedCliArgs {
  * @returns Parsed command, positional args, and flags.
  */
 export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
-  const [command = 'help', ...rest] = argv;
+  const [rawCommand = 'help', ...rest] = argv;
+  const command = rawCommand.toLowerCase();
   const positional: string[] = [];
   const flags: Record<string, string | boolean> = {};
   for (let index = 0; index < rest.length; index += 1) {
@@ -25,6 +26,15 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
         flags[key] = next;
         index += 1;
       } else flags[key] = true;
+    } else if (token.startsWith('-') && token.length > 1) {
+      const key = token.slice(1);
+      if (key === 'h') {
+        flags.help = true;
+      } else if (key === 'y') {
+        flags.yes = true;
+      } else {
+        flags[key] = true;
+      }
     } else positional.push(token);
   }
   return { command, positional, flags };

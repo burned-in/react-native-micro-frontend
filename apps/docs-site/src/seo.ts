@@ -24,7 +24,7 @@ const copy = {
   en: {
     suffix: brand,
     overview:
-      'Native-safe React Native micro frontend delivery with Hot Updater compatibility, host-provided state, and package-manager neutral workflows.',
+      'Native-safe React Native and Expo micro frontend delivery with Hot Updater compatibility, host-provided state, and package-manager neutral workflows.',
     docs: 'Complete React Native micro frontend documentation: install, configure, register modules, share host state, verify native contracts, and publish safely.',
     gettingStarted:
       'Getting started guide for React Native micro frontends: install packages, declare host policy, register a module, verify native safety, and load it at runtime.',
@@ -37,7 +37,7 @@ const copy = {
     metroBundle:
       'Configure Metro with withMfe and load portable rnm bundle archives through a Host-owned bundle archive loader.',
     packageManagers:
-      'Use Bun, npm, pnpm, Yarn, and Deno with the same React Native micro frontend install and release workflow.',
+      'Use Bun, npm, pnpm, Yarn, and Deno with the same RNM install, integration, verify, bundle, and publish commands.',
     nativeContract:
       'Understand native contract hashing, Hermes and New Architecture compatibility, and when React Native OTA must be blocked.',
     globalState:
@@ -46,7 +46,7 @@ const copy = {
   ko: {
     suffix: `${brand} 한국어 문서`,
     overview:
-      'Hot Updater 호환, Host shared state, native contract 검증을 제공하는 React Native micro frontend 한국어 가이드입니다.',
+      'Expo 지원, Hot Updater 호환, Host shared state, native contract 검증을 제공하는 React Native micro frontend 한국어 가이드입니다.',
     docs: '설치, 설정, MFE 등록, Host 상태 전달, native contract 검증, 안전한 배포까지 정리한 한국어 문서입니다.',
     gettingStarted:
       'React Native MFE를 처음 시작하기 위한 설치, Host policy 설정, module 등록, native safety 검증, runtime 로딩 가이드입니다.',
@@ -59,7 +59,7 @@ const copy = {
     metroBundle:
       'withMfe로 Metro를 설정하고 Host-owned bundle archive loader로 portable rnm bundle archive를 로드하는 방법입니다.',
     packageManagers:
-      'Bun, npm, pnpm, Yarn, Deno에서 동일한 React Native micro frontend workflow를 실행하는 방법입니다.',
+      'Bun, npm, pnpm, Yarn, Deno에서 RNM 설치, 통합, 검증, bundle, publish command를 실행하는 방법입니다.',
     nativeContract:
       'native hash, Hermes, New Architecture 호환성, OTA 차단 기준을 설명하는 한국어 문서입니다.',
     globalState:
@@ -68,7 +68,7 @@ const copy = {
   'zh-CN': {
     suffix: `${brand} 简体中文文档`,
     overview:
-      '面向 React Native micro frontend 的 native-safe delivery、Hot Updater 集成与 Host shared state 指南。',
+      '面向 React Native/Expo micro frontend 的 native-safe delivery、Hot Updater 集成与 Host shared state 指南。',
     docs: '完整的简体中文文档：安装、配置、注册 MFE、传递 Host 状态、校验 native contract 并安全发布。',
     gettingStarted:
       'React Native MFE 入门指南：安装 package、声明 Host policy、注册 module、校验 native safety 并通过 runtime 加载。',
@@ -81,7 +81,7 @@ const copy = {
     metroBundle:
       '使用 withMfe 配置 Metro，并通过 Host-owned bundle archive loader 加载 portable rnm bundle archive。',
     packageManagers:
-      '使用 Bun、npm、pnpm、Yarn、Deno 执行同一套 React Native micro frontend workflow。',
+      '使用 Bun、npm、pnpm、Yarn、Deno 执行 RNM 安装、集成、校验、bundle 与 publish command。',
     nativeContract:
       '解释 native hash、Hermes、New Architecture compatibility 以及何时必须阻止 OTA。',
     globalState:
@@ -90,7 +90,7 @@ const copy = {
   ja: {
     suffix: `${brand} 日本語ドキュメント`,
     overview:
-      'React Native micro frontend の native-safe delivery、Hot Updater 連携、Host shared state の日本語ガイドです。',
+      'React Native/Expo micro frontend の native-safe delivery、Hot Updater 連携、Host shared state の日本語ガイドです。',
     docs: 'install、config、MFE registration、Host state、native contract verification、安全な publish までの日本語ドキュメントです。',
     gettingStarted:
       'React Native MFE の入門ガイドです。install、Host policy、module registration、native safety verification、runtime loading を説明します。',
@@ -103,7 +103,7 @@ const copy = {
     metroBundle:
       'withMfe で Metro を設定し、Host-owned bundle archive loader で portable rnm bundle archive を読み込みます。',
     packageManagers:
-      'Bun、npm、pnpm、Yarn、Deno で同じ React Native micro frontend workflow を実行します。',
+      'Bun、npm、pnpm、Yarn、Deno で RNM install、integration、verify、bundle、publish command を実行します。',
     nativeContract:
       'native hash、Hermes、New Architecture compatibility、OTA を止める条件を説明します。',
     globalState:
@@ -131,7 +131,7 @@ const titles: Record<SeoSection, string> = {
   options: 'Options Reference',
   hotUpdater: 'Hot Updater Setup',
   metroBundle: 'Metro / Bundle Archive',
-  packageManagers: 'Package Manager Matrix',
+  packageManagers: 'Package Managers and CLI Commands',
   nativeContract: 'Native Contract Guide',
   globalState: 'Global State Guide',
 } as const;
@@ -146,7 +146,7 @@ const localizedTitles = {
     options: '옵션 레퍼런스',
     hotUpdater: 'Hot Updater 설정',
     metroBundle: 'Metro / Bundle Archive',
-    packageManagers: '패키지 매니저 표',
+    packageManagers: '패키지 매니저와 CLI 명령어',
     nativeContract: 'Native Contract 가이드',
     globalState: '전역 상태 가이드',
   },
@@ -158,7 +158,7 @@ const localizedTitles = {
     options: '选项参考',
     hotUpdater: 'Hot Updater 设置',
     metroBundle: 'Metro / Bundle Archive',
-    packageManagers: '包管理器矩阵',
+    packageManagers: '包管理器与 CLI 命令',
     nativeContract: 'Native Contract 指南',
     globalState: '全局状态指南',
   },
@@ -170,7 +170,7 @@ const localizedTitles = {
     options: 'Options reference',
     hotUpdater: 'Hot Updater 設定',
     metroBundle: 'Metro / Bundle Archive',
-    packageManagers: 'Package Manager 一覧',
+    packageManagers: 'Package managers と CLI command',
     nativeContract: 'Native Contract ガイド',
     globalState: 'Global State ガイド',
   },

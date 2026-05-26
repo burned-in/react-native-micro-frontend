@@ -1,6 +1,6 @@
-# Package manager matrix
+# Package managers and CLI commands
 
-This project is Bun-first and supports `bun`, `npm`, `pnpm`, `yarn`, and `deno` for consumer workflows.
+This project is Bun-first and supports `bun`, `npm`, `pnpm`, `yarn`, and `deno` for consumer workflows. This page also lists every RNM CLI command added for integration, watcher, bundle, verify, and publish flows.
 
 ## Install package
 
@@ -21,6 +21,82 @@ This project is Bun-first and supports `bun`, `npm`, `pnpm`, `yarn`, and `deno` 
 | pnpm | `pnpm dlx @bunin/react-native-micro-frontend-cli init` |
 | Yarn 2+ | `yarn dlx @bunin/react-native-micro-frontend-cli init` |
 | Deno | `deno run -A npm:@bunin/react-native-micro-frontend-cli init` |
+
+## RNM CLI command reference
+
+Every command supports friendly help for the installed CLI version:
+
+```bash
+rnm --help
+rnm help
+rnm <command> --help
+rnm <command> -h
+```
+
+### Host integration commands
+
+| Command | Purpose |
+| --- | --- |
+| `rnm package <mfe>` | Detect missing JS/native package dependencies and add them to the Host `package.json` after confirmation. |
+| `rnm aos <mfe>` / `rnm android <mfe>` | Detect Android Gradle projects, Gradle dependencies, and permissions; write generated Android include files or Expo plugin data. |
+| `rnm ios <mfe>` | Detect iOS Pods; write generated Podfile include files or Expo plugin data. |
+| `rnm all <mfe>` | Run every integration in the safe order: `package -> AOS -> iOS`. |
+| `rnm integrate all <mfe>` | Backward-compatible explicit integration route. |
+| `rnm expo <mfe>` | Run the same integration watcher and OTA eligibility gate, then print an Expo EAS Update deploy command. |
+
+```bash
+rnm package mfe-feature --dry-run
+rnm aos mfe-feature --yes
+rnm android mfe-feature --yes
+rnm ios mfe-feature --yes
+rnm all mfe-feature --yes
+```
+
+### Expo support
+
+The same CLI commands support Expo managed, prebuild, and bare/prebuilt Host Apps. In bare/prebuilt projects, RNM writes generated Podfile and Gradle include files. In managed projects without `ios/` or `android/`, RNM writes `rnm.expo-plugin.cjs` and `rnm.expo-integration.json`, then adds the plugin to `app.json` when possible.
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --yes
+rnm all mfe-feature --yes
+npx expo prebuild
+```
+
+For Expo EAS Update delivery, register the MFE with the Expo OTA provider and print the EAS deploy command after RNM's native-safety gate passes. During `rnm add --ota-provider expo`, the package watcher also shows missing Host packages such as `expo` and `expo-updates`, then applies them when you choose yes or pass `--yes`.
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --ota-provider expo --ota-mode manual --yes
+rnm expo mfe-feature --channel production --platform all --non-interactive
+# same route through publish
+rnm publish mfe-feature --provider expo --channel production --platform all --non-interactive
+```
+
+### Automatic integration watcher
+
+`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`, and `rnm expo` watch for missing `package -> AOS -> iOS` additions before continuing. In an interactive terminal RNM asks whether to apply detected additions.
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --yes
+rnm bundle mfe-feature --platform ios --host ../host-app --yes
+rnm verify mfe-feature --skip-integration
+rnm publish mfe-feature --package-manager bun --channel production --skip-integration
+rnm expo mfe-feature --channel production --platform all --skip-integration
+```
+
+Use `--yes` for non-interactive apply, direct integration commands with `--dry-run` to inspect changes, and `--skip-integration` when you intentionally want to run only the original add/bundle/verify/publish/expo command.
+
+### Lifecycle and diagnostics commands
+
+| Command | Purpose |
+| --- | --- |
+| `rnm init` | Create reviewable Host config, registry, native contract, and generated include files. |
+| `rnm build` | Print React Native bundle commands and optional archive output paths. |
+| `rnm bundle` | Build a minimal archive containing only `index.bundle`, `assets/`, and `manifest.json`. |
+| `rnm diff` | Compare Host and MFE native contracts. |
+| `rnm sync` | Record native-change decisions such as blocking an MFE or disabling OTA after native changes. |
+| `rnm status` | Print registered MFE status from `rnm.registry.json`. |
+| `rnm doctor` | Read-only project setup diagnostics. |
+| `rnm rollback` | Restore `.bak` files created before patching existing files. |
 
 ## Repository release commands
 
@@ -46,6 +122,18 @@ The repository release workflow still uses Bun internally for testing, building,
 | `deno` | `deno run -A npm:hot-updater deploy -p ios -c production` |
 
 `rnm publish` prints deploy commands only after OTA eligibility passes.
+
+Expo EAS Update can use either `rnm expo` or `rnm publish --provider expo`:
+
+| `--package-manager` | Expo EAS Update command |
+| --- | --- |
+| `bun` | `bunx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `npm` | `npx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `pnpm` | `pnpm dlx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `yarn` | `yarn dlx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `deno` | `deno run -A npm:eas-cli update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+
+Use `--branch`, `--auto`, `--environment`, and `--non-interactive` when your EAS workflow needs those options.
 
 ## Bundle archive command
 

@@ -1,6 +1,6 @@
-# パッケージマネージャ・マトリクス
+# Package managers と CLI command
 
-このプロジェクトは Bun 優先で、利用側 workflow では `bun`、`npm`、`pnpm`、`yarn`、`deno` をサポートします。
+このプロジェクトは Bun 優先で、利用側 workflow では `bun`、`npm`、`pnpm`、`yarn`、`deno` をサポートします。この page では integration、watcher、bundle、verify、publish flow に追加した RNM CLI command もすべて整理します。
 
 ## package を install する
 
@@ -47,6 +47,18 @@
 
 `rnm publish` は OTA eligibility を通過した場合だけ公開コマンドを出力します。
 
+Expo EAS Update は `rnm expo` または `rnm publish --provider expo` で使えます。
+
+| `--package-manager` | Expo EAS Update コマンド |
+| --- | --- |
+| `bun` | `bunx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `npm` | `npx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `pnpm` | `pnpm dlx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `yarn` | `yarn dlx eas-cli@latest update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+| `deno` | `deno run -A npm:eas-cli update --channel production --message 'RNM mfe-feature@1.0.0' --platform all` |
+
+EAS workflow に必要な場合は `--branch`、`--auto`、`--environment`、`--non-interactive` を併用してください。
+
 ## Bundle archive command
 
 CLI を install したあと MFE project で実行します。React Native bundling を実行し、`index.bundle`, `assets/`, `manifest.json` だけを archive にします。
@@ -56,3 +68,80 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
 各 runner でも同じ形で実行できます: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, `deno run -A ... bundle`.
+
+## RNM CLI command reference
+
+install 済み CLI version が対応する正確な options は help で確認できます。
+
+```bash
+rnm --help
+rnm help
+rnm <command> --help
+rnm <command> -h
+```
+
+### Host integration commands
+
+| Command | 用途 |
+| --- | --- |
+| `rnm package <mfe>` | 不足している JS/native package dependency を検出し、確認後に Host `package.json` へ追加します。 |
+| `rnm aos <mfe>` / `rnm android <mfe>` | Android Gradle project、Gradle dependency、permission を検出し、generated Android include files または Expo plugin data を書きます。 |
+| `rnm ios <mfe>` | iOS Pods を検出し、generated Podfile include files または Expo plugin data を書きます。 |
+| `rnm all <mfe>` | 安全な順序で全 integration を実行します: `package -> AOS -> iOS`。 |
+| `rnm integrate all <mfe>` | backward-compatible な explicit integration route です。 |
+| `rnm expo <mfe>` | 同じ integration watcher と OTA eligibility gate を実行し、Expo EAS Update deploy command を出力します。 |
+
+```bash
+rnm package mfe-feature --dry-run
+rnm aos mfe-feature --yes
+rnm android mfe-feature --yes
+rnm ios mfe-feature --yes
+rnm all mfe-feature --yes
+```
+
+### Expo support
+
+同じ CLI command が Expo managed、prebuild、bare/prebuilt Host App をすべてサポートします。bare/prebuilt project では generated Podfile/Gradle include files を書き、`ios/` または `android/` が無い managed project では `rnm.expo-plugin.cjs` と `rnm.expo-integration.json` を生成し、可能なら `app.json` に plugin を追加します。
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --yes
+rnm all mfe-feature --yes
+npx expo prebuild
+```
+
+Expo EAS Update で配信する場合は、MFE を Expo OTA provider として登録し、RNM の native-safety gate 通過後に EAS deploy command を出力します。`rnm add --ota-provider expo` を実行すると、package watcher が `expo`、`expo-updates` など Host に不足している package も表示し、yes を選ぶか `--yes` を渡すと一緒に適用します。
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --ota-provider expo --ota-mode manual --yes
+rnm expo mfe-feature --channel production --platform all --non-interactive
+# publish からも同じ route を使えます
+rnm publish mfe-feature --provider expo --channel production --platform all --non-interactive
+```
+
+### Automatic integration watcher
+
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` は元の task を続ける前に不足している `package -> AOS -> iOS` additions を監視します。interactive terminal では RNM が適用するか確認します。
+
+```bash
+rnm add mfe-feature --path ../mfe-feature --yes
+rnm bundle mfe-feature --platform ios --host ../host-app --yes
+rnm verify mfe-feature --skip-integration
+rnm publish mfe-feature --package-manager bun --channel production --skip-integration
+rnm expo mfe-feature --channel production --platform all --skip-integration
+```
+
+automation で非対話適用する場合は `--yes`、直接 integration command で変更点を見る場合は `--dry-run`、元の add/bundle/verify/publish/expo command だけ実行したい場合は `--skip-integration` を使います。
+
+### Lifecycle and diagnostics commands
+
+| Command | 用途 |
+| --- | --- |
+| `rnm init` | review 可能な Host config、registry、native contract、generated include files を作成します。 |
+| `rnm build` | React Native bundle command と optional archive output path を出力します。 |
+| `rnm bundle` | `index.bundle`、`assets/`、`manifest.json` だけを含む minimal archive を作成します。 |
+| `rnm diff` | Host と MFE の native contracts を比較します。 |
+| `rnm sync` | MFE block や native change 後の OTA disable など native-change decision を記録します。 |
+| `rnm status` | `rnm.registry.json` から registered MFE status を出力します。 |
+| `rnm doctor` | project setup を read-only で診断します。 |
+| `rnm rollback` | existing files の patch 前に作られた `.bak` files を復旧します。 |
+

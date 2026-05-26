@@ -1,7 +1,7 @@
 /** OTA mode for a micro frontend. */
 export type OtaMode = 'auto' | 'manual' | 'disabled';
 /** Supported OTA providers. */
-export type OtaProvider = 'hot-updater' | 'none' | 'custom';
+export type OtaProvider = 'hot-updater' | 'expo' | 'none' | 'custom';
 /** Native-change strategy for sync and publish. */
 export type NativeChangePolicy = 'ask' | 'block' | 'apply-and-disable-ota';
 /** MFE lifecycle status stored in the registry. */

@@ -33,6 +33,7 @@ Hot Updater を置き換えるものではありません。Hot Updater は OTA 
 | Bundle archive          | `rnm bundle` が React Native bundling を実行し、`index.bundle`, Metro `assets/`, `manifest.json` だけを archive して Host copy/CDN delivery に使えます。                                |
 | Hot Updater adapter     | 既存の Hot Updater 公開フローを再利用します。                                                                                                                                           |
 | Package manager support | Bun、npm、pnpm、Yarn、Deno の consumer workflow をサポートします。                                                                                                                      |
+| Expo サポート         | Expo managed、prebuild、bare/prebuilt Host App をサポートします。native folders が無い場合は watcher が Expo config plugin を生成します。                                        |
 
 ## クイックスタート
 
@@ -128,6 +129,11 @@ native-safety verification を通過した MFE を remote delivery する場合�
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater の代わりに Expo EAS Update を使う
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+# rnm add は expo、expo-updates など Host に不足している package も表示して適用します
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 ```tsx
@@ -355,6 +361,21 @@ deno task release:publish
 - workflow 内部の test、build、pack、publish はすべて Bun を使います。
 - CI の外側が `npm`、`pnpm`、`yarn`、`deno task` でも Bun は install されている必要があります。
 - `pnpm-workspace.yaml` と `.npmrc` により、repository の preferred `packageManager` が Bun でも pnpm を使用できます。
+
+## CLI command map
+
+正確な options は `rnm --help` または `rnm <command> --help` で確認してください。Host setup のために追加した integration command は次の通りです。
+
+| Command | 用途 |
+| --- | --- |
+| `rnm package <mfe>` | 確認後、不足している JS/native package dependency を追加します。 |
+| `rnm aos <mfe>` / `rnm android <mfe>` | Android Gradle project、dependency、permission を追加します。 |
+| `rnm ios <mfe>` | iOS Podfile integration を追加します。 |
+| `rnm all <mfe>` | `package -> AOS -> iOS` の順に実行します。 |
+| `rnm integrate all <mfe>` | backward-compatible な explicit integration route です。 |
+| `rnm expo <mfe>` | integration watcher と OTA safety check の後に Expo EAS Update deploy command を出力します。 |
+
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` は integration watcher を自動実行します。automation では `--yes`、watcher を省く場合は `--skip-integration` を使います。完全な command reference は [Package managers と CLI command](package-managers.ja.md) を確認してください。
 
 ## CLI 例
 

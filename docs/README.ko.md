@@ -39,6 +39,7 @@ Hot Updater를 대체하지 않습니다. Hot Updater는 OTA delivery engine이�
 | Bundle archive          | `rnm bundle`이 React Native bundling을 실행하고 `index.bundle`, Metro `assets/`, `manifest.json`만 묶어 Host copy/CDN delivery에 사용하게 합니다.                                 |
 | Hot Updater adapter     | 기존 Hot Updater 배포 흐름을 그대로 재사용합니다.                                                                                                                                 |
 | Package manager support | Bun, npm, pnpm, Yarn, Deno consumer workflow를 지원합니다.                                                                                                                        |
+| Expo 지원             | Expo managed, prebuild, bare/prebuilt Host App을 지원합니다. native folder가 없으면 watcher가 Expo config plugin을 생성합니다.                                                   |
 
 ## 빠른 시작
 
@@ -134,6 +135,11 @@ native-safety verification을 통과한 MFE를 원격으로 배포할 때 사용
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater 대신 Expo EAS Update 사용
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+# rnm add는 expo, expo-updates 같은 Host 누락 패키지도 보여주고 적용합니다
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 ```tsx
@@ -383,6 +389,21 @@ deno task release:publish
 - workflow 내부는 test, build, pack, publish 모두 Bun을 사용합니다.
 - CI에서 외부 명령을 `npm`, `pnpm`, `yarn`, `deno task`로 실행해도 Bun은 설치되어 있어야 합니다.
 - `pnpm-workspace.yaml`과 `.npmrc`가 있어서 repository의 preferred `packageManager`가 Bun이어도 pnpm을 사용할 수 있습니다.
+
+## CLI 명령어 지도
+
+정확한 option은 `rnm --help` 또는 `rnm <command> --help`로 확인하세요. Host setup을 위해 추가된 integration command는 다음과 같습니다.
+
+| 명령어 | 목적 |
+| --- | --- |
+| `rnm package <mfe>` | 확인 후 누락된 JS/native package dependency를 추가합니다. |
+| `rnm aos <mfe>` / `rnm android <mfe>` | Android Gradle project, dependency, permission을 추가합니다. |
+| `rnm ios <mfe>` | iOS Podfile integration을 추가합니다. |
+| `rnm all <mfe>` | `package -> AOS -> iOS` 순서로 실행합니다. |
+| `rnm integrate all <mfe>` | 기존 호환용 explicit integration route입니다. |
+| `rnm expo <mfe>` | integration watcher와 OTA safety check 이후 Expo EAS Update deploy command를 출력합니다. |
+
+`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`, `rnm expo`는 integration watcher를 자동 실행합니다. 자동화에서는 `--yes`, watcher 생략은 `--skip-integration`을 사용하세요. 전체 command reference는 [패키지 매니저와 CLI 명령어](package-managers.ko.md)를 확인하세요.
 
 ## CLI 예제
 

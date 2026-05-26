@@ -33,6 +33,7 @@ React Native Micro Frontend
 | Bundle archive          | `rnm bundle` 执行 React Native bundling，只归档 `index.bundle`、Metro `assets/` 和 `manifest.json`，用于 Host copy/CDN delivery。                    |
 | Hot Updater adapter     | 复用现有 Hot Updater 发布流程。                                                                                                                      |
 | Package manager support | 支持 Bun、npm、pnpm、Yarn、Deno 的使用方 workflow。                                                                                                  |
+| Expo 支持             | 支持 Expo managed、prebuild、bare/prebuilt Host App；native folders 不存在时 watcher 会生成 Expo config plugin。                                                                  |
 
 ## 快速开始
 
@@ -128,6 +129,11 @@ const loadMfeModule = createMicroFrontendLoader({
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# 使用 Expo EAS Update 代替 Hot Updater
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+# rnm add 也会显示并应用 Host 缺失的 expo、expo-updates 等包
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 ```tsx
@@ -355,6 +361,21 @@ deno task release:publish
 - workflow 内部的 test、build、pack、publish 都使用 Bun。
 - 即使 CI 外层使用 `npm`、`pnpm`、`yarn` 或 `deno task`，仍然需要安装 Bun。
 - 由于存在 `pnpm-workspace.yaml` 和 `.npmrc`，即使 repository 的 preferred `packageManager` 是 Bun，也可以使用 pnpm。
+
+## CLI 命令地图
+
+准确 options 可通过 `rnm --help` 或 `rnm <command> --help` 查看。为 Host setup 新增的 integration command 如下。
+
+| 命令 | 用途 |
+| --- | --- |
+| `rnm package <mfe>` | 确认后添加缺失的 JS/native package dependency。 |
+| `rnm aos <mfe>` / `rnm android <mfe>` | 添加 Android Gradle project、dependency 与 permission。 |
+| `rnm ios <mfe>` | 添加 iOS Podfile integration。 |
+| `rnm all <mfe>` | 按 `package -> AOS -> iOS` 顺序执行。 |
+| `rnm integrate all <mfe>` | 向后兼容的 explicit integration route。 |
+| `rnm expo <mfe>` | 在 integration watcher 与 OTA safety check 后输出 Expo EAS Update deploy command。 |
+
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` 会自动运行 integration watcher。自动化使用 `--yes`，跳过 watcher 使用 `--skip-integration`。完整 command reference 请查看 [包管理器与 CLI 命令](package-managers.zh-CN.md)。
 
 ## CLI 示例
 

@@ -19,12 +19,13 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [한국어 README](README.ko.md)                        | 주요 가이드와 예제.                                                 |
 | [Getting Started](getting-started.ko.md)             | 설치, 설정, 등록, 검증, 첫 MFE 로딩 가이드.                         |
 | [Easy Way](easy-way.ko.md)                           | Generic, OTA 없는 Bundle, OTA delivery 중 선택하는 가이드.          |
+| [Expo 지원](getting-started.ko.md#expo-host-app)        | Expo managed/prebuild/bare Host App에서 package, AOS, iOS integration watcher를 사용합니다. |
 | [옵션 레퍼런스](options.ko.md)                       | Host config, MFE config, registry, runtime 옵션 전체.               |
 | [Metro / Bundle archive](metro-bundle-archive.ko.md) | `withMfe`로 Metro를 merge하고 portable bundle archive를 로드합니다. |
 | [영어](../README.md)                                 | 영어 공식 가이드.                                                   |
 | [일본어](README.ja.md)                               | 일본어 공식 문서.                                                   |
 | [중국어 간체](README.zh-CN.md)                       | 중국어 간체 공식 문서.                                              |
-| [패키지 매니저](package-managers.ko.md)              | Bun, npm, pnpm, Yarn, Deno 명령 매트릭스.                           |
+| [패키지 매니저 & CLI](package-managers.ko.md)        | Bun, npm, pnpm, Yarn, Deno 실행 표와 RNM CLI 명령어 전체.            |
 | [Native contract](native-contract.md)                | native compatibility 설명.                                          |
 | [전역 상태](/ko/docs/global-state)                   | Host에서 MFE로 sharedState를 제공하고 가져오는 방법.                |
 | [Hot Updater 설정](/ko/docs/hot-updater)             | Hot Updater route 문서.                                             |
@@ -54,6 +55,10 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Hot Updater 대신 Expo EAS Update 사용
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 `createMicroFrontendLoader({ hotUpdater, custom })`로 연결합니다. OTA engine은 native-safety verification 통과 후 배포와 evaluation을 담당합니다.

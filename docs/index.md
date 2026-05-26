@@ -19,12 +19,13 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [English README](../README.md)                    | Main library guide and examples.                               |
 | [Getting started](getting-started.md)             | Install, configure, register, verify, and load your first MFE. |
 | [Easy Way](easy-way.md)                           | Choose Generic, Bundle without OTA publish, or OTA delivery.   |
+| [Expo support](getting-started.md#expo-host-apps)      | Expo managed/prebuild/bare Host Apps with package, AOS, and iOS integration watcher. |
 | [Options reference](options.md)                   | Every Host config, MFE config, registry, and runtime option.   |
 | [Metro / Bundle archive](metro-bundle-archive.md) | Merge Metro with `withMfe` and load portable bundle archives.  |
 | [Korean](README.ko.md)                            | Korean official guide.                                         |
 | [Japanese](README.ja.md)                          | Japanese official guide.                                       |
 | [Chinese](README.zh-CN.md)                        | Simplified Chinese official guide.                             |
-| [Package managers](package-managers.md)           | Bun, npm, pnpm, Yarn, and Deno command matrix.                 |
+| [Package managers & CLI](package-managers.md)     | Bun, npm, pnpm, Yarn, Deno runner matrix plus every RNM CLI command. |
 | [Native contract](native-contract.md)             | Native compatibility notes.                                    |
 | [Global state](/docs/global-state)                | Host-to-MFE sharedState providing and reading guide.           |
 | [Hot Updater setup](/docs/hot-updater)            | Routed website guide for Hot Updater configuration.            |
@@ -54,6 +55,10 @@ This creates a `.tar.gz` containing only `index.bundle`, `assets/`, and `manifes
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
+
+# Expo EAS Update instead
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive
 ```
 
 Use `createMicroFrontendLoader({ hotUpdater, custom })`; the OTA engine distributes and evaluates code after native-safety verification passes.

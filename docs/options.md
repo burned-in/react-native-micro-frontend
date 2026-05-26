@@ -55,7 +55,7 @@ File: `host-app/react-native-micro-frontend.config.ts`
 | `reactNative.hermes` | `"required" \| "optional" \| "disabled"` | Whether Hermes is required, allowed, or disabled. |
 | `reactNative.newArchitecture` | `"required" \| "supported" \| "disabled"` | New Architecture compatibility policy. |
 | `ota.enabled` | `boolean` | Enables or disables OTA delivery at the Host policy level. |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | OTA provider integration selected by the Host. |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | OTA provider integration selected by the Host. |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | How publish commands are produced or gated. |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | How to handle an existing Hot Updater config. |
 | `ota.existingHotUpdater.configPath` | `string` | Optional path to `hot-updater.config.ts` or `.js`. |
@@ -82,7 +82,7 @@ File: `mfe-feature/mfe.config.ts`
 | `reactNative` | `{ minVersion; hermes; newArchitecture }` | Optional MFE native/runtime assumptions. |
 | `ota.enabled` | `boolean` | Whether this MFE can publish through OTA when checks pass. |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | MFE-level OTA mode. |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | Optional MFE-level OTA provider override. |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Optional MFE-level OTA provider override. |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | MFE behavior when native changes are detected. |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | Package-manager behavior for this MFE. |
 | `packageManager.explicit` | `"bun" \| "deno" \| "npm" \| "pnpm" \| "yarn"` | Explicit package manager for this MFE. |
@@ -110,7 +110,7 @@ File: `host-app/rnm.registry.json`
 | `MfeManifest.path` | `string` | Path from Host App root to MFE project root. |
 | `MfeManifest.ota.enabled` | `boolean` | Whether OTA is enabled for this registered MFE. |
 | `MfeManifest.ota.mode` | `"auto" \| "manual" \| "disabled"` | Runtime/publish OTA mode. |
-| `MfeManifest.ota.provider` | `"hot-updater" \| "none" \| "custom"` | Provider used for this registered MFE. |
+| `MfeManifest.ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Provider used for this registered MFE. |
 | `MfeManifest.nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | Native-change policy captured for this MFE. |
 | `MfeManifest.status` | `"active" \| "blocked" \| "disabled"` | Runtime status. Blocked and disabled modules should not render. |
 | `MfeManifest.blockedReason` | `string` | Optional human-readable reason shown in fallback UI or logs. |

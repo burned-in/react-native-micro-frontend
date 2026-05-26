@@ -55,7 +55,7 @@ File: `host-app/react-native-micro-frontend.config.ts`
 | `reactNative.hermes` | `"required" \| "optional" \| "disabled"` | Hermes を必須、任意、無効のどれにするか。 |
 | `reactNative.newArchitecture` | `"required" \| "supported" \| "disabled"` | New Architecture compatibility policy。 |
 | `ota.enabled` | `boolean` | Host policy level で OTA delivery を有効/無効にします。 |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | Host が選択する OTA provider integration。 |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | Host が選択する OTA provider integration。 |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | publish command を生成または gate する方式。 |
 | `ota.existingHotUpdater.strategy` | `"reuse" \| "wrap" \| "separate" \| "disable" \| "manual"` | 既存 Hot Updater config の扱い。 |
 | `ota.existingHotUpdater.configPath` | `string` | 任意。`hot-updater.config.ts` または `.js` の path。 |
@@ -82,7 +82,7 @@ File: `mfe-feature/mfe.config.ts`
 | `reactNative` | `{ minVersion; hermes; newArchitecture }` | 任意の MFE native/runtime assumptions。 |
 | `ota.enabled` | `boolean` | compatibility checks が通った時、この MFE を OTA publish できるか。 |
 | `ota.mode` | `"auto" \| "manual" \| "disabled"` | MFE-level OTA mode。 |
-| `ota.provider` | `"hot-updater" \| "none" \| "custom"` | 任意の MFE-level OTA provider override。 |
+| `ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | 任意の MFE-level OTA provider override。 |
 | `nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | native changes 検出時の MFE behavior。 |
 | `packageManager.strategy` | `"follow-host" \| "follow-mfe" \| "ask-every-time" \| "manual" \| "follow-existing-project"` | この MFE の package-manager behavior。 |
 | `packageManager.explicit` | `"bun" \| "deno" \| "npm" \| "pnpm" \| "yarn"` | この MFE の明示的 package manager。 |
@@ -110,7 +110,7 @@ File: `host-app/rnm.registry.json`
 | `MfeManifest.path` | `string` | Host App root から MFE project root への path。 |
 | `MfeManifest.ota.enabled` | `boolean` | この registered MFE の OTA 有効状態。 |
 | `MfeManifest.ota.mode` | `"auto" \| "manual" \| "disabled"` | Runtime/publish OTA mode。 |
-| `MfeManifest.ota.provider` | `"hot-updater" \| "none" \| "custom"` | この registered MFE が使う provider。 |
+| `MfeManifest.ota.provider` | `"hot-updater" \| "expo" \| "none" \| "custom"` | この registered MFE が使う provider。 |
 | `MfeManifest.nativeChangePolicy` | `"ask" \| "block" \| "apply-and-disable-ota"` | この MFE の native-change policy。 |
 | `MfeManifest.status` | `"active" \| "blocked" \| "disabled"` | Runtime status。blocked/disabled modules は render しません。 |
 | `MfeManifest.blockedReason` | `string` | 任意。fallback UI または logs に出す readable reason。 |

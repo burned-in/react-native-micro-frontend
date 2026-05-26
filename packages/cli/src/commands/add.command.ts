@@ -46,7 +46,7 @@ export function runAddCommand(
   );
   const otaProvider = flagEnum(
     flags['ota-provider'],
-    ['hot-updater', 'none', 'custom'],
+    ['hot-updater', 'expo', 'none', 'custom'],
     'hot-updater',
   );
   const nativeChangePolicy = flagEnum(
