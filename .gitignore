@@ -14,6 +14,7 @@ coverage/
 # Package artifacts
 *.tgz
 .npm-pack/
+.npm-publish-stage/
 
 # Runtime / local state
 .rnm/rollback/*.json

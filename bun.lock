@@ -41,28 +41,28 @@
     },
     "packages/cli": {
       "name": "@bunin/react-native-micro-frontend-cli",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "rnm": "dist/bin/rnm.js",
       },
       "dependencies": {
-        "@bunin/react-native-micro-frontend": "0.1.0",
-        "@bunin/react-native-micro-frontend-hot-updater-adapter": "0.1.0",
-        "@bunin/react-native-micro-frontend-integration": "0.1.0",
-        "@bunin/react-native-micro-frontend-metro-adapter": "0.1.0",
-        "@bunin/react-native-micro-frontend-native-contract": "0.1.0",
+        "@bunin/react-native-micro-frontend": "workspace:*",
+        "@bunin/react-native-micro-frontend-hot-updater-adapter": "workspace:*",
+        "@bunin/react-native-micro-frontend-integration": "workspace:*",
+        "@bunin/react-native-micro-frontend-metro-adapter": "workspace:*",
+        "@bunin/react-native-micro-frontend-native-contract": "workspace:*",
       },
     },
     "packages/config": {
       "name": "@bunin/react-native-micro-frontend-config",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
-        "@bunin/react-native-micro-frontend": "0.1.0",
+        "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@bunin/react-native-micro-frontend",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "peerDependencies": {
         "react": "*",
         "react-native": ">=0.70.0",
@@ -74,34 +74,34 @@
     },
     "packages/hot-updater-adapter": {
       "name": "@bunin/react-native-micro-frontend-hot-updater-adapter",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
-        "@bunin/react-native-micro-frontend": "0.1.0",
+        "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/integration": {
       "name": "@bunin/react-native-micro-frontend-integration",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
-        "@bunin/react-native-micro-frontend": "0.1.0",
+        "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/metro-adapter": {
       "name": "@bunin/react-native-micro-frontend-metro-adapter",
-      "version": "0.1.0",
+      "version": "0.2.0",
     },
     "packages/native-contract": {
       "name": "@bunin/react-native-micro-frontend-native-contract",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
-        "@bunin/react-native-micro-frontend": "0.1.0",
+        "@bunin/react-native-micro-frontend": "workspace:*",
       },
     },
     "packages/react-native-runtime": {
       "name": "@bunin/react-native-micro-frontend-runtime",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
-        "@bunin/react-native-micro-frontend": "0.1.0",
+        "@bunin/react-native-micro-frontend": "workspace:*",
       },
       "peerDependencies": {
         "react": "*",

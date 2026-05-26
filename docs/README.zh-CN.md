@@ -463,17 +463,33 @@ export default defineReactNativeMicroFrontendConfig({
 ## Runtime 示例
 
 ```tsx
+import type { MfeManifest } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  MicroFrontendScreen,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
+
+type MfeModule = MicroFrontendModule;
+
+declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App({ registry }) {
   return (
     <MicroFrontendProvider registry={registry}>
-      <MicroFrontendScreen
+      <MicroFrontendComponent
         name="mfe-feature"
-        fallback={<Loading />}
+        load={loadMfeModule}
+        fallback={(state) => <Loading reason={state.reason} />}
       />
     </MicroFrontendProvider>
   );
@@ -482,14 +498,12 @@ export function App({ registry }) {
 
 含义：
 
-- Host App 决定 registry 从哪里读取。
+- Host App 决定 registry 的来源。
 - runtime 会拒绝 blocked 或 nativeHash mismatch 的 MFE。
-- MFE entry module 应 default export root component。
-- `MicroFrontendScreen` 是 fallback-first policy placeholder。
-- 连接真实 Hot Updater、embedded bundle 或 custom loader 时，请使用 `useMicroFrontend()`。
-- Host-specific loader 解析 JavaScript bundle 并渲染 `module.default`。
-- 不安全或无法加载时显示 fallback。
-
+- MFE entry module 必须 default export root component。
+- `createMicroFrontendLoader()` 会优先读取 registry config：`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`。
+- 如果某个 mount 点需要直接指定 provider/path/url，可以使用 `loadOptions` 或创建出的 loader 的第二个参数。
+- `MicroFrontendComponent` 在 missing、blocked、loading、failed 时显示 fallback；Host loader 成功后渲染 `module.default`。
 
 ## 读取 Host 提供的全局状态
 

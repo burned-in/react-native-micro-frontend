@@ -503,17 +503,33 @@ Meaning:
 ## Runtime example
 
 ```tsx
+import type { MfeManifest } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  MicroFrontendScreen,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
+
+type MfeModule = MicroFrontendModule;
+
+declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App({ registry }) {
   return (
     <MicroFrontendProvider registry={registry}>
-      <MicroFrontendScreen
+      <MicroFrontendComponent
         name="mfe-feature"
-        fallback={<Loading />}
+        load={loadMfeModule}
+        fallback={(state) => <Loading reason={state.reason} />}
       />
     </MicroFrontendProvider>
   );
@@ -525,11 +541,9 @@ Meaning:
 - the host app owns where the registry comes from
 - the runtime refuses blocked or nativeHash-mismatched MFEs
 - MFE entry modules should default-export their root component
-- `MicroFrontendScreen` is a fallback-first policy placeholder
-- use `useMicroFrontend()` when wiring a real Hot Updater, embedded-bundle, or custom loader
-- the host-specific loader resolves the JavaScript bundle and renders `module.default`
-- the fallback is shown when loading is unsafe or unavailable
-
+- `createMicroFrontendLoader()` reads registry config first: `ota.provider`, `embeddedBundlePath`, and `otaBundleUrl`
+- pass `loadOptions` or the created loader's second argument when a mount point needs direct provider/path/url settings
+- `MicroFrontendComponent` renders fallback while missing, blocked, loading, or failed, then renders `module.default` when the Host loader succeeds
 
 ## Host-provided global state
 

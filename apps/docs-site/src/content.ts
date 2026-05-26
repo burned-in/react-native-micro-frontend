@@ -247,55 +247,68 @@ export default function MfeFeature() {
     title: 'Mount through the runtime safety gate and a host loader.',
     body: [
       'The runtime package checks missing modules, blocked modules, and native hash mismatches. It does not download or evaluate JavaScript bundles by itself.',
-      'Use useMicroFrontend() as the safety gate, then render module.default from your Hot Updater, embedded-bundle, or custom loader implementation.',
+      'Use createMicroFrontendLoader() and MicroFrontendComponent. The loader reads registry config first (ota.provider, embeddedBundlePath, otaBundleUrl), and loadOptions can supply direct per-mount metadata.',
     ],
-    code: `import type { ComponentType } from "react";
-import { useEffect, useState } from "react";
-import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
+    code: `import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  useMicroFrontend,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
 import registryJson from "./rnm.registry.json";
 
-type MfeModule = { default: ComponentType };
+type MfeFeatureProps = {
+  readonly title?: string;
+};
 
-async function loadMfeModule(manifest: MfeManifest): Promise<MfeModule> {
-  return hostSpecificBundleLoader<MfeModule>(manifest);
-}
+type MfeModule = MicroFrontendModule<MfeFeatureProps>;
 
-function MfeMount(props: { readonly name: string }) {
-  const mfe = useMicroFrontend(props.name);
-  const [Component, setComponent] = useState<ComponentType | null>(null);
+// Replace these declarations with your real Hot Updater, embedded-bundle, or custom CDN implementation.
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
 
-  useEffect(() => {
-    if (mfe.status !== "ready" || !mfe.manifest) return;
-
-    let mounted = true;
-
-    loadMfeModule(mfe.manifest).then((module) => {
-      if (mounted) setComponent(() => module.default);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [mfe.status, mfe.manifest]);
-
-  if (mfe.status !== "ready" || !Component) {
-    return <Loading reason={mfe.reason} />;
-  }
-
-  return <Component />;
-}
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App() {
   return (
-    <MicroFrontendProvider registry={registryJson as MfeRegistry}>
-      <MfeMount name="mfe-feature" />
+    <MicroFrontendProvider
+      registry={registryJson as MfeRegistry}
+      sharedState={{ locale: "en-US" }}
+    >
+      <MicroFrontendComponent<MfeFeatureProps>
+        name="mfe-feature"
+        load={loadMfeModule}
+        componentProps={{ title: "MFE Feature" }}
+        fallback={(state) => <Loading reason={state.reason} />}
+        errorFallback={(error) => (
+          <Loading
+            reason={error instanceof Error ? error.message : "MFE load failed."}
+          />
+        )}
+      />
     </MicroFrontendProvider>
   );
-}`,
+}
+
+// Optional direct settings when a value is not stored in rnm.registry.json:
+// <MicroFrontendComponent
+//   name="mfe-feature"
+//   load={loadMfeModule}
+//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   fallback={(state) => <Loading reason={state.reason} />}
+// />`,
   },
 ];
 
@@ -521,10 +534,10 @@ MfeManifest.otaBundleUrl?: string
   },
   {
     eyebrow: 'Runtime',
-    title: 'Provider, hooks, and screen options.',
+    title: 'Provider, hooks, loader, and component options.',
     body: [
       'Runtime APIs do safety checks and expose Host-owned shared state. They do not implement the bundle transport.',
-      'Use useMicroFrontend() for real loading flows because it gives you the manifest and status needed by your Host loader.',
+      'Use createMicroFrontendLoader() and MicroFrontendComponent for real loading flows; useMicroFrontend() remains available for custom flows.',
     ],
     code: `MicroFrontendProvider.registry: MfeRegistry
   Required registry snapshot, usually imported from rnm.registry.json or loaded from Host storage.
@@ -550,11 +563,26 @@ useMicroFrontendSharedState<T>(): T
 useIsMfe(): boolean
   Tells shared components whether they are running in a mounted MFE subtree.
 
-MicroFrontendScreen.name: string
+createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
+  Creates a reusable Host loader. It reads registry config first: ota.provider, embeddedBundlePath, otaBundleUrl.
+
+loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
+  Resolves one module with Host callbacks. Optional options can directly supply provider, embeddedBundlePath, or otaBundleUrl.
+
+MicroFrontendComponent.name: string
   Registered MFE name.
 
-MicroFrontendScreen.fallback: ReactNode
-  Rendered when unsafe or unavailable. This component is a fallback-first placeholder; connect real loaders with useMicroFrontend().`,
+MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
+  Host loader created by createMicroFrontendLoader(), or your compatible loader.
+
+MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
+  Direct per-mount provider/path/url overrides when values are not stored in rnm.registry.json.
+
+MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
+  Rendered when missing, blocked, loading, or unavailable.
+
+MicroFrontendComponent.errorFallback?: ReactNode | ((error, state) => ReactNode)
+  Optional UI for bundle load failures.`,
   },
 ];
 
@@ -771,11 +799,26 @@ useMicroFrontendSharedState<T>(): T
 useIsMfe(): boolean
   shared component가 mounted MFE subtree 안에서 실행 중인지 알려 줍니다.
 
-MicroFrontendScreen.name: string
+createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
+  재사용 가능한 Host loader를 만듭니다. 먼저 registry config인 ota.provider, embeddedBundlePath, otaBundleUrl을 읽습니다.
+
+loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
+  Host callback으로 module 하나를 resolve합니다. optional options로 provider, embeddedBundlePath, otaBundleUrl을 직접 줄 수 있습니다.
+
+MicroFrontendComponent.name: string
   Registered MFE name입니다.
 
-MicroFrontendScreen.fallback: ReactNode
-  안전하지 않거나 unavailable일 때 render됩니다. 이 component는 fallback-first placeholder이며 실제 loader는 useMicroFrontend()로 연결하세요.`,
+MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
+  createMicroFrontendLoader()로 만든 Host loader 또는 호환 loader입니다.
+
+MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
+  값을 rnm.registry.json에 저장하지 않을 때 mount별 provider/path/url을 직접 지정합니다.
+
+MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
+  missing, blocked, loading, unavailable 상태에서 render됩니다.
+
+MicroFrontendComponent.errorFallback?: ReactNode | ((error, state) => ReactNode)
+  bundle load 실패 시 보여 줄 선택 UI입니다.`,
   },
   zh: {
     map: `host-app/react-native-micro-frontend.config.ts
@@ -989,11 +1032,26 @@ useMicroFrontendSharedState<T>(): T
 useIsMfe(): boolean
   告诉 shared component 是否运行在 mounted MFE subtree 中。
 
-MicroFrontendScreen.name: string
+createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
+  创建可复用的 Host loader。它会优先读取 registry config：ota.provider、embeddedBundlePath、otaBundleUrl。
+
+loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
+  使用 Host callback resolve 一个 module。optional options 可直接提供 provider、embeddedBundlePath 或 otaBundleUrl。
+
+MicroFrontendComponent.name: string
   Registered MFE name。
 
-MicroFrontendScreen.fallback: ReactNode
-  unsafe 或 unavailable 时 render。此 component 是 fallback-first placeholder；真实 loader 请通过 useMicroFrontend() 连接。`,
+MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
+  由 createMicroFrontendLoader() 创建的 Host loader，或兼容 loader。
+
+MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
+  当值不存储在 rnm.registry.json 时，为单个 mount 点直接覆盖 provider/path/url。
+
+MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
+  missing、blocked、loading 或 unavailable 时 render。
+
+MicroFrontendComponent.errorFallback?: ReactNode | ((error, state) => ReactNode)
+  bundle load 失败时的可选 UI。`,
   },
   ja: {
     map: `host-app/react-native-micro-frontend.config.ts
@@ -1207,11 +1265,26 @@ useMicroFrontendSharedState<T>(): T
 useIsMfe(): boolean
   shared component が mounted MFE subtree 内で実行されているかを示します。
 
-MicroFrontendScreen.name: string
+createMicroFrontendLoader(options?): ConfiguredMicroFrontendLoader
+  再利用可能な Host loader を作ります。まず registry config の ota.provider、embeddedBundlePath、otaBundleUrl を読みます。
+
+loadMicroFrontendModule(manifest, options?): Promise<MicroFrontendModule>
+  Host callback で module 1 つを resolve します。optional options で provider、embeddedBundlePath、otaBundleUrl を直接指定できます。
+
+MicroFrontendComponent.name: string
   Registered MFE name です。
 
-MicroFrontendScreen.fallback: ReactNode
-  unsafe または unavailable の時に render されます。この component は fallback-first placeholder なので、real loader は useMicroFrontend() で接続してください。`,
+MicroFrontendComponent.load: ConfiguredMicroFrontendLoader
+  createMicroFrontendLoader() で作った Host loader、または互換 loader です。
+
+MicroFrontendComponent.loadOptions?: MicroFrontendLoadOptions
+  値を rnm.registry.json に保存しない場合、mount ごとに provider/path/url を直接指定します。
+
+MicroFrontendComponent.fallback: ReactNode | ((state) => ReactNode)
+  missing、blocked、loading、unavailable の時に render されます。
+
+MicroFrontendComponent.errorFallback?: ReactNode | ((error, state) => ReactNode)
+  bundle load 失敗時の任意 UI です。`,
   },
 } as const;
 
@@ -1251,29 +1324,31 @@ rnm publish mfe-feature --package-manager bun --channel production`,
     title: 'Load feature modules through an explicit runtime policy.',
     body: [
       'The runtime reads the registry and refuses blocked modules, missing modules, and native-hash mismatches. The host owns the fallback UI and actual bundle loader.',
-      'MicroFrontendScreen is a fallback-first placeholder. Use useMicroFrontend() when connecting Hot Updater, embedded bundles, or a custom loader.',
+      'Use createMicroFrontendLoader() to bind Host transports once, then mount with MicroFrontendComponent. Pass loadOptions when a mount point needs direct provider/path/url settings.',
     ],
-    code: `import { MicroFrontendProvider, useMicroFrontend } from "@bunin/react-native-micro-frontend/runtime";
+    code: `import {
+  MicroFrontendComponent,
+  MicroFrontendProvider,
+  createMicroFrontendLoader,
+} from "@bunin/react-native-micro-frontend/runtime";
+
+const loadMfeModule = createMicroFrontendLoader({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App({ registry }) {
   return (
     <MicroFrontendProvider registry={registry}>
-      <MfeMount name="mfe-feature" />
+      <MicroFrontendComponent
+        name="mfe-feature"
+        load={loadMfeModule}
+        fallback={(state) => <Loading reason={state.reason} />}
+      />
     </MicroFrontendProvider>
   );
-}
-
-function MfeMount({ name }) {
-  const mfe = useMicroFrontend(name);
-
-  if (mfe.status !== "ready") {
-    return <Loading reason={mfe.reason} />;
-  }
-
-  return <HostSpecificMfeLoader manifest={mfe.manifest} />;
-}
-
-// HostSpecificMfeLoader resolves the bundle and renders module.default.`,
+}`,
   },
   {
     eyebrow: 'Global state',
@@ -1555,7 +1630,7 @@ export const localizedGuides = {
         title: 'runtime safety gate와 Host loader로 mount합니다.',
         body: [
           'runtime은 missing module, blocked module, native hash mismatch를 확인하지만 JavaScript bundle을 직접 download하거나 evaluation하지 않습니다.',
-          'useMicroFrontend()로 safety gate를 통과시킨 뒤 Hot Updater, embedded bundle, custom loader가 반환한 module.default를 렌더링합니다.',
+          'createMicroFrontendLoader()와 MicroFrontendComponent를 사용합니다. loader는 registry config를 먼저 읽고, loadOptions로 mount 지점별 값을 직접 줄 수 있습니다.',
         ],
         code: gettingStartedSections[5]?.code ?? '',
       },
@@ -1782,7 +1857,7 @@ beerware spirit: appreciated`,
         title: '通过 runtime safety gate 和 Host loader 挂载。',
         body: [
           'runtime 会检查 missing module、blocked module 和 native hash mismatch，但不会自己 download 或 evaluation JavaScript bundle。',
-          '先用 useMicroFrontend() 通过 safety gate，再渲染 Hot Updater、embedded bundle 或 custom loader 返回的 module.default。',
+          '使用 createMicroFrontendLoader() 和 MicroFrontendComponent。loader 会优先读取 registry config，也可以用 loadOptions 为某个 mount 点直接传入 metadata。',
         ],
         code: gettingStartedSections[5]?.code ?? '',
       },
@@ -2015,7 +2090,7 @@ beerware spirit: appreciated`,
         title: 'runtime safety gate と Host loader で mount します。',
         body: [
           'runtime は missing module、blocked module、native hash mismatch を確認しますが、JavaScript bundle の download や evaluation は行いません。',
-          'useMicroFrontend() で safety gate を通した後、Hot Updater、embedded bundle、custom loader が返す module.default を render します。',
+          'createMicroFrontendLoader() と MicroFrontendComponent を使います。loader は registry config を先に読み、loadOptions で mount ごとの metadata も直接渡せます。',
         ],
         code: gettingStartedSections[5]?.code ?? '',
       },

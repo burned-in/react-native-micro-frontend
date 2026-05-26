@@ -1,6 +1,6 @@
 {
   "name": "@bunin/react-native-micro-frontend-cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "author": "bunin contributors",
   "homepage": "https://rnmfe.bunin.app/",
   "repository": {
@@ -24,11 +24,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@bunin/react-native-micro-frontend": "0.1.1",
-    "@bunin/react-native-micro-frontend-native-contract": "0.1.1",
-    "@bunin/react-native-micro-frontend-hot-updater-adapter": "0.1.1",
-    "@bunin/react-native-micro-frontend-metro-adapter": "0.1.1",
-    "@bunin/react-native-micro-frontend-integration": "0.1.1"
+    "@bunin/react-native-micro-frontend": "workspace:*",
+    "@bunin/react-native-micro-frontend-native-contract": "workspace:*",
+    "@bunin/react-native-micro-frontend-hot-updater-adapter": "workspace:*",
+    "@bunin/react-native-micro-frontend-metro-adapter": "workspace:*",
+    "@bunin/react-native-micro-frontend-integration": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

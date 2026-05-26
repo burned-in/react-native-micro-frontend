@@ -490,17 +490,33 @@ export default defineReactNativeMicroFrontendConfig({
 ## Runtime 예제
 
 ```tsx
+import type { MfeManifest } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  MicroFrontendScreen,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
+
+type MfeModule = MicroFrontendModule;
+
+declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App({ registry }) {
   return (
     <MicroFrontendProvider registry={registry}>
-      <MicroFrontendScreen
+      <MicroFrontendComponent
         name="mfe-feature"
-        fallback={<Loading />}
+        load={loadMfeModule}
+        fallback={(state) => <Loading reason={state.reason} />}
       />
     </MicroFrontendProvider>
   );
@@ -512,11 +528,9 @@ export function App({ registry }) {
 - Host App이 registry를 어디서 읽을지 결정합니다.
 - runtime은 blocked 또는 nativeHash mismatch MFE를 거부합니다.
 - MFE entry module은 root component를 default export해야 합니다.
-- `MicroFrontendScreen`은 fallback 중심의 policy placeholder입니다.
-- 실제 Hot Updater, embedded bundle, custom loader를 연결할 때는 `useMicroFrontend()`를 사용합니다.
-- Host 전용 loader가 JavaScript bundle을 해석하고 `module.default`를 렌더링합니다.
-- 안전하지 않거나 아직 로드할 수 없으면 fallback을 보여줍니다.
-
+- `createMicroFrontendLoader()`는 먼저 registry config(`ota.provider`, `embeddedBundlePath`, `otaBundleUrl`)를 읽습니다.
+- mount 지점별 provider/path/url을 직접 지정해야 하면 `loadOptions` 또는 생성된 loader의 두 번째 인자를 사용합니다.
+- `MicroFrontendComponent`는 missing, blocked, loading, failed 상태에서는 fallback을 보여 주고, Host loader가 성공하면 `module.default`를 렌더링합니다.
 
 ## Host 제공 전역 상태 가져오기
 

@@ -132,51 +132,40 @@ export default function MfeFeature() {
 
 The runtime package enforces registry safety: missing module, blocked module, and native hash mismatch. It does **not** download or evaluate JavaScript bundles by itself. The Host App still owns the actual Hot Updater, embedded-bundle, or custom bundle loader.
 
-Use `useMicroFrontend()` as the safety gate, then render `module.default` after your host-specific loader resolves the bundle.
+Use `MicroFrontendComponent` with a loader made by `createMicroFrontendLoader()`. The loader reads the registry config first (`ota.provider`, `embeddedBundlePath`, `otaBundleUrl`). If a value is not in `rnm.registry.json`, pass direct optional metadata with `loadOptions` or as the second argument to the created loader.
 
 ```tsx
-import type { ComponentType } from "react";
-import { useEffect, useState } from "react";
 import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  useMicroFrontend,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
 import registryJson from "./rnm.registry.json";
 
-type MfeModule = {
-  default: ComponentType;
+type MfeFeatureProps = {
+  readonly title?: string;
 };
 
-async function loadMfeModule(manifest: MfeManifest): Promise<MfeModule> {
-  // Replace this with Hot Updater, an embedded bundle, or your own loader.
-  return hostSpecificBundleLoader<MfeModule>(manifest);
-}
+type MfeModule = MicroFrontendModule<MfeFeatureProps>;
 
-function MfeMount(props: { readonly name: string }) {
-  const mfe = useMicroFrontend(props.name);
-  const [Component, setComponent] = useState<ComponentType | null>(null);
+// Replace these declarations with your real Hot Updater, embedded-bundle, or custom CDN implementation.
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
 
-  useEffect(() => {
-    if (mfe.status !== "ready" || !mfe.manifest) return;
-
-    let mounted = true;
-
-    loadMfeModule(mfe.manifest).then((module) => {
-      if (mounted) setComponent(() => module.default);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [mfe.status, mfe.manifest]);
-
-  if (mfe.status !== "ready" || !Component) {
-    return <Loading reason={mfe.reason} />;
-  }
-
-  return <Component />;
-}
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App() {
   return (
@@ -184,13 +173,29 @@ export function App() {
       registry={registryJson as MfeRegistry}
       sharedState={{ locale: "en-US" }}
     >
-      <MfeMount name="mfe-feature" />
+      <MicroFrontendComponent<MfeFeatureProps>
+        name="mfe-feature"
+        load={loadMfeModule}
+        componentProps={{ title: "MFE Feature" }}
+        fallback={(state) => <Loading reason={state.reason} />}
+        errorFallback={(error) => (
+          <Loading
+            reason={error instanceof Error ? error.message : "MFE load failed."}
+          />
+        )}
+      />
     </MicroFrontendProvider>
   );
 }
-```
 
-`MicroFrontendScreen` is intentionally a fallback-first placeholder. Use it for policy checks and fallback wiring, but use `useMicroFrontend()` when you need to connect a real bundle loader.
+// Optional direct settings when a value is not stored in rnm.registry.json:
+// <MicroFrontendComponent
+//   name="mfe-feature"
+//   load={loadMfeModule}
+//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   fallback={(state) => <Loading reason={state.reason} />}
+// />
+```
 
 Next:
 

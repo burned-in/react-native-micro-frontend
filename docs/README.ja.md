@@ -463,17 +463,33 @@ export default defineReactNativeMicroFrontendConfig({
 ## Runtime 例
 
 ```tsx
+import type { MfeManifest } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  MicroFrontendScreen,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
+
+type MfeModule = MicroFrontendModule;
+
+declare function loadWithHotUpdater<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+declare function loadCustomBundle<TModule>(manifest: MfeManifest): Promise<TModule>;
+
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App({ registry }) {
   return (
     <MicroFrontendProvider registry={registry}>
-      <MicroFrontendScreen
+      <MicroFrontendComponent
         name="mfe-feature"
-        fallback={<Loading />}
+        load={loadMfeModule}
+        fallback={(state) => <Loading reason={state.reason} />}
       />
     </MicroFrontendProvider>
   );
@@ -484,12 +500,10 @@ export function App({ registry }) {
 
 - Host App が registry の取得元を決めます。
 - runtime は blocked または nativeHash mismatch の MFE を拒否します。
-- MFE entry module は root component を default export します。
-- `MicroFrontendScreen` は fallback-first policy placeholder です。
-- 実際の Hot Updater、embedded bundle、custom loader を接続する場合は `useMicroFrontend()` を使います。
-- Host-specific loader が JavaScript bundle を解決し、`module.default` をレンダリングします。
-- 安全でない場合、またはロードできない場合は fallback を表示します。
-
+- MFE entry module は root component を default export する必要があります。
+- `createMicroFrontendLoader()` はまず registry config（`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`）を読みます。
+- mount ごとに provider/path/url を直接指定する必要がある場合は、`loadOptions` または作成された loader の第 2 引数を使います。
+- `MicroFrontendComponent` は missing、blocked、loading、failed では fallback を表示し、Host loader 成功後に `module.default` を render します。
 
 ## Host から提供される global state を取得する
 

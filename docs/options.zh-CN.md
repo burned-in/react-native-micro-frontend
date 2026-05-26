@@ -129,5 +129,10 @@ Host config 中的 `mfes` 通常保持为空。Runtime registration 建议由 `r
 | `RuntimeMfeState.status` | `"ready" \| "loading" \| "blocked" \| "missing"` | 只有 `ready` 可以交给 Host loader；其他状态应 render fallback。 |
 | `useMicroFrontendSharedState<T>()` | `T` | 读取 Host-provided shared state snapshot。 |
 | `useIsMfe()` | `boolean` | 告诉 shared components 是否运行在 mounted MFE subtree 中。 |
-| `MicroFrontendScreen.name` | `string` | Registered MFE name。 |
-| `MicroFrontendScreen.fallback` | `ReactNode` | 不安全或不可用时 render。此 component 是 fallback-first；真实 loader 请通过 `useMicroFrontend()` 连接。 |
+| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 创建可复用的 Host loader。它会优先读取 registry config：`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`。 |
+| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | 使用 Host callback resolve 一个 module。optional options 可直接提供 provider、embedded path 或 OTA URL。 |
+| `MicroFrontendComponent.name` | `string` | Registered MFE name。 |
+| `MicroFrontendComponent.load` | `ConfiguredMicroFrontendLoader` | 由 `createMicroFrontendLoader()` 创建的 Host loader，或兼容 loader。 |
+| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 当值不存储在 `rnm.registry.json` 时，为单个 mount 点直接覆盖 provider/path/url。 |
+| `MicroFrontendComponent.fallback` | `ReactNode | ((state) => ReactNode)` | missing、blocked、loading 或 unavailable 时 render。 |
+| `MicroFrontendComponent.errorFallback` | `ReactNode | ((error, state) => ReactNode)` | bundle load 失败时的可选 UI。 |

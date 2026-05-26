@@ -129,5 +129,10 @@ File: `host-app/rnm.registry.json`
 | `RuntimeMfeState.status` | `"ready" \| "loading" \| "blocked" \| "missing"` | `ready` のみ Host loader に渡します。他の state は fallback を render します。 |
 | `useMicroFrontendSharedState<T>()` | `T` | Host-provided shared state snapshot を読み取ります。 |
 | `useIsMfe()` | `boolean` | shared components が mounted MFE subtree 内で実行されているかを示します。 |
-| `MicroFrontendScreen.name` | `string` | Registered MFE name。 |
-| `MicroFrontendScreen.fallback` | `ReactNode` | unsafe/unavailable の時に render されます。この component は fallback-first なので、real loader は `useMicroFrontend()` で接続してください。 |
+| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | 再利用可能な Host loader を作ります。まず registry config の `ota.provider`、`embeddedBundlePath`、`otaBundleUrl` を読みます。 |
+| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | Host callback で module 1 つを resolve します。optional options で provider、embedded path、OTA URL を直接指定できます。 |
+| `MicroFrontendComponent.name` | `string` | Registered MFE name。 |
+| `MicroFrontendComponent.load` | `ConfiguredMicroFrontendLoader` | `createMicroFrontendLoader()` で作った Host loader、または互換 loader です。 |
+| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | 値を `rnm.registry.json` に保存しない場合、mount ごとに provider/path/url を直接指定します。 |
+| `MicroFrontendComponent.fallback` | `ReactNode | ((state) => ReactNode)` | missing、blocked、loading、unavailable の時に render されます。 |
+| `MicroFrontendComponent.errorFallback` | `ReactNode | ((error, state) => ReactNode)` | bundle load 失敗時の任意 UI です。 |

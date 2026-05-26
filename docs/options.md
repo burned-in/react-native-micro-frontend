@@ -129,8 +129,13 @@ File: `host-app/rnm.registry.json`
 | `RuntimeMfeState.status` | `"ready" \| "loading" \| "blocked" \| "missing"` | `ready` can be passed to the Host loader. Other states should render fallback. |
 | `useMicroFrontendSharedState<T>()` | `T` | Reads the Host-provided shared state snapshot. |
 | `useIsMfe()` | `boolean` | Tells shared components whether they are inside a mounted MFE subtree. |
-| `MicroFrontendScreen.name` | `string` | Registered MFE name. |
-| `MicroFrontendScreen.fallback` | `ReactNode` | Rendered when unsafe or unavailable. This component is fallback-first; connect real loaders with `useMicroFrontend()`. |
+| `createMicroFrontendLoader(options?)` | `ConfiguredMicroFrontendLoader` | Creates a reusable Host loader. It reads registry config first: `ota.provider`, `embeddedBundlePath`, `otaBundleUrl`. |
+| `loadMicroFrontendModule(manifest, options?)` | `Promise<MicroFrontendModule>` | Resolves one module with Host callbacks. Optional options can directly supply provider, embedded path, or OTA URL. |
+| `MicroFrontendComponent.name` | `string` | Registered MFE name. |
+| `MicroFrontendComponent.load` | `ConfiguredMicroFrontendLoader` | Host loader created by `createMicroFrontendLoader()`, or a compatible loader. |
+| `MicroFrontendComponent.loadOptions` | `MicroFrontendLoadOptions` | Optional per-mount provider/path/url overrides when values are not stored in `rnm.registry.json`. |
+| `MicroFrontendComponent.fallback` | `ReactNode | ((state) => ReactNode)` | Rendered when missing, blocked, loading, or unavailable. |
+| `MicroFrontendComponent.errorFallback` | `ReactNode | ((error, state) => ReactNode)` | Optional UI for bundle load failures. |
 
 ## Recommended default
 

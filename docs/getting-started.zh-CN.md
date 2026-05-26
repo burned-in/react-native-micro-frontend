@@ -132,51 +132,40 @@ export default function MfeFeature() {
 
 runtime package 负责 registry safety gate：missing module、blocked module、native hash mismatch。它不会自己下载或执行 JavaScript bundle。实际 loader 由 Host App 选择，可以是 Hot Updater、embedded bundle 或 custom loader。
 
-先用 `useMicroFrontend()` 通过 safety gate，再渲染 Host-specific loader 返回的 `module.default`。
+使用 `createMicroFrontendLoader()` 创建 loader，并把它传给 `MicroFrontendComponent`。loader 会优先读取 `rnm.registry.json` 中的 config 值（`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`）。如果某个值不适合写入 registry，可以通过 `loadOptions` 或创建出的 loader 的第二个参数直接传入。
 
 ```tsx
-import type { ComponentType } from "react";
-import { useEffect, useState } from "react";
 import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  useMicroFrontend,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
 import registryJson from "./rnm.registry.json";
 
-type MfeModule = {
-  default: ComponentType;
+type MfeFeatureProps = {
+  readonly title?: string;
 };
 
-async function loadMfeModule(manifest: MfeManifest): Promise<MfeModule> {
-  // Replace this with Hot Updater, an embedded bundle, or a custom loader.
-  return hostSpecificBundleLoader<MfeModule>(manifest);
-}
+type MfeModule = MicroFrontendModule<MfeFeatureProps>;
 
-function MfeMount(props: { readonly name: string }) {
-  const mfe = useMicroFrontend(props.name);
-  const [Component, setComponent] = useState<ComponentType | null>(null);
+// 请把这些声明替换为真实的 Hot Updater、embedded bundle 或 custom CDN 实现。
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
 
-  useEffect(() => {
-    if (mfe.status !== "ready" || !mfe.manifest) return;
-
-    let mounted = true;
-
-    loadMfeModule(mfe.manifest).then((module) => {
-      if (mounted) setComponent(() => module.default);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [mfe.status, mfe.manifest]);
-
-  if (mfe.status !== "ready" || !Component) {
-    return <Loading reason={mfe.reason} />;
-  }
-
-  return <Component />;
-}
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App() {
   return (
@@ -184,13 +173,30 @@ export function App() {
       registry={registryJson as MfeRegistry}
       sharedState={{ locale: "zh-CN" }}
     >
-      <MfeMount name="mfe-feature" />
+      <MicroFrontendComponent<MfeFeatureProps>
+        name="mfe-feature"
+        load={loadMfeModule}
+        componentProps={{ title: "MFE Feature" }}
+        fallback={(state) => <Loading reason={state.reason} />}
+        errorFallback={(error) => (
+          <Loading
+            reason={error instanceof Error ? error.message : "MFE load failed."}
+          />
+        )}
+      />
     </MicroFrontendProvider>
   );
 }
+
+// 当某个值没有存储在 rnm.registry.json 中时，也可以直接设置：
+// <MicroFrontendComponent
+//   name="mfe-feature"
+//   load={loadMfeModule}
+//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   fallback={(state) => <Loading reason={state.reason} />}
+// />
 ```
 
-`MicroFrontendScreen` 是 fallback-first placeholder。需要连接真实 bundle loader 时，请使用 `useMicroFrontend()`。
 
 下一步：
 

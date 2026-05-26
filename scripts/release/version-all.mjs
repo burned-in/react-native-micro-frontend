@@ -25,6 +25,7 @@ const nextVersion = bumpKinds.has(rawVersion)
   : normalizeVersion(rawVersion);
 
 const internalNames = internalPackageNames();
+const internalDependencyVersion = 'workspace:*';
 
 writePackageJson(rootPackagePath, {
   ...rootPackageJson,
@@ -40,13 +41,14 @@ for (const packageDir of packageOrder) {
       version: nextVersion,
     },
     internalNames,
-    nextVersion,
+    internalDependencyVersion,
   );
 
   writePackageJson(packageJsonPath, updatedPackageJson);
   console.log(`[version] ${packageJson.name} -> ${nextVersion}`);
 }
 
+updateBunLock(nextVersion, internalNames, internalDependencyVersion);
 console.log(`[version] root -> ${nextVersion}`);
 
 function bumpVersion(version, bumpKind) {
@@ -110,4 +112,73 @@ function writePackageJson(path, packageJson) {
   const nextText = JSON.stringify(packageJson, null, 2) + trailingNewline;
 
   writeFileSync(path, nextText);
+}
+
+function updateBunLock(version, internalNames, internalDependencyVersion) {
+  const bunLockPath = 'bun.lock';
+  let text;
+
+  try {
+    text = readFileSync(bunLockPath, 'utf8');
+  } catch {
+    return;
+  }
+
+  const packageSectionMarker = '  "packages": {';
+  const markerIndex = text.indexOf(packageSectionMarker);
+
+  if (markerIndex < 0) {
+    return;
+  }
+
+  const workspaceSection = text.slice(0, markerIndex);
+  const packageSection = text.slice(markerIndex);
+  let updatedWorkspaceSection = workspaceSection;
+
+  for (const packageDir of packageOrder) {
+    updatedWorkspaceSection = updateWorkspaceLockBlock(
+      updatedWorkspaceSection,
+      packageDir,
+      version,
+      internalNames,
+      internalDependencyVersion,
+    );
+  }
+
+  if (updatedWorkspaceSection !== workspaceSection) {
+    writeFileSync(bunLockPath, updatedWorkspaceSection + packageSection);
+  }
+}
+
+function updateWorkspaceLockBlock(
+  text,
+  packageDir,
+  version,
+  internalNames,
+  internalDependencyVersion,
+) {
+  const escapedPackageDir = packageDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const blockPattern = new RegExp(
+    `(    "${escapedPackageDir}": \\{[\\s\\S]*?\\n    \\},)`,
+  );
+
+  return text.replace(blockPattern, (block) => {
+    let updatedBlock = block.replace(
+      /"version": "[^"]+"/,
+      `"version": "${version}"`,
+    );
+
+    for (const dependencyName of internalNames) {
+      const escapedDependencyName = dependencyName.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
+      updatedBlock = updatedBlock.replace(
+        new RegExp(`"${escapedDependencyName}": "[^"]+"`, 'g'),
+        `"${dependencyName}": "${internalDependencyVersion}"`,
+      );
+    }
+
+    return updatedBlock;
+  });
 }

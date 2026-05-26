@@ -132,51 +132,40 @@ export default function MfeFeature() {
 
 runtime package は missing module、blocked module、native hash mismatch を防ぐ registry safety gate を担当します。JavaScript bundle の download や evaluation は行いません。実際の loader は Hot Updater、embedded bundle、custom loader のいずれかを Host App が選びます。
 
-`useMicroFrontend()` で safety gate を通した後、Host-specific loader が返した `module.default` を render します。
+`createMicroFrontendLoader()` で loader を作り、`MicroFrontendComponent` に渡してください。loader はまず `rnm.registry.json` の config 値（`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`）を読みます。registry に入れられない値は `loadOptions`、または作成された loader の第 2 引数で直接指定できます。
 
 ```tsx
-import type { ComponentType } from "react";
-import { useEffect, useState } from "react";
 import type { MfeManifest, MfeRegistry } from "@bunin/react-native-micro-frontend";
 import {
+  MicroFrontendComponent,
   MicroFrontendProvider,
-  useMicroFrontend,
+  createMicroFrontendLoader,
+  type MicroFrontendModule,
 } from "@bunin/react-native-micro-frontend/runtime";
 import registryJson from "./rnm.registry.json";
 
-type MfeModule = {
-  default: ComponentType;
+type MfeFeatureProps = {
+  readonly title?: string;
 };
 
-async function loadMfeModule(manifest: MfeManifest): Promise<MfeModule> {
-  // Hot Updater、embedded bundle、custom loader のいずれかに置き換えてください。
-  return hostSpecificBundleLoader<MfeModule>(manifest);
-}
+type MfeModule = MicroFrontendModule<MfeFeatureProps>;
 
-function MfeMount(props: { readonly name: string }) {
-  const mfe = useMicroFrontend(props.name);
-  const [Component, setComponent] = useState<ComponentType | null>(null);
+// これらの宣言は実際の Hot Updater、embedded bundle、custom CDN 実装に置き換えてください。
+declare function loadWithHotUpdater<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadEmbeddedBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
+declare function loadCustomBundle<TModule>(
+  manifest: MfeManifest,
+): Promise<TModule>;
 
-  useEffect(() => {
-    if (mfe.status !== "ready" || !mfe.manifest) return;
-
-    let mounted = true;
-
-    loadMfeModule(mfe.manifest).then((module) => {
-      if (mounted) setComponent(() => module.default);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [mfe.status, mfe.manifest]);
-
-  if (mfe.status !== "ready" || !Component) {
-    return <Loading reason={mfe.reason} />;
-  }
-
-  return <Component />;
-}
+const loadMfeModule = createMicroFrontendLoader<MfeModule>({
+  hotUpdater: loadWithHotUpdater,
+  embedded: loadEmbeddedBundle,
+  custom: loadCustomBundle,
+});
 
 export function App() {
   return (
@@ -184,13 +173,30 @@ export function App() {
       registry={registryJson as MfeRegistry}
       sharedState={{ locale: "ja-JP" }}
     >
-      <MfeMount name="mfe-feature" />
+      <MicroFrontendComponent<MfeFeatureProps>
+        name="mfe-feature"
+        load={loadMfeModule}
+        componentProps={{ title: "MFE Feature" }}
+        fallback={(state) => <Loading reason={state.reason} />}
+        errorFallback={(error) => (
+          <Loading
+            reason={error instanceof Error ? error.message : "MFE load failed."}
+          />
+        )}
+      />
     </MicroFrontendProvider>
   );
 }
+
+// rnm.registry.json に値がない場合は mount 地点で直接指定できます:
+// <MicroFrontendComponent
+//   name="mfe-feature"
+//   load={loadMfeModule}
+//   loadOptions={{ provider: "custom", otaBundleUrl: "https://cdn.example.com/mfe.bundle" }}
+//   fallback={(state) => <Loading reason={state.reason} />}
+// />
 ```
 
-`MicroFrontendScreen` は fallback-first placeholder です。実際の bundle loader を接続する場合は `useMicroFrontend()` を使ってください。
 
 次に読むもの:
 

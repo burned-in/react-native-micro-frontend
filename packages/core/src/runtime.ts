@@ -1,6 +1,10 @@
-import type { ReactElement, ReactNode } from 'react';
-import React, { createContext, useContext } from 'react';
-import type { MfeManifest, MfeRegistry } from './domain/mfe-manifest.type.js';
+import type { ComponentType, ReactElement, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type {
+  MfeManifest,
+  MfeRegistry,
+  OtaProvider,
+} from './domain/mfe-manifest.type.js';
 
 /** Runtime load status for a single MFE. */
 export type RuntimeMfeStatus = 'ready' | 'loading' | 'blocked' | 'missing';
@@ -41,6 +45,146 @@ export interface MicroFrontendRuntime {
   readonly isMfe: boolean;
   /** Gets MFE state by name. */
   readonly getMfe: (name: string) => RuntimeMfeState;
+}
+
+/** Default module shape expected from an MFE entry bundle. */
+export interface MicroFrontendModule<
+  TProps extends object = Record<string, never>,
+> {
+  /** Root React component exported by the MFE entry file. */
+  readonly default: ComponentType<TProps>;
+}
+
+/** Host-owned function that resolves and evaluates one MFE bundle. */
+export type MicroFrontendBundleLoader<TModule> = (
+  manifest: MfeManifest,
+) => TModule | Promise<TModule>;
+
+/** Loader callbacks for each supported Host bundle transport. */
+export interface MicroFrontendBundleLoaders<TModule> {
+  /** Loader used when `manifest.ota.provider` is `hot-updater`. */
+  readonly hotUpdater?: MicroFrontendBundleLoader<TModule>;
+  /** Loader used when `manifest.embeddedBundlePath` is present. */
+  readonly embedded?: MicroFrontendBundleLoader<TModule>;
+  /** Loader used for custom OTA URLs, keys, or provider-specific metadata. */
+  readonly custom?: MicroFrontendBundleLoader<TModule>;
+  /** Last-resort loader when no transport-specific callback matches. */
+  readonly fallback?: MicroFrontendBundleLoader<TModule>;
+}
+
+/** Direct loader metadata overrides for apps that do not store values in config. */
+export interface MicroFrontendDirectLoadOptions {
+  /** Overrides `manifest.ota.provider` for this load call. */
+  readonly provider?: OtaProvider;
+  /** Overrides or supplies `manifest.embeddedBundlePath`. */
+  readonly embeddedBundlePath?: string;
+  /** Overrides or supplies `manifest.otaBundleUrl`. */
+  readonly otaBundleUrl?: string;
+}
+
+/** Host loader callbacks plus optional direct metadata overrides. */
+export interface MicroFrontendLoadOptions<TModule>
+  extends MicroFrontendBundleLoaders<TModule>,
+    MicroFrontendDirectLoadOptions {}
+
+/** Loader returned by createMicroFrontendLoader. */
+export type ConfiguredMicroFrontendLoader<TModule> = (
+  manifest: MfeManifest,
+  options?: MicroFrontendLoadOptions<TModule>,
+) => TModule | Promise<TModule>;
+
+/**
+ * Resolves an MFE module with a Host-provided transport implementation.
+ *
+ * The runtime intentionally does not download or evaluate JavaScript bundles.
+ * This helper only picks the correct Host callback from registry metadata.
+ *
+ * Loader selection order:
+ * 1. Hot Updater callback when `ota.provider` is `hot-updater`
+ * 2. Embedded callback when `embeddedBundlePath` exists
+ * 3. Custom callback when `ota.provider` is `custom` or `otaBundleUrl` exists
+ * 4. Fallback callback
+ *
+ * @param manifest Registry manifest that passed the runtime safety gate.
+ * @param loaders Host bundle transport callbacks.
+ * @returns The evaluated MFE module.
+ */
+export async function loadMicroFrontendModule<TModule>(
+  manifest: MfeManifest,
+  options: MicroFrontendLoadOptions<TModule> = {},
+): Promise<TModule> {
+  const resolvedManifest = resolveMicroFrontendLoadManifest(manifest, options);
+  const loader = selectMicroFrontendBundleLoader(resolvedManifest, options);
+
+  if (!loader) {
+    throw new Error(
+      `No bundle loader configured for MFE "${resolvedManifest.name}" ` +
+        `(provider: ${resolvedManifest.ota.provider}).`,
+    );
+  }
+
+  return await loader(resolvedManifest);
+}
+
+/**
+ * Creates a reusable Host loader with shared transport callbacks.
+ *
+ * Registry config is used by default. Per-call `options` can directly supply or
+ * override provider, embedded path, or OTA URL when an app does not store those
+ * values in `rnm.registry.json`.
+ *
+ * @param defaultOptions Shared Host loader callbacks and optional metadata.
+ * @returns Function suitable for MicroFrontendComponent's `load` prop.
+ */
+export function createMicroFrontendLoader<TModule>(
+  defaultOptions: MicroFrontendLoadOptions<TModule> = {},
+): ConfiguredMicroFrontendLoader<TModule> {
+  return (manifest, options) =>
+    loadMicroFrontendModule(manifest, {
+      ...defaultOptions,
+      ...options,
+    });
+}
+
+function resolveMicroFrontendLoadManifest(
+  manifest: MfeManifest,
+  options: MicroFrontendDirectLoadOptions,
+): MfeManifest {
+  return {
+    ...manifest,
+    ota: {
+      ...manifest.ota,
+      provider: options.provider ?? manifest.ota.provider,
+    },
+    ...(options.embeddedBundlePath !== undefined
+      ? { embeddedBundlePath: options.embeddedBundlePath }
+      : {}),
+    ...(options.otaBundleUrl !== undefined
+      ? { otaBundleUrl: options.otaBundleUrl }
+      : {}),
+  };
+}
+
+function selectMicroFrontendBundleLoader<TModule>(
+  manifest: MfeManifest,
+  loaders: MicroFrontendBundleLoaders<TModule>,
+): MicroFrontendBundleLoader<TModule> | undefined {
+  if (manifest.ota.provider === 'hot-updater' && loaders.hotUpdater) {
+    return loaders.hotUpdater;
+  }
+
+  if (manifest.embeddedBundlePath && loaders.embedded) {
+    return loaders.embedded;
+  }
+
+  if (
+    (manifest.ota.provider === 'custom' || manifest.otaBundleUrl) &&
+    loaders.custom
+  ) {
+    return loaders.custom;
+  }
+
+  return loaders.fallback;
 }
 
 /**
@@ -230,6 +374,146 @@ export function useIsMfe(): boolean {
   const runtime = useContext(MicroFrontendContext);
 
   return runtime?.isMfe ?? false;
+}
+
+type MicroFrontendFallback =
+  | ReactNode
+  | ((state: RuntimeMfeState) => ReactNode);
+
+type MicroFrontendErrorFallback =
+  | ReactNode
+  | ((error: unknown, state: RuntimeMfeState) => ReactNode);
+
+interface LoadedMicroFrontendState<TProps extends object> {
+  readonly Component: ComponentType<TProps> | null;
+  readonly error: unknown | null;
+}
+
+/** Props for MicroFrontendComponent. */
+export interface MicroFrontendComponentProps<
+  TProps extends object = Record<string, never>,
+> {
+  /** Registered MFE name. */
+  readonly name: string;
+  /** Host-owned loader that resolves `manifest` into an entry module. */
+  readonly load: ConfiguredMicroFrontendLoader<MicroFrontendModule<TProps>>;
+  /** Optional direct metadata overrides for this mount point. */
+  readonly loadOptions?: MicroFrontendLoadOptions<MicroFrontendModule<TProps>>;
+  /** Props forwarded to the loaded MFE root component. */
+  readonly componentProps?: TProps;
+  /** Rendered while loading or when the runtime blocks/misses the MFE. */
+  readonly fallback: MicroFrontendFallback;
+  /** Optional render output for loader failures. Defaults to `fallback`. */
+  readonly errorFallback?: MicroFrontendErrorFallback;
+}
+
+/**
+ * Mounts a registered MFE after the runtime safety gate passes.
+ *
+ * `useMicroFrontend()` still owns missing/blocked/nativeHash decisions. The
+ * `load` prop owns Host-specific bundle transport such as Hot Updater,
+ * embedded bundles, or a custom CDN loader.
+ *
+ * @param props Component props.
+ * @returns Loaded MFE root component or fallback UI.
+ */
+export function MicroFrontendComponent<
+  TProps extends object = Record<string, never>,
+>(props: MicroFrontendComponentProps<TProps>): ReactElement {
+  const mfe = useMicroFrontend(props.name);
+  const [loaded, setLoaded] = useState<LoadedMicroFrontendState<TProps>>({
+    Component: null,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (mfe.status !== 'ready' || !mfe.manifest) {
+      setLoaded({ Component: null, error: null });
+      return;
+    }
+
+    let mounted = true;
+
+    setLoaded({ Component: null, error: null });
+    Promise.resolve(props.load(mfe.manifest, props.loadOptions))
+      .then((module) => {
+        if (mounted) {
+          setLoaded({ Component: module.default, error: null });
+        }
+      })
+      .catch((error: unknown) => {
+        if (mounted) {
+          setLoaded({ Component: null, error });
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [mfe.status, mfe.manifest, props.load, props.loadOptions]);
+
+  if (mfe.status !== 'ready') {
+    return React.createElement(
+      React.Fragment,
+      null,
+      renderMicroFrontendFallback(props.fallback, mfe),
+    );
+  }
+
+  if (loaded.error) {
+    return React.createElement(
+      React.Fragment,
+      null,
+      renderMicroFrontendErrorFallback(
+        props.errorFallback,
+        props.fallback,
+        loaded.error,
+        mfe,
+      ),
+    );
+  }
+
+  if (!loaded.Component) {
+    return React.createElement(
+      React.Fragment,
+      null,
+      renderMicroFrontendFallback(props.fallback, {
+        ...mfe,
+        status: 'loading',
+        reason: 'MFE bundle is loading.',
+      }),
+    );
+  }
+
+  const componentProps = props.componentProps ?? ({} as TProps);
+
+  return React.createElement(loaded.Component, componentProps);
+}
+
+function renderMicroFrontendFallback(
+  fallback: MicroFrontendFallback,
+  state: RuntimeMfeState,
+): ReactNode {
+  return typeof fallback === 'function' ? fallback(state) : fallback;
+}
+
+function renderMicroFrontendErrorFallback(
+  errorFallback: MicroFrontendErrorFallback | undefined,
+  fallback: MicroFrontendFallback,
+  error: unknown,
+  state: RuntimeMfeState,
+): ReactNode {
+  if (errorFallback !== undefined) {
+    return typeof errorFallback === 'function'
+      ? errorFallback(error, state)
+      : errorFallback;
+  }
+
+  return renderMicroFrontendFallback(fallback, {
+    ...state,
+    status: 'blocked',
+    reason: error instanceof Error ? error.message : 'MFE bundle load failed.',
+  });
 }
 
 /** Props for MicroFrontendScreen. */
