@@ -245,46 +245,9 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 `bundleArchiveUrl`은 `createBundleArchiveLoader()`와 함께 사용하세요. 생성된 등록 파일은 React Native가 복사된 `.tar.gz`를 asset으로 resolve하게 하고, loader는 이를 읽어 gunzip/untar한 뒤 MFE source import 없이 Metro entry module을 반환합니다.
 
 
-## 8. Easy Way: generic, bundle, OTA 메뉴
+## 8. Easy Way: bundle, Hot Updater/OTA, Expo 메뉴
 
-### 메뉴 1. Generic — 일반 TS 모듈처럼 사용
-
-Host App과 MFE project가 같은 workspace에 있고 Metro가 MFE source를 직접 bundle할 수 있을 때 사용합니다. local development나 앱스토어에 함께 포함되는 feature module에 가장 쉬운 경로입니다.
-
-```bash
-# host-app/에서 실행
-rnm init
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-// host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-```tsx
-// Host loader: Metro가 local MFE를 포함할 수 있게 import는 static map으로 유지합니다.
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-const loadMfeModule = createMicroFrontendLoader({
-  fallback: async (manifest) => {
-    const load = localModules[manifest.name as keyof typeof localModules];
-    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
-    return await load();
-  },
-});
-```
-
-이후 `MicroFrontendProvider`와 `MicroFrontendComponent`로 렌더링하세요. `isMfe`는 직접 넣지 않아도 됩니다. loaded MFE subtree는 자동으로 MFE로 표시됩니다.
-
-### 메뉴 2. Bundle — Host가 필요한 파일만 archive
+### 메뉴 1. Bundle — Host가 필요한 파일만 archive
 
 MFE를 portable archive로 만들어 Host project에 복사하거나 release artifact/CDN/storage에 올리고 싶을 때 사용합니다.
 
@@ -301,7 +264,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 `rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성합니다. Host entry import는 `--yes`로 자동 적용하거나 한 번 수동 import하세요. `rnm.registry.json`에 `bundleArchiveUrl`을 쓰려면 `--update-registry`를 추가하세요.
 
-### 메뉴 3. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
+### 메뉴 2. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
 
 native-safety verification을 통과한 MFE를 원격으로 배포할 때 사용합니다. 이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution과 JavaScript evaluation은 Hot Updater 또는 OTA engine이 담당합니다.
 

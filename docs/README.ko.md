@@ -70,46 +70,9 @@ export default defineReactNativeMicroFrontendConfig({
 });
 ```
 
-## Easy Way: generic, bundle, OTA 메뉴
+## Easy Way: bundle, Hot Updater/OTA, Expo 메뉴
 
-### 메뉴 1. Generic — 일반 TS 모듈처럼 사용
-
-Host App과 MFE project가 같은 workspace에 있고 Metro가 MFE source를 직접 bundle할 수 있을 때 사용합니다. local development나 앱스토어에 함께 포함되는 feature module에 가장 쉬운 경로입니다.
-
-```bash
-# host-app/에서 실행
-rnm init
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-// host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-```tsx
-// Host loader: Metro가 local MFE를 포함할 수 있게 import는 static map으로 유지합니다.
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-const loadMfeModule = createMicroFrontendLoader({
-  fallback: async (manifest) => {
-    const load = localModules[manifest.name as keyof typeof localModules];
-    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
-    return await load();
-  },
-});
-```
-
-이후 `MicroFrontendProvider`와 `MicroFrontendComponent`로 렌더링하세요. `isMfe`는 직접 넣지 않아도 됩니다. loaded MFE subtree는 자동으로 MFE로 표시됩니다.
-
-### 메뉴 2. Bundle — Host가 필요한 파일만 archive
+### 메뉴 1. Bundle — Host가 필요한 파일만 archive
 
 MFE를 portable archive로 만들어 Host project에 복사하거나 release artifact/CDN/storage에 올리고 싶을 때 사용합니다.
 
@@ -126,7 +89,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 `rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성한 뒤, 대화형 터미널에서는 Host entry import 여부를 묻습니다. `--yes` 또는 `--register-archives`를 주면 자동 등록하고, `bundleArchiveUrl`을 registry에 쓰려면 `--update-registry`를 추가하세요. Host에서는 `createBundleArchiveLoader()`가 등록된 archive asset을 읽어 gunzip/untar 후 Metro entry module을 반환합니다.
 
-### 메뉴 3. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
+### 메뉴 2. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
 
 native-safety verification을 통과한 MFE를 원격으로 배포할 때 사용합니다. 이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution과 JavaScript evaluation은 Hot Updater 또는 OTA engine이 담당합니다.
 
@@ -167,7 +130,7 @@ bun run docs:preview
 - `/`는 Three.js module-network hero가 있는 홈페이지입니다.
 - `/docs`는 처음 사용하는 사람을 위한 시작 경로입니다.
 - `/docs/getting-started`는 첫 MFE 설정을 단계별로 따라가는 guide입니다.
-- `/docs/easy-way`는 Generic, Bundle, OTA 중 적용 방식을 고르는 guide입니다.
+- `/docs/easy-way`는 Bundle, Hot Updater/OTA, Expo 중 적용 방식을 고르는 guide입니다.
 - `/docs/options`는 Host config, MFE config, registry, runtime option을 상세 section으로 나눈 reference입니다.
 - `/docs/hot-updater`는 Hot Updater 설정 전용 route입니다.
 - `/docs/package-managers`는 Bun, npm, pnpm, Yarn, Deno 명령을 정리합니다.

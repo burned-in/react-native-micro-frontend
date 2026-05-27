@@ -18,7 +18,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | ------------------------------------------------------- | ------------------------------------------------------------ |
 | [简体中文 README](README.zh-CN.md)                      | 主要指南和示例。                                             |
 | [Getting Started](getting-started.zh-CN.md)             | 安装、配置、注册、校验并加载第一个 MFE。                     |
-| [Easy Way](easy-way.zh-CN.md)                           | 在 Generic、无 OTA publish 的 Bundle、OTA delivery 中选择。  |
+| [Easy Way](easy-way.zh-CN.md)                           | 在无 OTA publish 的 Bundle、Hot Updater/custom OTA、Expo delivery 中选择。  |
 | [Expo 支持](getting-started.zh-CN.md#expo-host-app)     | Expo managed/prebuild/bare Host App 支持 package、AOS、iOS integration watcher。 |
 | [选项参考](options.zh-CN.md)                            | Host config、MFE config、registry 与 runtime 的全部选项。    |
 | [Metro / Bundle archive](metro-bundle-archive.zh-CN.md) | 使用 `withMfe` merge Metro，并加载 portable bundle archive。 |
@@ -32,15 +32,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## Easy Way
 
-### 1. Generic — 普通 TS module 方式
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-在 `metro.config.js` 中使用 `withMfe`，并在 Host loader 中通过 static import 连接本地 MFE。`isMfe` 会在 `MicroFrontendComponent` 内自动应用。
-
-### 2. Bundle — portable archive
+### 1. Bundle — portable archive
 
 ```bash
 # 在 MFE project 中运行
@@ -49,7 +41,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 
 它会创建只包含 `index.bundle`、`assets/` 和 `manifest.json` 的 `.tar.gz`；不传 `--update-registry` 时保持 bundle-only/no-OTA 流程。
 
-### 3. OTA — Hot Updater/custom delivery
+### 2. OTA — Hot Updater/custom delivery
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual

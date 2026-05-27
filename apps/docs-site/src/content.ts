@@ -198,11 +198,10 @@ export const features: readonly Feature[] = [
 ];
 
 const splitExamplesCode = `examples/
-  general-ts/   # normal TypeScript module through Metro + withMfe
   bundle/       # .tar.gz archive; createBundleArchiveLoader reads registered RN assets
   ota/          # Hot Updater/custom OTA SDK loader after rnm verify
   expo/         # Expo managed/prebuild Host + EAS Update route
-  mfe-feature/  # shared sample MFE used by non-Expo examples`;
+  mfe-feature/  # shared sample MFE used by Bundle and OTA examples`;
 
 export const homeSections: readonly DocSection[] = [
   {
@@ -271,36 +270,29 @@ rnm publish mfe-feature --package-manager bun --channel production`,
 
   {
     eyebrow: 'Easy Way',
-    title: 'Pick the menu you need: generic, bundle, or OTA.',
+    title: 'Pick the menu you need: bundle, Hot Updater/OTA, or Expo.',
     body: [
-      'Generic treats the MFE like a normal TypeScript module: Metro bundles a local or sibling project through withMfe and a static import map.',
       'Bundle creates a portable archive containing only index.bundle, assets, and manifest.json, then can copy it to the Host and write bundleArchiveUrl.',
       'OTA keeps Hot Updater or your custom OTA engine in charge of distribution after native-safety verification passes.',
+      'Expo uses the same safety checks with EAS Update through rnm expo.',
     ],
-    code: `# 1. Generic: normal TS module style
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-
-# host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-
-# 2. Bundle: portable archive
+    code: `# 1. Bundle: portable archive
 # in mfe-feature/
 rnm bundle mfe-feature --platform ios --host ../host-app
 
-# 3. OTA: verified remote delivery
+# 2. OTA: verified remote delivery
 rnm verify mfe-feature
-rnm publish mfe-feature --package-manager bun --channel production`,
+rnm publish mfe-feature --package-manager bun --channel production
+
+# 3. Expo EAS Update
+rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
+rnm expo mfe-feature --channel production --platform all --non-interactive`,
   },
   {
     eyebrow: 'Expo',
     title: 'Expo managed, prebuild, and bare Hosts are supported.',
     body: [
-      'Use the same Generic, Bundle, or OTA menu in Expo projects. package integration works through package.json, AOS/iOS integration uses generated native files when ios/android folders exist, and managed projects get an Expo config plugin.',
+      'Use the Bundle path for embedded archives or the OTA path with Expo EAS Update. package integration works through package.json, AOS/iOS integration uses generated native files when ios/android folders exist, and managed projects get an Expo config plugin.',
       'The integration watcher runs during rnm add, rnm bundle --host, rnm verify, rnm publish, and rnm expo. Apply detected additions, skip them interactively, use --yes for automation, or use --skip-integration when you only want the original command.',
     ],
     code: `rnm add mfe-feature --path ../mfe-feature
@@ -309,9 +301,8 @@ npx expo prebuild`,
   },
   {
     eyebrow: 'Examples',
-    title: 'Examples are split into general TS, bundle, and OTA folders.',
+    title: 'Examples are split into bundle, OTA, and Expo folders.',
     body: [
-      'Open examples/general-ts when you want Metro to include a local MFE source like a normal TypeScript module.',
       'Open examples/bundle when you want rnm bundle to produce a portable archive without OTA publish. The Host imports the generated archive registration and createBundleArchiveLoader reads the copied asset without importing MFE source.',
       'Open examples/ota when you want Hot Updater or another OTA SDK to download and evaluate JavaScript after rnm verify passes.',
       'Open examples/expo when you want an Expo managed/prebuild Host example with EAS Update and Bun-loaded mfe.config.mjs / .cjs support.',
@@ -545,22 +536,13 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 
   {
     eyebrow: 'Easy Way',
-    title: 'Use one of three menus: generic, bundle, or OTA.',
+    title: 'Use bundle, Hot Updater/OTA, or Expo.',
     body: [
-      'Generic is the normal TypeScript-module style. Register with OTA disabled, add withMfe to metro.config.js, and keep the Host loader import static so Metro can include the MFE source.',
       'Bundle is the portable archive style. Run rnm bundle in the MFE project to produce only index.bundle, assets, manifest.json, and a .tar.gz; use bundleArchiveUrl with createBundleArchiveLoader and the generated archive registration.',
       'OTA is the remote delivery style. Register with hot-updater, Expo, or custom OTA metadata, run verify before publish, and let the OTA engine distribute and evaluate JavaScript only after native-safety checks pass.',
       'You do not need to pass an isMfe prop. MicroFrontendComponent automatically marks the loaded subtree as MFE context.',
     ],
-    code: `# 1. Generic: normal TS module style
-# host-app/
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-# 2. Bundle: portable archive
+    code: `# 1. Bundle: portable archive
 # mfe-feature/
 rnm bundle mfe-feature --platform ios --host ../host-app
 
@@ -568,13 +550,13 @@ const bundleLoader = createMicroFrontendLoader({
   custom: loadBundleArchive,
 });
 
-# 3. OTA: Hot Updater or custom OTA
+# 2. OTA: Hot Updater or custom OTA
 # host-app/
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual
 rnm verify mfe-feature
 rnm publish mfe-feature --package-manager bun --channel production
 
-# Expo EAS Update route
+# 3. Expo EAS Update route
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider expo --ota-mode manual
 rnm expo mfe-feature --channel production --platform all --non-interactive
 
@@ -588,29 +570,6 @@ const otaLoader = createMicroFrontendLoader({
 export const easyWaySections: readonly DocSection[] = [
   {
     eyebrow: 'Menu 1',
-    title: 'Generic: use the MFE like a normal TypeScript module.',
-    body: [
-      'Choose Generic when the Host App and MFE project live in the same workspace and Metro can include the MFE source directly.',
-      'Register the MFE with OTA disabled, merge Metro with withMfe, and keep the Host loader import map static so Metro can see the dependency graph.',
-      'This is the lowest-friction path for local development or features shipped inside the app-store binary.',
-    ],
-    code: `# host-app/
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-
-# host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};`,
-  },
-  {
-    eyebrow: 'Menu 2',
     title: 'Bundle: create a portable archive without OTA publish.',
     body: [
       'Choose Bundle when the MFE project should produce an artifact that can be copied into the Host, attached to a release, or uploaded to your own storage.',
@@ -631,7 +590,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });`,
   },
   {
-    eyebrow: 'Menu 3',
+    eyebrow: 'Menu 2',
     title:
       'OTA: publish through Hot Updater, Expo EAS Update, or a custom OTA pipeline.',
     body: [
@@ -654,10 +613,10 @@ const loadMfeModule = createMicroFrontendLoader({
 });`,
   },
   {
-    eyebrow: 'Menu 4',
+    eyebrow: 'Menu 3',
     title: 'Expo: managed or prebuild Host Apps.',
     body: [
-      'Expo Host Apps are supported for generic, bundle, and OTA workflows. Run the same commands and let the RNM watcher handle package, AOS, and iOS additions.',
+      'Expo Host Apps are supported for Bundle archives and OTA/EAS Update workflows. Run the same commands and let the RNM watcher handle package, AOS, and iOS additions.',
       'For Expo EAS Update delivery, use --ota-provider expo. During rnm add, the package watcher shows missing Host packages such as expo and expo-updates, then rnm expo prints the EAS Update command after safety checks pass.',
       'When ios/ or android/ already exists, RNM patches generated Podfile/Gradle include files. When those folders do not exist yet, RNM writes rnm.expo-plugin.cjs and rnm.expo-integration.json, then adds the plugin to app.json when possible.',
       'rnm add, rnm bundle --host, rnm verify, rnm publish, and rnm expo run the watcher automatically. Use --yes to apply in CI or --skip-integration to bypass it.',
@@ -2000,7 +1959,7 @@ export const localizedGuides = {
       },
       {
         title: '쉬운 사용법',
-        body: 'generic, bundle, OTA 세 가지 Easy Way 메뉴를 바로 비교합니다.',
+        body: 'bundle, Hot Updater/OTA, Expo Easy Way 메뉴를 바로 비교합니다.',
       },
       {
         title: 'Options reference',
@@ -2103,9 +2062,8 @@ export const localizedGuides = {
       },
       {
         eyebrow: 'Easy Way',
-        title: 'generic, bundle, OTA 세 가지 메뉴 중 하나를 고릅니다.',
+        title: 'bundle, Hot Updater/OTA, Expo 메뉴 중 하나를 고릅니다.',
         body: [
-          'Generic은 일반 TypeScript module처럼 쓰는 방식입니다. OTA를 끄고 등록한 뒤 withMfe를 metro.config.js에 추가하고 Host loader에서 static import map으로 연결합니다.',
           'Bundle은 portable archive 방식입니다. MFE project에서 rnm bundle을 실행해 index.bundle, assets, manifest.json, .tar.gz만 만들고 bundleArchiveUrl을 createBundleArchiveLoader 및 생성된 archive registration에 연결합니다.',
           'OTA는 원격 배포 방식입니다. hot-updater 또는 custom OTA metadata로 등록하고 publish 전에 verify를 실행하며, native-safety check 통과 후 OTA engine이 배포와 evaluation을 담당합니다.',
           'isMfe prop은 따로 넘길 필요가 없습니다. MicroFrontendComponent가 loaded subtree를 자동으로 MFE context로 표시합니다.',
@@ -2116,26 +2074,16 @@ export const localizedGuides = {
     easyWaySections: [
       {
         eyebrow: '메뉴 1',
-        title: 'Generic: 일반 TypeScript module처럼 사용합니다.',
-        body: [
-          'Host App과 MFE project가 같은 workspace에 있고 Metro가 MFE source를 직접 포함할 수 있을 때 선택합니다.',
-          'OTA를 끄고 등록한 뒤 withMfe로 Metro를 merge하고, Host loader는 static import map으로 유지합니다.',
-          'local development 또는 app-store binary에 함께 포함되는 feature에 가장 단순한 경로입니다.',
-        ],
-        code: easyWaySections[0]?.code ?? '',
-      },
-      {
-        eyebrow: '메뉴 2',
         title: 'Bundle: OTA publish 없이 portable archive를 만듭니다.',
         body: [
           'MFE project에서 Host로 복사하거나 release artifact/storage에 올릴 archive가 필요할 때 선택합니다.',
           'MFE project에서 rnm bundle을 실행하면 index.bundle, assets, manifest.json만 archive에 들어갑니다.',
           'OTA metadata를 원하지 않으면 --update-registry를 빼세요. --host를 쓰면 RNM은 그래도 rnm.bundle-archives.ts를 생성하므로 prompt를 수락하거나 --yes로 Host entry import까지 적용하세요.',
         ],
-        code: easyWaySections[1]?.code ?? '',
+        code: easyWaySections[0]?.code ?? '',
       },
       {
-        eyebrow: '메뉴 3',
+        eyebrow: '메뉴 2',
         title:
           'OTA: Hot Updater, Expo EAS Update 또는 custom OTA pipeline으로 배포합니다.',
         body: [
@@ -2143,13 +2091,13 @@ export const localizedGuides = {
           '이 라이브러리는 native contract를 먼저 검증하고, 실제 distribution/download/evaluation은 Hot Updater, Expo EAS Update 또는 custom OTA engine이 담당합니다.',
           'native assumption이 바뀌어 검증이 실패하면 OTA 대신 Store release를 진행합니다.',
         ],
-        code: easyWaySections[2]?.code ?? '',
+        code: easyWaySections[1]?.code ?? '',
       },
       {
-        eyebrow: '메뉴 4',
+        eyebrow: '메뉴 3',
         title: 'Expo: managed 또는 prebuild Host App입니다.',
         body: [
-          'Expo Host App도 generic, bundle, OTA workflow를 모두 지원합니다. 같은 명령을 실행하고 RNM watcher가 package, AOS, iOS 추가 항목을 처리하게 하세요. `--ota-provider expo`로 등록하면 `rnm add`가 `expo`, `expo-updates` 같은 Host 누락 패키지도 보여줍니다.',
+          'Expo Host App은 Bundle archive와 OTA/EAS Update workflow를 지원합니다. 같은 명령을 실행하고 RNM watcher가 package, AOS, iOS 추가 항목을 처리하게 하세요. `--ota-provider expo`로 등록하면 `rnm add`가 `expo`, `expo-updates` 같은 Host 누락 패키지도 보여줍니다.',
           'ios/ 또는 android/가 이미 있으면 generated Podfile/Gradle include 파일을 patch합니다. 아직 없으면 rnm.expo-plugin.cjs와 rnm.expo-integration.json을 만들고 가능한 경우 app.json에 plugin을 추가합니다.',
           'rnm add, rnm bundle --host, rnm verify, rnm publish, rnm expo는 watcher를 자동 실행합니다. Expo EAS Update 배포는 --ota-provider expo 등록 후 rnm expo를 사용하세요. CI에서는 --yes, 생략하려면 --skip-integration을 사용합니다.',
         ],
@@ -2338,9 +2286,8 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'Easy Way',
-        title: 'generic, bundle, OTA 메뉴로 사용 방식을 나눕니다.',
+        title: 'bundle, Hot Updater/OTA, Expo 메뉴로 사용 방식을 나눕니다.',
         body: [
-          'Generic은 local/sibling project를 일반 TS module처럼 Metro로 바로 묶는 방식입니다.',
           'Bundle은 rnm bundle로 필요한 파일만 archive하고 bundleArchiveUrl, rnm.bundle-archives.ts, createBundleArchiveLoader로 연결하는 방식입니다.',
           'OTA는 verify를 통과한 뒤 Hot Updater 또는 custom OTA pipeline으로 원격 배포하는 방식입니다.',
         ],
@@ -2350,7 +2297,7 @@ beerware spirit: appreciated`,
         eyebrow: 'Expo',
         title: 'Expo managed, prebuild, bare Host App을 지원합니다.',
         body: [
-          'Expo에서도 generic, bundle, OTA 메뉴를 그대로 사용합니다. package는 package.json으로, AOS/iOS는 native folder 존재 여부에 따라 generated file 또는 Expo config plugin으로 통합합니다.',
+          'Expo에서는 embedded archive는 Bundle 경로를, 원격 배포는 Expo EAS Update OTA 경로를 사용합니다. package는 package.json으로, AOS/iOS는 native folder 존재 여부에 따라 generated file 또는 Expo config plugin으로 통합합니다.',
           'rnm add, rnm bundle --host, rnm verify, rnm publish, rnm expo가 누락된 추가 항목을 감시합니다. 적용, 건너뛰기, --yes 자동 적용, --skip-integration 생략을 선택할 수 있습니다.',
         ],
         code: `rnm add mfe-feature --path ../mfe-feature
@@ -2359,9 +2306,8 @@ npx expo prebuild`,
       },
       {
         eyebrow: 'Examples',
-        title: 'examples 폴더를 general TS, bundle, OTA로 분리했습니다.',
+        title: 'examples 폴더를 bundle, OTA, Expo로 분리했습니다.',
         body: [
-          'examples/general-ts는 일반 TypeScript module처럼 local MFE source를 Metro와 withMfe로 포함하는 예제입니다.',
           'examples/bundle은 OTA publish 없이 rnm bundle archive를 만들고 생성된 archive registration과 createBundleArchiveLoader로 실제 로드하는 예제입니다.',
           'examples/ota는 rnm verify 통과 후 Hot Updater 또는 custom OTA SDK가 download/evaluation을 담당하는 예제입니다.',
           'examples/expo는 Expo managed/prebuild Host, EAS Update, Bun 기반 mfe.config.mjs / .cjs 로딩 예제입니다.',
@@ -2430,7 +2376,7 @@ npx expo prebuild`,
       },
       {
         title: '简单用法',
-        body: '直接比较 generic、bundle、OTA 三种 Easy Way 菜单。',
+        body: '直接比较 bundle、Hot Updater/OTA、Expo Easy Way 菜单。',
       },
       {
         title: 'Options reference',
@@ -2527,9 +2473,8 @@ npx expo prebuild`,
       },
       {
         eyebrow: 'Easy Way',
-        title: '在 generic、bundle、OTA 三个菜单中选择一个。',
+        title: '在 bundle、Hot Updater/OTA、Expo 菜单中选择一个。',
         body: [
-          'Generic 是像普通 TypeScript module 一样使用的方式。注册时关闭 OTA，在 metro.config.js 中加入 withMfe，并在 Host loader 中用 static import map 连接。',
           'Bundle 是 portable archive 方式。在 MFE project 中运行 rnm bundle，只生成 index.bundle、assets、manifest.json 和 .tar.gz，并通过 createBundleArchiveLoader 与生成的 archive registration 使用 bundleArchiveUrl。',
           'OTA 是远程发布方式。使用 hot-updater 或 custom OTA metadata 注册，publish 前运行 verify，并在 native-safety check 通过后由 OTA engine 负责分发和 evaluation。',
           '不需要传 isMfe prop。MicroFrontendComponent 会自动把 loaded subtree 标记为 MFE context。',
@@ -2540,26 +2485,16 @@ npx expo prebuild`,
     easyWaySections: [
       {
         eyebrow: '菜单 1',
-        title: 'Generic：像普通 TypeScript module 一样使用。',
-        body: [
-          '当 Host App 与 MFE project 在同一个 workspace 中，并且 Metro 可以直接包含 MFE source 时选择 Generic。',
-          '注册时关闭 OTA，用 withMfe merge Metro，并把 Host loader 保持为 static import map，让 Metro 能看到 dependency graph。',
-          '这是 local development 或随 app-store binary 一起发布 feature 时摩擦最小的路径。',
-        ],
-        code: easyWaySections[0]?.code ?? '',
-      },
-      {
-        eyebrow: '菜单 2',
         title: 'Bundle：不做 OTA publish，只创建 portable archive。',
         body: [
           '当 MFE project 需要生成可复制到 Host、附加到 release 或上传到自有 storage 的 artifact 时选择 Bundle。',
           '在 MFE project 中运行 rnm bundle，archive 只包含 index.bundle、assets 和 manifest.json。',
           '如果不需要 OTA metadata，就不要传 --update-registry。使用 --host 时 RNM 仍会生成 rnm.bundle-archives.ts；请接受提示或传 --yes，让 Host entry 导入它。',
         ],
-        code: easyWaySections[1]?.code ?? '',
+        code: easyWaySections[0]?.code ?? '',
       },
       {
-        eyebrow: '菜单 3',
+        eyebrow: '菜单 2',
         title:
           'OTA：通过 Hot Updater、Expo EAS Update 或 custom OTA pipeline 发布。',
         body: [
@@ -2567,13 +2502,13 @@ npx expo prebuild`,
           '本库先验证 native contract；实际 distribution、download 和 JavaScript evaluation 仍由 Hot Updater、Expo EAS Update 或 custom OTA engine 负责。',
           '如果 verification 因 native assumptions 改变而失败，应发布 Store release，而不是继续推 OTA。',
         ],
-        code: easyWaySections[2]?.code ?? '',
+        code: easyWaySections[1]?.code ?? '',
       },
       {
-        eyebrow: '菜单 4',
+        eyebrow: '菜单 3',
         title: 'Expo：managed 或 prebuild Host App。',
         body: [
-          'Expo Host App 同样支持 generic、bundle、OTA workflows。运行相同命令，让 RNM watcher 处理 package、AOS、iOS additions。使用 `--ota-provider expo` 注册时，`rnm add` 也会显示 Host 缺失的 `expo`、`expo-updates` 等包。',
+          'Expo Host App 支持 Bundle archive 和 OTA/EAS Update workflow。运行对应命令，让 RNM watcher 处理 package、AOS、iOS additions。使用 `--ota-provider expo` 注册时，`rnm add` 也会显示 Host 缺失的 `expo`、`expo-updates` 等包。',
           '如果 ios/ 或 android/ 已存在，RNM 会 patch generated Podfile/Gradle include files。还不存在时，RNM 会生成 rnm.expo-plugin.cjs 和 rnm.expo-integration.json，并在可行时加入 app.json。',
           'rnm add、rnm bundle --host、rnm verify、rnm publish、rnm expo 会自动运行 watcher。Expo EAS Update 发布请先用 --ota-provider expo 注册，然后运行 rnm expo。CI 中使用 --yes，想跳过则使用 --skip-integration。',
         ],
@@ -2758,9 +2693,8 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'Easy Way',
-        title: '按 generic、bundle、OTA 菜单区分使用方式。',
+        title: '按 bundle、Hot Updater/OTA、Expo 菜单区分使用方式。',
         body: [
-          'Generic 是把 local/sibling project 像普通 TS module 一样交给 Metro 直接 bundle。',
           'Bundle 是用 rnm bundle 只 archive 必要文件，并通过 bundleArchiveUrl、rnm.bundle-archives.ts 与 createBundleArchiveLoader 连接。',
           'OTA 是 verify 通过后，通过 Hot Updater 或 custom OTA pipeline 远程发布。',
         ],
@@ -2768,9 +2702,8 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'Examples',
-        title: 'examples 已分成 general TS、bundle、OTA 三个目录。',
+        title: 'examples 已分成 bundle、OTA、Expo 三个目录。',
         body: [
-          'examples/general-ts 展示把 local MFE source 像普通 TypeScript module 一样交给 Metro 与 withMfe 处理。',
           'examples/bundle 展示不做 OTA publish 的 rnm bundle archive，并通过生成的 archive registration 与 createBundleArchiveLoader 实际加载。',
           'examples/ota 展示 rnm verify 通过后由 Hot Updater 或 custom OTA SDK 负责 download/evaluation。',
           'examples/expo 展示 Expo managed/prebuild Host、EAS Update，以及基于 Bun 的 mfe.config.mjs / .cjs 加载。',
@@ -2839,7 +2772,7 @@ beerware spirit: appreciated`,
       },
       {
         title: '簡単な使い方',
-        body: 'generic、bundle、OTA の 3 つの Easy Way メニューをすぐ比較します。',
+        body: 'bundle、Hot Updater/OTA、Expo の Easy Way メニューをすぐ比較します。',
       },
       {
         title: 'Options reference',
@@ -2942,9 +2875,8 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'Easy Way',
-        title: 'generic、bundle、OTA の 3 つのメニューから選びます。',
+        title: 'bundle、Hot Updater/OTA、Expo のメニューから選びます。',
         body: [
-          'Generic は通常の TypeScript module のように使う方式です。OTA を無効にして登録し、metro.config.js に withMfe を追加し、Host loader で static import map に接続します。',
           'Bundle は portable archive 方式です。MFE project で rnm bundle を実行し、index.bundle、assets、manifest.json、.tar.gz だけを作成して bundleArchiveUrl を createBundleArchiveLoader と生成された archive registration に接続します。',
           'OTA は remote delivery 方式です。hot-updater または custom OTA metadata で登録し、publish 前に verify を実行し、native-safety check 通過後は OTA engine が配布と evaluation を担当します。',
           'isMfe prop を渡す必要はありません。MicroFrontendComponent が loaded subtree を自動で MFE context として mark します。',
@@ -2955,26 +2887,16 @@ beerware spirit: appreciated`,
     easyWaySections: [
       {
         eyebrow: 'メニュー 1',
-        title: 'Generic: 通常の TypeScript module のように使います。',
-        body: [
-          'Host App と MFE project が同じ workspace にあり、Metro が MFE source を直接含められる場合に Generic を選びます。',
-          'OTA を無効にして登録し、withMfe で Metro を merge し、Host loader は static import map のままにして Metro が dependency graph を見られるようにします。',
-          'local development や app-store binary に含めて出す feature に最も friction の少ない path です。',
-        ],
-        code: easyWaySections[0]?.code ?? '',
-      },
-      {
-        eyebrow: 'メニュー 2',
         title: 'Bundle: OTA publish なしで portable archive を作ります。',
         body: [
           'MFE project から Host に copy したり、release artifact/storage に upload する artifact が必要な場合に Bundle を選びます。',
           'MFE project で rnm bundle を実行すると、archive には index.bundle、assets、manifest.json だけが入ります。',
           'OTA metadata が不要なら --update-registry を外します。--host を使うと RNM は rnm.bundle-archives.ts を生成するため、prompt を受け入れるか --yes で Host entry import まで適用してください。',
         ],
-        code: easyWaySections[1]?.code ?? '',
+        code: easyWaySections[0]?.code ?? '',
       },
       {
-        eyebrow: 'メニュー 3',
+        eyebrow: 'メニュー 2',
         title:
           'OTA: Hot Updater、Expo EAS Update または custom OTA pipeline で配布します。',
         body: [
@@ -2982,13 +2904,13 @@ beerware spirit: appreciated`,
           'この library は native contract を先に検証します。実際の distribution、download、JavaScript evaluation は Hot Updater、Expo EAS Update または custom OTA engine が担当します。',
           'native assumptions が変わって verification が失敗した場合は、OTA ではなく Store release を行います。',
         ],
-        code: easyWaySections[2]?.code ?? '',
+        code: easyWaySections[1]?.code ?? '',
       },
       {
-        eyebrow: 'メニュー 4',
+        eyebrow: 'メニュー 3',
         title: 'Expo: managed または prebuild Host App です。',
         body: [
-          'Expo Host App も generic、bundle、OTA workflows をすべてサポートします。同じ command を実行し、RNM watcher に package、AOS、iOS additions を処理させます。`--ota-provider expo` で登録すると、`rnm add` は `expo`、`expo-updates` など Host に不足している package も表示します。',
+          'Expo Host App は Bundle archive と OTA/EAS Update workflow をサポートします。対応する command を実行し、RNM watcher に package、AOS、iOS additions を処理させます。`--ota-provider expo` で登録すると、`rnm add` は `expo`、`expo-updates` など Host に不足している package も表示します。',
           'ios/ または android/ が既にある場合は generated Podfile/Gradle include files を patch します。まだ無い場合は rnm.expo-plugin.cjs と rnm.expo-integration.json を生成し、可能なら app.json に plugin を追加します。',
           'rnm add、rnm bundle --host、rnm verify、rnm publish、rnm expo は watcher を自動実行します。Expo EAS Update 配信は --ota-provider expo で登録し、rnm expo を使います。CI では --yes、スキップする場合は --skip-integration を使います。',
         ],
@@ -3176,9 +3098,8 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'Easy Way',
-        title: 'generic、bundle、OTA メニューで使い方を分けます。',
+        title: 'bundle、Hot Updater/OTA、Expo メニューで使い方を分けます。',
         body: [
-          'Generic は local/sibling project を通常の TS module のように Metro で直接 bundle する方式です。',
           'Bundle は rnm bundle で必要 files だけを archive し、bundleArchiveUrl、rnm.bundle-archives.ts、createBundleArchiveLoader で接続する方式です。',
           'OTA は verify 通過後に Hot Updater または custom OTA pipeline で remote delivery する方式です。',
         ],
@@ -3186,10 +3107,8 @@ beerware spirit: appreciated`,
       },
       {
         eyebrow: 'Examples',
-        title:
-          'examples を general TS、bundle、OTA の 3 folders に分けました。',
+        title: 'examples を bundle、OTA、Expo の folders に分けました。',
         body: [
-          'examples/general-ts は local MFE source を通常の TypeScript module として Metro と withMfe に含める例です。',
           'examples/bundle は OTA publish なしの rnm bundle archive を生成し、archive registration と createBundleArchiveLoader で実際に load する例です。',
           'examples/ota は rnm verify 通過後に Hot Updater または custom OTA SDK が download/evaluation を担当する例です。',
           'examples/expo は Expo managed/prebuild Host、EAS Update、Bun による mfe.config.mjs / .cjs 読み込みの例です。',

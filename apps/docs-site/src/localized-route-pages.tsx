@@ -33,7 +33,7 @@ const localeConfig = {
       '처음 설치부터 첫 MFE 등록, native-safety verification, runtime 로딩까지 바로 따라갈 수 있는 시작 가이드입니다.',
     easyWayTitle: '쉬운 사용법',
     easyWaySubtitle:
-      'generic, bundle, OTA 세 가지 메뉴 중 현재 project에 맞는 적용 방식을 고릅니다.',
+      'bundle, Hot Updater/OTA, Expo 중 현재 project에 맞는 적용 방식을 고릅니다.',
     optionsTitle: 'Options reference',
     optionsSubtitle:
       'Host config, MFE config, registry manifest, runtime Provider와 hook의 가능한 옵션을 모두 설명합니다.',
@@ -75,7 +75,7 @@ const localeConfig = {
       '从首次安装到第一个 MFE 注册、native-safety verification 与 runtime 加载的入门指南。',
     easyWayTitle: '简单用法',
     easyWaySubtitle:
-      '在 generic、bundle、OTA 三个菜单中选择适合当前 project 的接入方式。',
+      '在 bundle、Hot Updater/OTA、Expo 中选择适合当前 project 的接入方式。',
     optionsTitle: 'Options reference',
     optionsSubtitle:
       '说明 Host config、MFE config、registry manifest、runtime Provider 与 hooks 的所有可用选项。',
@@ -117,7 +117,7 @@ const localeConfig = {
       '初回 install から最初の MFE registration、native-safety verification、runtime loading まで進める入門ガイドです。',
     easyWayTitle: '簡単な使い方',
     easyWaySubtitle:
-      'generic、bundle、OTA の 3 つのメニューから current project に合う path を選びます。',
+      'bundle、Hot Updater/OTA、Expo から current project に合う path を選びます。',
     optionsTitle: 'Options reference',
     optionsSubtitle:
       'Host config、MFE config、registry manifest、runtime Provider と hooks の使用可能な option をすべて説明します。',

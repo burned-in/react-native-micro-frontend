@@ -2,32 +2,7 @@
 
 Host App と MFE を接続する前に、3 つのメニューから 1 つを選びます。
 
-## 1. Generic — 通常の TypeScript module 方式
-
-Host と MFE が同じ workspace にあり、Metro が MFE source を直接 bundle できる場合に使います。
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-Host loader import は static に保ちます。
-
-```tsx
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-```
-
-## 2. Bundle — OTA publish なしの archive
+## 1. Bundle — OTA publish なしの archive
 
 MFE が portable archive を作るが OTA publish はしない場合に使います。
 
@@ -52,7 +27,7 @@ OTA なしの bundle 方式では registry OTA を無効にし、`bundleArchiveU
 }
 ```
 
-## 3. OTA — Hot Updater または custom delivery
+## 2. OTA — Hot Updater または custom delivery
 
 native-safety verification 後に remote delivery が必要な場合に使います。
 
@@ -75,9 +50,9 @@ const loadMfeModule = createMicroFrontendLoader({
 
 native assumption が変わって verification が失敗した場合は、OTA ではなく Store release を行います。
 
-## 4. Expo — managed または prebuild Host App
+## 3. Expo — managed または prebuild Host App
 
-Expo Host App もサポートします。Generic、Bundle、OTA のメニューはそのまま使い、RNM integration watcher に native additions を処理させます。MFE を `--ota-provider expo` で登録すると、`rnm add` は `expo`、`expo-updates` など Host に不足している package も表示し、適用できます。
+Expo Host App もサポートします。embedded archive は Bundle、リモート配信は Expo EAS Update の OTA 経路を使い、RNM integration watcher に native additions を処理させます。MFE を `--ota-provider expo` で登録すると、`rnm add` は `expo`、`expo-updates` など Host に不足している package も表示し、適用できます。
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature

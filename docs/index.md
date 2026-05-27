@@ -18,7 +18,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | ------------------------------------------------- | -------------------------------------------------------------- |
 | [English README](../README.md)                    | Main library guide and examples.                               |
 | [Getting started](getting-started.md)             | Install, configure, register, verify, and load your first MFE. |
-| [Easy Way](easy-way.md)                           | Choose Generic, Bundle without OTA publish, or OTA delivery.   |
+| [Easy Way](easy-way.md)                           | Choose Bundle without OTA publish, Hot Updater/custom OTA, or Expo delivery.   |
 | [Expo support](getting-started.md#expo-host-apps)      | Expo managed/prebuild/bare Host Apps with package, AOS, and iOS integration watcher. |
 | [Options reference](options.md)                   | Every Host config, MFE config, registry, and runtime option.   |
 | [Metro / Bundle archive](metro-bundle-archive.md) | Merge Metro with `withMfe` and load portable bundle archives.  |
@@ -32,15 +32,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## Easy Way
 
-### 1. Generic — normal TS module style
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-Use `withMfe` in `metro.config.js`, then map the local MFE through a static import in the Host loader. `isMfe` is automatic inside `MicroFrontendComponent`.
-
-### 2. Bundle — portable archive
+### 1. Bundle — portable archive
 
 ```bash
 # run in the MFE project
@@ -49,7 +41,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 
 This creates a `.tar.gz` containing only `index.bundle`, `assets/`, and `manifest.json`; without `--update-registry` it stays bundle-only/no-OTA.
 
-### 3. OTA — Hot Updater/custom delivery
+### 2. OTA — Hot Updater/custom delivery
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual

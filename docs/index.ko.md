@@ -18,7 +18,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | ---------------------------------------------------- | ------------------------------------------------------------------- |
 | [한국어 README](README.ko.md)                        | 주요 가이드와 예제.                                                 |
 | [Getting Started](getting-started.ko.md)             | 설치, 설정, 등록, 검증, 첫 MFE 로딩 가이드.                         |
-| [Easy Way](easy-way.ko.md)                           | Generic, OTA 없는 Bundle, OTA delivery 중 선택하는 가이드.          |
+| [Easy Way](easy-way.ko.md)                           | OTA 없는 Bundle, Hot Updater/custom OTA, Expo delivery 중 선택하는 가이드.          |
 | [Expo 지원](getting-started.ko.md#expo-host-app)        | Expo managed/prebuild/bare Host App에서 package, AOS, iOS integration watcher를 사용합니다. |
 | [옵션 레퍼런스](options.ko.md)                       | Host config, MFE config, registry, runtime 옵션 전체.               |
 | [Metro / Bundle archive](metro-bundle-archive.ko.md) | `withMfe`로 Metro를 merge하고 portable bundle archive를 로드합니다. |
@@ -32,15 +32,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## Easy Way
 
-### 1. Generic — 일반 TS 모듈 방식
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-`metro.config.js`에 `withMfe`를 넣고, Host loader에서 static import로 local MFE를 연결합니다. `isMfe`는 `MicroFrontendComponent` 안에서 자동 적용됩니다.
-
-### 2. Bundle — portable archive
+### 1. Bundle — portable archive
 
 ```bash
 # MFE project에서 실행
@@ -49,7 +41,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 
 `index.bundle`, `assets/`, `manifest.json`만 들어 있는 `.tar.gz`를 만들고, `--update-registry`를 빼면 bundle-only/no-OTA 흐름으로 유지됩니다.
 
-### 3. OTA — Hot Updater/custom delivery
+### 2. OTA — Hot Updater/custom delivery
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual

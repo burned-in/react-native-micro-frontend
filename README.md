@@ -71,46 +71,9 @@ export default defineReactNativeMicroFrontendConfig({
 });
 ```
 
-## Easy Way: generic, bundle, OTA menus
+## Easy Way: bundle, Hot Updater/OTA, Expo menus
 
-### Menu 1. Generic — use it like a normal TypeScript module
-
-Use this when the Host App and MFE project are in the same workspace and Metro can bundle the MFE source directly. This is the easiest path for local development or app-store-bundled feature modules.
-
-```bash
-# in host-app/
-rnm init
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-// host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-```tsx
-// Host loader: keep imports static so Metro can include the local MFE.
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-const loadMfeModule = createMicroFrontendLoader({
-  fallback: async (manifest) => {
-    const load = localModules[manifest.name as keyof typeof localModules];
-    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
-    return await load();
-  },
-});
-```
-
-Then render with `MicroFrontendProvider` + `MicroFrontendComponent`. You do not need to pass `isMfe`; loaded MFE subtrees are marked automatically.
-
-### Menu 2. Bundle — package only the files the Host needs
+### Menu 1. Bundle — package only the files the Host needs
 
 Use this when you want a portable archive that can be copied into the Host project, attached to a release, or uploaded to your own storage.
 
@@ -127,7 +90,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 `rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/`; without `--update-registry` it stays a bundle-only/no-OTA flow. Your custom loader reads/downloads the archive, verifies it, unpacks it, and evaluates it with your runtime engine. Add `--update-registry` only when you intentionally want to write `bundleArchiveUrl`.
 
-### Menu 3. OTA — publish through Hot Updater or a custom OTA pipeline
+### Menu 2. OTA — publish through Hot Updater or a custom OTA pipeline
 
 Use this when the MFE should be delivered remotely after native-safety verification. The library verifies the native contract first; Hot Updater or your OTA engine still owns distribution and JavaScript evaluation.
 
@@ -158,7 +121,7 @@ Use `hotUpdater` when `ota.provider` is `hot-updater`; use `custom` when your re
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [`docs/index.md`](docs/index.md)                               | Official documentation home.                                                           |
 | [`docs/getting-started.md`](docs/getting-started.md)           | First install, host config, MFE registration, verification, and runtime loading guide. |
-| [`docs/easy-way.md`](docs/easy-way.md)                         | Choose Generic, Bundle, or OTA usage.                                                  |
+| [`docs/easy-way.md`](docs/easy-way.md)                         | Choose Bundle, Hot Updater/OTA, or Expo usage.                                                  |
 | [`docs/metro-bundle-archive.md`](docs/metro-bundle-archive.md) | Merge Metro and load bundle archives.                                                  |
 | [`docs/options.md`](docs/options.md)                           | Complete Host config, MFE config, registry, and runtime options reference.             |
 | [`README.md`](README.md)                                       | English official guide.                                                                |

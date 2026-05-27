@@ -13,7 +13,7 @@ const guideCards = [
   {
     title: 'Easy Way',
     href: '/docs/easy-way',
-    body: 'Choose Generic, Bundle, or OTA before wiring your Host and MFE.',
+    body: 'Choose Bundle, Hot Updater/OTA, or Expo before wiring your Host and MFE.',
   },
   {
     title: 'Options reference',

@@ -246,46 +246,9 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 将 `bundleArchiveUrl` 配合 `createBundleArchiveLoader()` 使用。生成的注册文件让 React Native 能把复制的 `.tar.gz` resolve 为 asset；loader 会读取它、gunzip/untar，并在不导入 MFE source 的情况下返回 Metro entry module。
 
 
-## 8. Easy Way：generic、bundle、OTA 菜单
+## 8. Easy Way：bundle、Hot Updater/OTA、Expo 菜单
 
-### 菜单 1. Generic — 像普通 TypeScript module 一样使用
-
-当 Host App 与 MFE project 在同一个 workspace 中，并且 Metro 可以直接 bundle MFE source 时使用。这是 local development 或随 app store binary 一起发布 feature module 的最简单路径。
-
-```bash
-# 在 host-app/ 中执行
-rnm init
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-// host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-```tsx
-// Host loader: 保持 static import map，让 Metro 能包含本地 MFE。
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-const loadMfeModule = createMicroFrontendLoader({
-  fallback: async (manifest) => {
-    const load = localModules[manifest.name as keyof typeof localModules];
-    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
-    return await load();
-  },
-});
-```
-
-然后使用 `MicroFrontendProvider` 和 `MicroFrontendComponent` 渲染。不需要手动传 `isMfe`；loaded MFE subtree 会自动标记为 MFE。
-
-### 菜单 2. Bundle — 只 archive Host 需要的文件
+### 菜单 1. Bundle — 只 archive Host 需要的文件
 
 当你想把 MFE 做成 portable archive，复制到 Host project，或上传到 release artifact/CDN/storage 时使用。
 
@@ -302,7 +265,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 `rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；用 `--yes` 自动导入 Host entry，或手动导入一次。想把 `bundleArchiveUrl` 写入 `rnm.registry.json` 时添加 `--update-registry`。
 
-### 菜单 3. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
+### 菜单 2. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 
 当 MFE 通过 native-safety verification 后需要远程发布时使用。本库先验证 native contract；实际 distribution 和 JavaScript evaluation 仍由 Hot Updater 或你的 OTA engine 负责。
 

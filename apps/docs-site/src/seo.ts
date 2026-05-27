@@ -29,7 +29,7 @@ const copy = {
     gettingStarted:
       'Getting started guide for React Native micro frontends: install packages, declare host policy, register a module, verify native safety, and load it at runtime.',
     easyWay:
-      'Easy Way guide for React Native micro frontends: choose Generic, Bundle without OTA publish, or OTA delivery with Hot Updater/custom pipelines.',
+      'Easy Way guide for React Native micro frontends: choose Bundle without OTA publish, Hot Updater/custom OTA delivery, or Expo EAS Update.',
     options:
       'Complete options reference for React Native micro frontend Host config, MFE config, registry manifests, runtime providers, hooks, and screen APIs.',
     hotUpdater:
@@ -51,7 +51,7 @@ const copy = {
     gettingStarted:
       'React Native MFE를 처음 시작하기 위한 설치, Host policy 설정, module 등록, native safety 검증, runtime 로딩 가이드입니다.',
     easyWay:
-      'React Native MFE Easy Way 가이드입니다. Generic, OTA 없는 Bundle, Hot Updater/custom OTA delivery 중 맞는 경로를 고릅니다.',
+      'React Native MFE Easy Way 가이드입니다. OTA 없는 Bundle, Hot Updater/custom OTA delivery, Expo EAS Update 중 맞는 경로를 고릅니다.',
     options:
       'Host config, MFE config, registry manifest, runtime Provider, hook, screen API의 모든 옵션을 정리한 레퍼런스입니다.',
     hotUpdater:
@@ -73,7 +73,7 @@ const copy = {
     gettingStarted:
       'React Native MFE 入门指南：安装 package、声明 Host policy、注册 module、校验 native safety 并通过 runtime 加载。',
     easyWay:
-      'React Native MFE Easy Way 指南：在 Generic、无 OTA publish 的 Bundle、Hot Updater/custom OTA delivery 中选择合适路径。',
+      'React Native MFE Easy Way 指南：在无 OTA publish 的 Bundle、Hot Updater/custom OTA delivery、Expo EAS Update 中选择合适路径。',
     options:
       '完整选项参考：Host config、MFE config、registry manifest、runtime Provider、hooks 与 screen API。',
     hotUpdater:
@@ -95,7 +95,7 @@ const copy = {
     gettingStarted:
       'React Native MFE の入門ガイドです。install、Host policy、module registration、native safety verification、runtime loading を説明します。',
     easyWay:
-      'React Native MFE Easy Way guide です。Generic、OTA publish なしの Bundle、Hot Updater/custom OTA delivery から選びます。',
+      'React Native MFE Easy Way guide です。OTA publish なしの Bundle、Hot Updater/custom OTA delivery、Expo EAS Update から選びます。',
     options:
       'Host config、MFE config、registry manifest、runtime Provider、hooks、screen API の全 option reference です。',
     hotUpdater:

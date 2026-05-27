@@ -18,7 +18,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | ---------------------------------------------------- | ------------------------------------------------------------------------ |
 | [日本語 README](README.ja.md)                        | メインガイドと例。                                                       |
 | [Getting Started](getting-started.ja.md)             | install、config、register、verify、最初の MFE loading guide。            |
-| [Easy Way](easy-way.ja.md)                           | Generic、OTA publish なしの Bundle、OTA delivery から選ぶ guide。        |
+| [Easy Way](easy-way.ja.md)                           | OTA publish なしの Bundle、Hot Updater/custom OTA、Expo delivery から選ぶ guide。        |
 | [Expo サポート](getting-started.ja.md#expo-host-app)    | Expo managed/prebuild/bare Host App で package、AOS、iOS integration watcher を使えます。 |
 | [Options reference](options.ja.md)                   | Host config、MFE config、registry、runtime の全 options。                |
 | [Metro / Bundle archive](metro-bundle-archive.ja.md) | `withMfe` で Metro を merge し、portable bundle archive を読み込みます。 |
@@ -32,15 +32,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 
 ## Easy Way
 
-### 1. Generic — 通常の TS module 方式
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-`metro.config.js` に `withMfe` を入れ、Host loader で static import により local MFE を接続します。`isMfe` は `MicroFrontendComponent` 内で自動適用されます。
-
-### 2. Bundle — portable archive
+### 1. Bundle — portable archive
 
 ```bash
 # MFE project で実行
@@ -49,7 +41,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 
 `index.bundle`、`assets/`、`manifest.json` だけを含む `.tar.gz` を作り、`--update-registry` を外すと bundle-only/no-OTA flow のままです。
 
-### 3. OTA — Hot Updater/custom delivery
+### 2. OTA — Hot Updater/custom delivery
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --ota-provider hot-updater --ota-mode manual

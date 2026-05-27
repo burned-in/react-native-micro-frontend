@@ -2,32 +2,7 @@
 
 连接 Host App 与 MFE 之前，请先选择三种菜单之一。
 
-## 1. Generic — 普通 TypeScript module 方式
-
-当 Host 与 MFE 在同一个 workspace，且 Metro 可以直接 bundle MFE source 时使用。
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-Host loader import 应保持 static。
-
-```tsx
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-```
-
-## 2. Bundle — 不进行 OTA publish 的 archive
+## 1. Bundle — 不进行 OTA publish 的 archive
 
 当 MFE 需要生成 portable archive，但不应通过 OTA publish 时使用。
 
@@ -52,7 +27,7 @@ manifest.json
 }
 ```
 
-## 3. OTA — Hot Updater 或 custom delivery
+## 2. OTA — Hot Updater 或 custom delivery
 
 当 native-safety verification 之后需要远程发布时使用。
 
@@ -75,9 +50,9 @@ const loadMfeModule = createMicroFrontendLoader({
 
 如果 native assumption 变化导致 verification 失败，应走 Store release，而不是 OTA。
 
-## 4. Expo — managed 或 prebuild Host App
+## 3. Expo — managed 或 prebuild Host App
 
-Expo Host App 也受支持。Generic、Bundle、OTA 三种菜单保持不变，然后让 RNM integration watcher 处理 native additions。使用 `--ota-provider expo` 注册 MFE 时，`rnm add` 也会显示并可应用 Host 缺失的 `expo`、`expo-updates` 等包。
+Expo Host App 也受支持。embedded archive 使用 Bundle 路径，远程发布使用 Expo EAS Update OTA 路径，然后让 RNM integration watcher 处理 native additions。使用 `--ota-provider expo` 注册 MFE 时，`rnm add` 也会显示并可应用 Host 缺失的 `expo`、`expo-updates` 等包。
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature

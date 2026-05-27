@@ -246,46 +246,9 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 `bundleArchiveUrl` は `createBundleArchiveLoader()` と一緒に使ってください。生成された registration file により React Native は copy 済み `.tar.gz` を asset として resolve でき、loader はそれを読み、gunzip/untar して、MFE source を import せず Metro entry module を返します。
 
 
-## 8. Easy Way: generic, bundle, OTA メニュー
+## 8. Easy Way: bundle, Hot Updater/OTA, Expo メニュー
 
-### メニュー 1. Generic — 通常の TypeScript module のように使う
-
-Host App と MFE project が同じ workspace にあり、Metro が MFE source を直接 bundle できる場合に使います。local development や app store に一緒に含める feature module に最も簡単な path です。
-
-```bash
-# host-app/ で実行
-rnm init
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-// host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-```tsx
-// Host loader: Metro が local MFE を含められるよう import は static map にします。
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-const loadMfeModule = createMicroFrontendLoader({
-  fallback: async (manifest) => {
-    const load = localModules[manifest.name as keyof typeof localModules];
-    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
-    return await load();
-  },
-});
-```
-
-その後 `MicroFrontendProvider` と `MicroFrontendComponent` で render します。`isMfe` を手動で渡す必要はありません。loaded MFE subtree は自動的に MFE として mark されます。
-
-### メニュー 2. Bundle — Host が必要な files だけを archive
+### メニュー 1. Bundle — Host が必要な files だけを archive
 
 MFE を portable archive にして Host project へ copy したり、release artifact/CDN/storage に upload したい場合に使います。
 
@@ -302,7 +265,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 `rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。Host entry import は `--yes` で自動適用するか、一度手動 import してください。`rnm.registry.json` に `bundleArchiveUrl` を書く場合は `--update-registry` を追加してください。
 
-### メニュー 3. OTA — Hot Updater または custom OTA pipeline で配布
+### メニュー 2. OTA — Hot Updater または custom OTA pipeline で配布
 
 native-safety verification を通過した MFE を remote delivery する場合に使います。この library は native contract を先に検証し、実際の distribution と JavaScript evaluation は Hot Updater または OTA engine が担当します。
 

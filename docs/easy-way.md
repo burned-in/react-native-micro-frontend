@@ -1,35 +1,10 @@
 # Easy Way
 
-Choose one menu before wiring a Host App and an MFE.
+Choose a bundle, Hot Updater/OTA, or Expo path before wiring a Host App and an MFE.
 
-## 1. Generic — normal TypeScript module style
+## 1. Bundle — archive without OTA publish
 
-Use this when the Host and MFE are in the same workspace and Metro can bundle the MFE source directly.
-
-```bash
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-Keep the Host loader import static:
-
-```tsx
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-```
-
-## 2. Bundle — archive without OTA publish
-
-Use this when the MFE should produce a portable archive but should **not** be published through OTA.
+Use this when the MFE should produce a portable archive but should **not** be published through Hot Updater or another OTA engine.
 
 ```bash
 rnm bundle mfe-feature --platform ios --host ../host-app
@@ -52,7 +27,7 @@ For bundle without OTA, keep registry OTA disabled and store only `bundleArchive
 }
 ```
 
-## 3. OTA — Hot Updater or custom delivery
+## 2. OTA — Hot Updater or custom delivery
 
 Use this when remote delivery is required after native-safety verification.
 
@@ -75,9 +50,9 @@ const loadMfeModule = createMicroFrontendLoader({
 
 If verification fails because native assumptions changed, ship a store release instead of OTA.
 
-## 4. Expo — managed or prebuild Host Apps
+## 3. Expo — managed or prebuild Host Apps
 
-Expo Host Apps are supported. Use the same Generic, Bundle, or OTA menu, then let the RNM integration watcher handle native additions. See `examples/expo` for an Expo Host plus `mfe.config.mjs` sample; `mfe.config.cjs` is also supported through Bun. When the MFE is registered with `--ota-provider expo`, `rnm add` also shows and can apply missing Host packages such as `expo` and `expo-updates`.
+Expo Host Apps are supported. Use the Bundle path for embedded archives or the OTA path with Expo EAS Update, then let the RNM integration watcher handle native additions. See `examples/expo` for an Expo Host plus `mfe.config.mjs` sample; `mfe.config.cjs` is also supported through Bun. When the MFE is registered with `--ota-provider expo`, `rnm add` also shows and can apply missing Host packages such as `expo` and `expo-updates`.
 
 ```bash
 rnm add mfe-feature --path ../mfe-feature

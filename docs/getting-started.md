@@ -240,46 +240,9 @@ The command executes the local React Native `bundle`, writes only `index.bundle`
 Use `bundleArchiveUrl` with `createBundleArchiveLoader()`. The generated registration file lets React Native resolve the copied `.tar.gz` as an asset; the loader reads it, gunzips/untars it, and returns the Metro entry module without importing MFE source.
 
 
-## 8. Easy Way: generic, bundle, OTA menus
+## 8. Easy Way: bundle, Hot Updater/OTA, Expo menus
 
-### Menu 1. Generic — use it like a normal TypeScript module
-
-Use this when the Host App and MFE project are in the same workspace and Metro can bundle the MFE source directly. This is the easiest path for local development or app-store-bundled feature modules.
-
-```bash
-# in host-app/
-rnm init
-rnm add mfe-feature --path ../mfe-feature --entry ./src/index.tsx --version 1.0.0 --no-ota --ota-provider none --ota-mode disabled
-```
-
-```js
-// host-app/metro.config.js
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-
-module.exports = (async () => {
-  const { withMfe } = await import("@bunin/react-native-micro-frontend/metro");
-  return withMfe(__dirname, mergeConfig(getDefaultConfig(__dirname), {}));
-})();
-```
-
-```tsx
-// Host loader: keep imports static so Metro can include the local MFE.
-const localModules = {
-  "mfe-feature": () => import("../mfe-feature/src/index"),
-};
-
-const loadMfeModule = createMicroFrontendLoader({
-  fallback: async (manifest) => {
-    const load = localModules[manifest.name as keyof typeof localModules];
-    if (!load) throw new Error(`Local MFE not mapped: ${manifest.name}`);
-    return await load();
-  },
-});
-```
-
-Then render with `MicroFrontendProvider` + `MicroFrontendComponent`. You do not need to pass `isMfe`; loaded MFE subtrees are marked automatically.
-
-### Menu 2. Bundle — package only the files the Host needs
+### Menu 1. Bundle — package only the files the Host needs
 
 Use this when you want a portable archive that can be copied into the Host project, attached to a release, or uploaded to your own storage.
 
@@ -296,7 +259,7 @@ const loadMfeModule = createMicroFrontendLoader({
 
 `rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/` and generates `rnm.bundle-archives.ts`; use `--yes` for automatic Host entry import, or import it manually once. Add `--update-registry` when you want `bundleArchiveUrl` in `rnm.registry.json`.
 
-### Menu 3. OTA — publish through Hot Updater or a custom OTA pipeline
+### Menu 2. OTA — publish through Hot Updater or a custom OTA pipeline
 
 Use this when the MFE should be delivered remotely after native-safety verification. The library verifies the native contract first; Hot Updater or your OTA engine still owns distribution and JavaScript evaluation.
 
