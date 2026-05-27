@@ -6,6 +6,7 @@ import type {
 } from '@bunin/react-native-micro-frontend';
 import { createEmptyRegistry } from '@bunin/react-native-micro-frontend';
 import type { CliPrinter } from '../cli-output.printer.js';
+import { ensureBundleArchiveRegistration } from './bundle-archive-registration.js';
 
 /**
  * Handles `rnm add <mfe>` by registering a micro frontend in rnm.registry.json.
@@ -72,6 +73,9 @@ export function runAddCommand(
   writeRegistry(root, {
     ...registry,
     mfes,
+  });
+  ensureBundleArchiveRegistration(root, flags, printer, {
+    patchImportByDefault: true,
   });
 
   printer.log(`[OK] Registered MFE ${name}`);

@@ -49,6 +49,8 @@ import animation from "./assets/lottie/loading.json";
 
 `.ts`、`.tsx`、`.js`、`.d.ts`、`.map` 等 source 文件会被排除；asset 文件夹里未使用的文件也不会复制。生成的 `manifest.json` 的 `assets` 数组会在 Metro emit 时包含 `httpServerLocation`、`scales`、`hash`、`width`、`height` 等 `registerAsset(...)` metadata。
 
+对于 OTA 或 archive delivery，用户设备在读取 archive 之前没有 MFE asset。archive 本身就是 asset delivery unit：`index.bundle`、`manifest.json` 和被引用的 asset 会一起下载/读取，然后 Host loader 会在 evaluate JavaScript bundle 之前把这些 asset extract 到 cache。
+
 如果只想检查收集结果，或为 dynamic require 提供 fallback glob，请使用 standalone command：
 
 ```bash
@@ -66,17 +68,38 @@ rnm bundle-asset mfe-feature --platform ios --asset-glob "src/assets/**/*"
 import './rnm.bundle-archives';
 ```
 
-在 React Native 中，请传入由 `react-native-fs`、`react-native-blob-util`、Expo FileSystem 或 custom native module 支撑的 `assetFileSystem` adapter：
+`rnm init` 和 `rnm add` 会预先生成 Host 所需的 `rnm.bundle-archives.ts`，并自动从 Host entry 导入它。之后 `rnm bundle --host` 会在 archive 列表变化时重新生成同一个文件。如果 Host package 中有 `react-native-blob-util`，generated file 也会注册默认 file-system adapter：
 
 ```ts
-const loadBundleArchive = createBundleArchiveLoader({
-  runtime: 'react-native',
-  assetFileSystem: hostAssetFileSystem,
-});
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import {
+  createReactNativeBlobUtilAssetFileSystem,
+  registerBundleArchiveAssetFileSystem,
+} from '@bunin/react-native-micro-frontend/bundle-archive';
+
+registerBundleArchiveAssetFileSystem(
+  createReactNativeBlobUtilAssetFileSystem(ReactNativeBlobUtil),
+);
+```
+
+导入该 generated registration 后，Host loader 可以保持最小配置：
+
+```ts
+const loadBundleArchive = createBundleArchiveLoader({ runtime: 'react-native' });
 
 const loadMfeModule = createMicroFrontendLoader({
   custom: loadBundleArchive,
 });
 ```
 
-Extracted asset 会缓存到 `<cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/`，只有 `.rnm-assets-ready.json` 存在时才复用。不要在这个 bundle path 中 import MFE source。
+如果使用 `react-native-fs`、Expo FileSystem 或 custom native module，请直接把 `assetFileSystem` adapter 传给 `createBundleArchiveLoader()`。当没有 registered 或 explicit file-system adapter 时，RNM 才 fallback 到 `data:<mime>;base64,...` URI。base64 只是兼容 fallback；OTA、图片、字体、Lottie JSON、PDF 和较大的 asset 推荐使用 file-cache extract。
+
+Extracted asset 会缓存到 `<cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/`，只有 `.rnm-assets-ready.json` 存在时才复用，从而避免 partial extract。生成的 registration 也会 externalize `react-native/Libraries/Image/AssetRegistry`，因此 Metro numeric asset ID 会通过 Host AssetRegistry resolve 到 extracted `file://` URI。不要在这个 bundle path 中 import MFE source。
+
+在 `minitax` 这样的 Host 中应用时：
+
+1. 将 Host dependency update/link/publish 到包含这些 bundle-archive export 的 RNM package。
+2. 如果要使用默认高效的 file-cache 路径，保留 `react-native-blob-util`。
+3. 确认 `rnm init` 或 `rnm add` 已自动 import generated registration。需要跳过 entry patch 时使用 `--no-register-archives`。
+4. 重新运行 `rnm bundle <mfe-name> --platform ios|android --host ../host --yes`，让 `rnm.bundle-archives.ts` 包含复制后的 archive asset 列表。
+5. Host 不需要写 per-asset mapping，MFE 也不需要手动 export asset。

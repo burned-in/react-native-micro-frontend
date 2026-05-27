@@ -41,7 +41,8 @@ const watcherOption: OptionHelp = {
 
 const commandHelp: Readonly<Record<string, CommandHelp>> = {
   init: {
-    usage: 'rnm init [--dry-run] [--config-only] [--full]',
+    usage:
+      'rnm init [--dry-run] [--config-only] [--full] [--host-entry <file>]',
     description:
       'Initialize a host React Native app with RNM config, registry, native contract, and generated include files.',
     options: [
@@ -53,6 +54,16 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
       {
         flags: '--full',
         description: 'Generate the full host integration file set.',
+      },
+      {
+        flags: '--host-entry <file>',
+        description:
+          'Host entry file to patch when importing generated archive assets.',
+      },
+      {
+        flags: '--no-register-archives',
+        description:
+          'Generate rnm.bundle-archives.ts but do not patch Host entry.',
       },
     ],
   },
@@ -79,6 +90,16 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
         description: 'How native changes are handled for this MFE.',
       },
       { flags: '--no-ota', description: 'Register the MFE with OTA disabled.' },
+      {
+        flags: '--host-entry <file>',
+        description:
+          'Host entry file to patch when importing generated archive assets.',
+      },
+      {
+        flags: '--no-register-archives',
+        description:
+          'Generate rnm.bundle-archives.ts but do not patch Host entry.',
+      },
       watcherOption,
     ],
     examples: [

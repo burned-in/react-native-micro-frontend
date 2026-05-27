@@ -7,6 +7,7 @@ import {
   generateIntegrationPlan,
 } from '@bunin/react-native-micro-frontend-integration';
 import type { CliPrinter } from '../cli-output.printer.js';
+import { ensureBundleArchiveRegistration } from './bundle-archive-registration.js';
 
 /**
  * Handles `rnm init` by generating safe minimal config and generated include files.
@@ -49,6 +50,11 @@ export function runInitCommand(
   if (mode !== 'config-only')
     for (const file of createGeneratedIntegrationFiles())
       writeGenerated(root, file.path, file.contents);
+  if (mode !== 'config-only') {
+    ensureBundleArchiveRegistration(root, flags, printer, {
+      patchImportByDefault: true,
+    });
+  }
   printer.log(
     '[OK] @bunin/react-native-micro-frontend initialized with generated include files.',
   );

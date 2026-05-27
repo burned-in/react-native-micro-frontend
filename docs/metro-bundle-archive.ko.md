@@ -49,6 +49,8 @@ import animation from "./assets/lottie/loading.json";
 
 `.ts`, `.tsx`, `.js`, `.d.ts`, `.map` 같은 source 파일은 제외하고, asset 폴더 안에 있어도 사용하지 않은 파일은 복사하지 않습니다. 생성된 `manifest.json`의 `assets` 배열에는 Metro가 emit한 경우 `httpServerLocation`, `scales`, `hash`, `width`, `height` 같은 `registerAsset(...)` metadata가 함께 들어갑니다.
 
+OTA 또는 archive delivery 기준에서 사용자 기기에는 처음에 MFE asset이 없습니다. archive가 asset delivery unit이며, `index.bundle`, `manifest.json`, 참조된 asset을 함께 다운로드/읽은 뒤 Host loader가 JS bundle을 evaluate하기 전에 asset을 cache로 extract합니다.
+
 수집 결과만 확인하거나 dynamic require fallback glob을 줄 때는 standalone command를 사용하세요:
 
 ```bash
@@ -66,17 +68,38 @@ CLI가 자동으로 patch하지 않았다면 Host entry file에서 생성된 등
 import './rnm.bundle-archives';
 ```
 
-React Native에서는 `react-native-fs`, `react-native-blob-util`, Expo FileSystem 또는 custom native module 기반 `assetFileSystem` adapter를 넘겨 loader를 연결하세요:
+`rnm init`과 `rnm add`는 Host에 필요한 `rnm.bundle-archives.ts`를 미리 생성하고 Host entry에 import를 자동 추가합니다. 이후 `rnm bundle --host`는 archive 목록이 바뀔 때 같은 파일을 다시 생성합니다. Host package에 `react-native-blob-util`이 있으면 generated file에 기본 file-system adapter가 같이 등록됩니다:
 
 ```ts
-const loadBundleArchive = createBundleArchiveLoader({
-  runtime: 'react-native',
-  assetFileSystem: hostAssetFileSystem,
-});
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import {
+  createReactNativeBlobUtilAssetFileSystem,
+  registerBundleArchiveAssetFileSystem,
+} from '@bunin/react-native-micro-frontend/bundle-archive';
+
+registerBundleArchiveAssetFileSystem(
+  createReactNativeBlobUtilAssetFileSystem(ReactNativeBlobUtil),
+);
+```
+
+이 generated registration을 import했다면 Host loader는 그대로 단순하게 둘 수 있습니다:
+
+```ts
+const loadBundleArchive = createBundleArchiveLoader({ runtime: 'react-native' });
 
 const loadMfeModule = createMicroFrontendLoader({
   custom: loadBundleArchive,
 });
 ```
 
-Extracted asset은 `<cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/` 아래에 cache되고 `.rnm-assets-ready.json`이 있을 때만 재사용됩니다. 이 bundle path에서 MFE source import로 우회하지 마세요.
+`react-native-fs`, Expo FileSystem 또는 custom native module을 쓴다면 `createBundleArchiveLoader()`에 `assetFileSystem` adapter를 직접 넘기세요. 등록된 adapter와 명시 adapter가 모두 없을 때만 RNM은 `data:<mime>;base64,...` URI로 fallback합니다. base64는 호환용 fallback이며, OTA/이미지/폰트/Lottie JSON/PDF/큰 asset에는 file cache extract 경로가 기본 권장입니다.
+
+Extracted asset은 `<cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/` 아래에 cache되고 `.rnm-assets-ready.json`이 있을 때만 재사용되어 partial extract를 피합니다. 생성된 registration은 `react-native/Libraries/Image/AssetRegistry`도 externalize하므로 Metro numeric asset ID가 Host AssetRegistry를 통해 extracted `file://` URI로 resolve됩니다. 이 bundle path에서 MFE source import로 우회하지 마세요.
+
+`minitax` 같은 Host에 반영할 때는 아래만 확인하면 됩니다:
+
+1. 이 bundle-archive export가 들어간 RNM package로 Host dependency를 update/link/publish합니다.
+2. 기본 효율 좋은 file-cache 경로를 쓰려면 `react-native-blob-util` dependency를 유지합니다.
+3. `rnm init` 또는 `rnm add` 시 generated registration이 자동 import됐는지 확인합니다. 자동 import를 막아야 하면 `--no-register-archives`를 사용합니다.
+4. `rnm bundle <mfe-name> --platform ios|android --host ../host --yes`를 다시 실행해 archive asset 목록까지 포함된 `rnm.bundle-archives.ts`를 재생성합니다.
+5. Host에서 asset별 mapping을 만들 필요 없고, MFE도 asset을 수동 export하지 않습니다.
