@@ -240,9 +240,9 @@ Hot Updater처럼 archive를 만들어 Host project로 가져가려면 MFE proje
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
-이 명령은 local React Native `bundle`을 실행하고 `index.bundle`, `assets/`, `manifest.json`만 생성한 뒤 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`로 압축합니다. `--host`를 주면 `<host>/.bundle/rnm/`로 복사하고 `rnm.bundle-archives.ts`를 생성하며, `--update-registry`를 주면 `rnm.registry.json`의 `bundleArchiveUrl`도 업데이트합니다. 대화형 터미널에서는 감지한 Host entry file에서 `rnm.bundle-archives`를 import할지 묻고, `--yes` 또는 `--register-archives`를 주면 자동 적용합니다.
+이 명령은 local React Native `bundle`을 실행하고 `index.bundle`, `manifest.json`, 실제 참조된 runtime asset만 생성한 뒤 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`로 압축합니다. `--host`를 주면 `<host>/.bundle/rnm/`로 복사하고 `rnm.bundle-archives.ts`를 생성하며, `--update-registry`를 주면 `rnm.registry.json`의 `bundleArchiveUrl`도 업데이트합니다. 대화형 터미널에서는 감지한 Host entry file에서 `rnm.bundle-archives`를 import할지 묻고, `--yes` 또는 `--register-archives`를 주면 자동 적용합니다.
 
-`bundleArchiveUrl`은 `createBundleArchiveLoader()`와 함께 사용하세요. 생성된 등록 파일은 React Native가 복사된 `.tar.gz`를 asset으로 resolve하게 하고, loader는 이를 읽어 gunzip/untar한 뒤 MFE source import 없이 Metro entry module을 반환합니다.
+`bundleArchiveUrl`은 `createBundleArchiveLoader()`와 함께 사용하세요. 생성된 등록 파일은 React Native가 복사된 `.tar.gz`를 asset으로 resolve하게 하고, loader는 이를 읽어 gunzip/untar하고 manifest asset을 deterministic cache에 extract한 뒤 evaluate 전에 asset resolver를 patch해서 MFE source import 없이 Metro entry module을 반환합니다.
 
 
 ## 8. Easy Way: bundle, Hot Updater/OTA, Expo 메뉴
@@ -262,7 +262,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성합니다. Host entry import는 `--yes`로 자동 적용하거나 한 번 수동 import하세요. `rnm.registry.json`에 `bundleArchiveUrl`을 쓰려면 `--update-registry`를 추가하세요.
+`rnm bundle`은 `index.bundle`, `manifest.json`, 실제 참조된 runtime asset, `.tar.gz` archive만 만듭니다. `--no-bundle-assets`를 주지 않으면 `rnm bundle-asset`을 자동 실행합니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성합니다. Host entry import는 `--yes`로 자동 적용하거나 한 번 수동 import하세요. `rnm.registry.json`에 `bundleArchiveUrl`을 쓰려면 `--update-registry`를 추가하세요.
 
 ### 메뉴 2. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
 

@@ -61,11 +61,13 @@ EAS workflow に必要な場合は `--branch`、`--auto`、`--environment`、`--
 
 ## Bundle archive command
 
-CLI を install したあと MFE project で実行します。React Native bundling を実行し、`index.bundle`, `assets/`, `manifest.json` だけを archive にします。
+CLI を install したあと MFE project で実行します。React Native bundling を実行し、参照された runtime assets を自動収集して、`index.bundle`, `manifest.json`, 検証済み asset files だけを archive にします。
 
 ```bash
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
+
+最終 tarball を作らず asset 収集結果だけを確認する場合は `rnm bundle-asset mfe-feature --platform ios --entry ./src/index.tsx` を実行してください。Dynamic require には `--asset-glob` を fallback として使います。
 
 各 runner でも同じ形で実行できます: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, `deno run -A ... bundle`. `--host` 使用時は CLI が `rnm.bundle-archives.ts` を生成し、Host entry import を確認します。`--yes` または `--register-archives` で自動適用できます。
 
@@ -138,7 +140,7 @@ automation で非対話適用する場合は `--yes`、直接 integration comman
 | --- | --- |
 | `rnm init` | review 可能な Host config、registry、native contract、generated include files を作成します。 |
 | `rnm build` | React Native bundle command と optional archive output path を出力します。 |
-| `rnm bundle` | `index.bundle`、`assets/`、`manifest.json` だけを含む minimal archive を作成します。 |
+| `rnm bundle` | `index.bundle`、`manifest.json`、実際に参照された runtime assets だけを含む minimal archive を作成します。 |
 | `rnm diff` | Host と MFE の native contracts を比較します。 |
 | `rnm sync` | MFE block や native change 後の OTA disable など native-change decision を記録します。 |
 | `rnm status` | `rnm.registry.json` から registered MFE status を出力します。 |

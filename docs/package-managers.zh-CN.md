@@ -61,11 +61,13 @@ Expo EAS Update 可以通过 `rnm expo` 或 `rnm publish --provider expo` 使用
 
 ## Bundle archive 命令
 
-安装 CLI 后在 MFE project 中运行。它会执行 React Native bundling，并只把 `index.bundle`、`assets/` 和 `manifest.json` 打进 archive。
+安装 CLI 后在 MFE project 中运行。它会执行 React Native bundling，自动收集被引用的 runtime assets，并只把 `index.bundle`、`manifest.json` 和验证后的 asset 文件打进 archive。
 
 ```bash
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
+
+如果只想检查 asset 收集结果而不创建最终 tarball，可运行 `rnm bundle-asset mfe-feature --platform ios --entry ./src/index.tsx`。Dynamic require 场景使用 `--asset-glob` 作为 fallback。
 
 也可以通过各 runner 运行同一命令：`bunx ... bundle`、`npx ... bundle`、`pnpm dlx ... bundle`、`yarn dlx ... bundle`、`deno run -A ... bundle`。使用 `--host` 时 CLI 会生成 `rnm.bundle-archives.ts`，并询问是否导入 Host entry；传 `--yes` 或 `--register-archives` 可自动应用。
 
@@ -138,7 +140,7 @@ rnm expo mfe-feature --channel production --platform all --skip-integration
 | --- | --- |
 | `rnm init` | 创建可审查的 Host config、registry、native contract 与 generated include files。 |
 | `rnm build` | 输出 React Native bundle command 与可选 archive output path。 |
-| `rnm bundle` | 创建只包含 `index.bundle`、`assets/`、`manifest.json` 的最小 archive。 |
+| `rnm bundle` | 创建只包含 `index.bundle`、`manifest.json` 和实际引用 runtime assets 的最小 archive。 |
 | `rnm diff` | 比较 Host 与 MFE native contracts。 |
 | `rnm sync` | 记录 block MFE 或 native change 后 disable OTA 等 native-change decision。 |
 | `rnm status` | 从 `rnm.registry.json` 输出已注册 MFE 状态。 |

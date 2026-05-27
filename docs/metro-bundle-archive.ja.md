@@ -27,7 +27,7 @@ module.exports = (async () => {
 
 ## OTA publish なしの Bundle archive
 
-MFE project で `rnm bundle` を実行します。archive には `index.bundle`、`assets/`、`manifest.json` だけが含まれます。
+MFE project で `rnm bundle` を実行します。archive には `index.bundle`、`manifest.json`、そして MFE bundle が実際に参照した runtime asset files だけが含まれます。
 
 ```bash
 rnm bundle mfe-feature --platform ios --host ../host-app
@@ -36,26 +36,47 @@ rnm bundle mfe-feature --platform android --host ../host-app
 
 Host `rnm.registry.json` に `bundleArchiveUrl` を書き込む場合は `--update-registry` を追加してください。`--host` を使うと CLI は `rnm.bundle-archives.ts` も生成し、検出した Host entry file から import するか確認します。自動適用する場合は `--yes` または `--register-archives`、file 生成だけにする場合は `--no-register-archives` を使います。
 
-## Host loader boundary
+## Runtime asset pipeline
 
-`bundleArchiveUrl` は Host loader を選択します。`createBundleArchiveLoader()` は登録済み React Native archive asset を読み、gunzip/untar して、MFE source を import せず Metro entry module を返せます。
+`--no-bundle-assets` を渡さない限り、`rnm bundle` は `rnm bundle-asset` step を自動実行します。この step は MFE entry file から始め、TS/JS/TSX/JSX を AST で解析し、`require()` または `import` で参照した runtime asset だけを収集します。
 
 ```tsx
-const loadMfeModule = createMicroFrontendLoader({
-  custom: loadBundleArchive,
-});
+<Image source={require("./test.jpg")} />;
+import logo from "./assets/logo.png";
+import font from "./assets/fonts/Pretendard.ttf";
+import animation from "./assets/lottie/loading.json";
 ```
 
-CLI が自動 patch しなかった場合は、Host entry file で生成された登録 file を 1 回 import してください:
+`.ts`、`.tsx`、`.js`、`.d.ts`、`.map` などの source files は除外され、asset folder 内でも未使用 file は copy されません。生成される `manifest.json` の `assets` array には、Metro が emit した場合 `httpServerLocation`、`scales`、`hash`、`width`、`height` などの `registerAsset(...)` metadata も入ります。
+
+収集結果だけを確認する場合や dynamic require の fallback glob を渡す場合は standalone command を使います:
+
+```bash
+rnm bundle-asset mfe-feature --platform ios --entry ./src/index.tsx
+rnm bundle-asset mfe-feature --platform ios --asset-glob "src/assets/**/*"
+```
+
+## Host loader boundary
+
+`bundleArchiveUrl` は Host loader を選択します。`createBundleArchiveLoader()` は登録済み React Native archive asset を読み、gunzip/untar し、manifest asset を deterministic cache に extract し、JavaScript evaluation 前に asset resolver を patch して、MFE source を import せず Metro entry module を返します。
+
+CLI が自動 patch していない場合は、Host entry file で生成された registration を 1 回 import してください:
 
 ```ts
 import './rnm.bundle-archives';
 ```
 
-その後 loader を通常通り接続します:
+React Native では `react-native-fs`、`react-native-blob-util`、Expo FileSystem、または custom native module を使う `assetFileSystem` adapter を渡してください:
 
 ```ts
-const loadBundleArchive = createBundleArchiveLoader();
+const loadBundleArchive = createBundleArchiveLoader({
+  runtime: 'react-native',
+  assetFileSystem: hostAssetFileSystem,
+});
+
+const loadMfeModule = createMicroFrontendLoader({
+  custom: loadBundleArchive,
+});
 ```
 
-この bundle path で MFE source import に迂回しないでください。
+Extracted asset は `<cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/` に cache され、`.rnm-assets-ready.json` がある場合だけ再利用されます。この bundle path で MFE source import に戻さないでください。

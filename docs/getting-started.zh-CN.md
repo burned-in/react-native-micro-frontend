@@ -241,9 +241,9 @@ module.exports = (async () => {
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
-该命令执行本地 React Native `bundle`，只生成 `index.bundle`、`assets/` 和 `manifest.json`，然后压缩为 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`。提供 `--host` 时复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；同时提供 `--update-registry` 时更新 `rnm.registry.json` 的 `bundleArchiveUrl`。在交互式终端中，它会询问是否从检测到的 Host entry file 导入 `rnm.bundle-archives`；传 `--yes` 或 `--register-archives` 可自动应用。
+该命令执行本地 React Native `bundle`，只生成 `index.bundle`、`manifest.json` 和实际引用的 runtime assets，然后压缩为 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`。提供 `--host` 时复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；同时提供 `--update-registry` 时更新 `rnm.registry.json` 的 `bundleArchiveUrl`。在交互式终端中，它会询问是否从检测到的 Host entry file 导入 `rnm.bundle-archives`；传 `--yes` 或 `--register-archives` 可自动应用。
 
-将 `bundleArchiveUrl` 配合 `createBundleArchiveLoader()` 使用。生成的注册文件让 React Native 能把复制的 `.tar.gz` resolve 为 asset；loader 会读取它、gunzip/untar，并在不导入 MFE source 的情况下返回 Metro entry module。
+将 `bundleArchiveUrl` 配合 `createBundleArchiveLoader()` 使用。生成的注册文件让 React Native 能把复制的 `.tar.gz` resolve 为 asset；loader 会读取它、gunzip/untar，将 manifest assets 解压到 deterministic cache，在 evaluation 前 patch asset resolver，并在不导入 MFE source 的情况下返回 Metro entry module。
 
 
 ## 8. Easy Way：bundle、Hot Updater/OTA、Expo 菜单
@@ -263,7 +263,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；用 `--yes` 自动导入 Host entry，或手动导入一次。想把 `bundleArchiveUrl` 写入 `rnm.registry.json` 时添加 `--update-registry`。
+`rnm bundle` 只生成 `index.bundle`、`manifest.json`、实际引用的 runtime assets 和 `.tar.gz` archive。除非传入 `--no-bundle-assets`，否则会自动运行 `rnm bundle-asset`。`--host` 会复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；用 `--yes` 自动导入 Host entry，或手动导入一次。想把 `bundleArchiveUrl` 写入 `rnm.registry.json` 时添加 `--update-registry`。
 
 ### 菜单 2. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 

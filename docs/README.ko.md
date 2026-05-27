@@ -36,7 +36,7 @@ Hot Updater를 대체하지 않습니다. Hot Updater는 OTA delivery engine이�
 | OTA gate                | native assumption이 host binary와 맞지 않으면 OTA를 차단합니다.                                                                                                                   |
 | Runtime policy          | blocked/incompatible MFE를 로드하지 않고 fallback을 보여 줍니다.                                                                                                                  |
 | Metro integration       | `withMfe`가 Metro config를 merge하고 registered MFE root와 shared package를 Host `node_modules`로 자동 매핑합니다. `rnm build`는 inspect 가능한 bundle command를 계속 출력합니다. |
-| Bundle archive          | `rnm bundle`이 React Native bundling을 실행하고 `index.bundle`, Metro `assets/`, `manifest.json`만 묶어 Host copy/CDN delivery에 사용하게 합니다.                                 |
+| Bundle archive          | `rnm bundle`이 React Native bundling을 실행하고 `index.bundle`, `manifest.json`, 실제 참조된 runtime asset만 묶어 Host copy/CDN delivery에 사용하게 합니다.                                 |
 | Hot Updater adapter     | 기존 Hot Updater 배포 흐름을 그대로 재사용합니다.                                                                                                                                 |
 | Package manager support | Bun, npm, pnpm, Yarn, Deno consumer workflow를 지원합니다.                                                                                                                        |
 | Expo 지원             | Expo managed, prebuild, bare/prebuilt Host App을 지원합니다. native folder가 없으면 watcher가 Expo config plugin을 생성합니다.                                                   |
@@ -87,7 +87,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성한 뒤, 대화형 터미널에서는 Host entry import 여부를 묻습니다. `--yes` 또는 `--register-archives`를 주면 자동 등록하고, `bundleArchiveUrl`을 registry에 쓰려면 `--update-registry`를 추가하세요. Host에서는 `createBundleArchiveLoader()`가 등록된 archive asset을 읽어 gunzip/untar 후 Metro entry module을 반환합니다.
+`rnm bundle`은 `index.bundle`, `manifest.json`, 실제 참조된 runtime asset, `.tar.gz` archive만 만듭니다. `--no-bundle-assets`를 주지 않으면 `rnm bundle-asset`을 자동 실행합니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성한 뒤, 대화형 터미널에서는 Host entry import 여부를 묻습니다. `--yes` 또는 `--register-archives`를 주면 자동 등록하고, `bundleArchiveUrl`을 registry에 쓰려면 `--update-registry`를 추가하세요. Host에서는 `createBundleArchiveLoader()`가 등록된 archive asset을 읽어 gunzip/untar하고 manifest assets를 deterministic cache에 extract한 뒤 Metro entry module을 반환합니다.
 
 ### 메뉴 2. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
 
@@ -517,7 +517,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 의미:
 
 - 명령 출력만 하지 않고 local React Native `bundle`을 실행합니다.
-- `index.bundle`, Metro `assets/`, `manifest.json`만 산출합니다.
+- `index.bundle`, `manifest.json`, 실제 참조된 runtime asset만 산출합니다.
 - 해당 파일만 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`로 압축합니다.
 - `--host`를 주면 archive를 `<host>/.bundle/rnm/`로 복사하고 `rnm.bundle-archives.ts`를 생성합니다.
 - 대화형 터미널에서는 Host entry import 여부를 묻고, `--yes` 또는 `--register-archives`를 주면 자동으로 `import './rnm.bundle-archives';`를 추가합니다.

@@ -177,7 +177,7 @@ export const features: readonly Feature[] = [
   },
   {
     title: 'Minimal bundle archives',
-    body: 'rnm bundle runs React Native bundling and archives only index.bundle, Metro assets, and manifest.json for Host copy or CDN delivery.',
+    body: 'rnm bundle runs React Native bundling, collects only referenced runtime assets, and archives index.bundle, manifest.json, and the verified asset files for Host copy or CDN delivery.',
   },
   {
     title: 'Host-provided state',
@@ -272,7 +272,7 @@ rnm publish mfe-feature --package-manager bun --channel production`,
     eyebrow: 'Easy Way',
     title: 'Pick the menu you need: bundle, Hot Updater/OTA, or Expo.',
     body: [
-      'Bundle creates a portable archive containing only index.bundle, assets, and manifest.json, then can copy it to the Host and write bundleArchiveUrl.',
+      'Bundle creates a portable archive containing index.bundle, manifest.json, and only referenced runtime assets, then can copy it to the Host and write bundleArchiveUrl.',
       'OTA keeps Hot Updater or your custom OTA engine in charge of distribution after native-safety verification passes.',
       'Expo uses the same safety checks with EAS Update through rnm expo.',
     ],
@@ -314,7 +314,7 @@ npx expo prebuild`,
     title: 'Use withMfe for Metro, and rnm bundle for portable artifacts.',
     body: [
       'withMfe merges your Metro config with MFE watchFolders and shared-package aliases from rnm.registry.json, so manual extraNodeModules setup is no longer the default path.',
-      'When you need a Hot-Updater-like artifact, run rnm bundle in the MFE project. It packages only index.bundle, assets, and manifest.json, copies the archive into the Host project, and can auto-import the generated React Native archive registration.',
+      'When you need a Hot-Updater-like artifact, run rnm bundle in the MFE project. It packages index.bundle, manifest.json, and only referenced runtime assets, copies the archive into the Host project, and can auto-import the generated React Native archive registration.',
     ],
     code: `// host-app/metro.config.js
 const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
@@ -521,7 +521,7 @@ module.exports = (async () => {
     eyebrow: 'Step 7',
     title: 'Bundle only the files the Host needs.',
     body: [
-      'Run rnm bundle inside the MFE project when you want a Hot-Updater-like archive. It executes React Native bundling, writes index.bundle, assets, and manifest.json, then compresses only those files.',
+      'Run rnm bundle inside the MFE project when you want a Hot-Updater-like archive. It executes React Native bundling, writes index.bundle, manifest.json, and the verified runtime asset set, then compresses only those files.',
       'Use --host to copy the archive into the Host project. The CLI generates rnm.bundle-archives.ts and asks whether to import it from the Host entry file; use --yes or --register-archives for automatic registration, and --update-registry to set bundleArchiveUrl.',
     ],
     code: `# in mfe-feature/
@@ -538,7 +538,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
     eyebrow: 'Easy Way',
     title: 'Use bundle, Hot Updater/OTA, or Expo.',
     body: [
-      'Bundle is the portable archive style. Run rnm bundle in the MFE project to produce only index.bundle, assets, manifest.json, and a .tar.gz; use bundleArchiveUrl with createBundleArchiveLoader and the generated archive registration.',
+      'Bundle is the portable archive style. Run rnm bundle in the MFE project to produce index.bundle, manifest.json, verified runtime assets, and a .tar.gz; use bundleArchiveUrl with createBundleArchiveLoader and the generated archive registration.',
       'OTA is the remote delivery style. Register with hot-updater, Expo, or custom OTA metadata, run verify before publish, and let the OTA engine distribute and evaluate JavaScript only after native-safety checks pass.',
       'You do not need to pass an isMfe prop. MicroFrontendComponent automatically marks the loaded subtree as MFE context.',
     ],
@@ -573,7 +573,7 @@ export const easyWaySections: readonly DocSection[] = [
     title: 'Bundle: create a portable archive without OTA publish.',
     body: [
       'Choose Bundle when the MFE project should produce an artifact that can be copied into the Host, attached to a release, or uploaded to your own storage.',
-      'Run rnm bundle from the MFE project. The archive contains only index.bundle, assets, and manifest.json.',
+      'Run rnm bundle from the MFE project. The archive contains index.bundle, manifest.json, and only referenced runtime asset files.',
       'If you do not want OTA metadata, omit --update-registry. With --host, RNM still generates rnm.bundle-archives.ts; accept the prompt or pass --yes so the Host entry imports it.',
     ],
     code: `# mfe-feature/
@@ -661,7 +661,7 @@ module.exports = (async () => {
     eyebrow: 'Bundle archive',
     title: 'Create only the archive files the Host needs.',
     body: [
-      'Run rnm bundle in the MFE project when you need a portable artifact without OTA publish. The archive contains only index.bundle, assets, and manifest.json.',
+      'Run rnm bundle in the MFE project when you need a portable artifact without OTA publish. The archive contains index.bundle, manifest.json, and only referenced runtime asset files.',
       '--host copies the .tar.gz into <host>/.bundle/rnm/ and generates rnm.bundle-archives.ts. Accept the prompt, or pass --yes/--register-archives, so the Host entry imports the generated archive registration. Add --update-registry when you want bundleArchiveUrl in the Host registry.',
     ],
     code: `# in mfe-feature/
@@ -673,13 +673,42 @@ rnm bundle mfe-feature --platform android --host ../host-app --yes
 # host-app/.bundle/rnm/mfe-feature.android.ota.tar.gz`,
   },
   {
+    eyebrow: 'Runtime assets',
+    title: 'Bundle assets are collected automatically from require/import.',
+    body: [
+      'rnm bundle runs the bundle-asset step by default. It follows the MFE entry file, parses TypeScript/JavaScript with an AST, collects runtime assets referenced by require() and import, then writes them into manifest.json under assets.',
+      'Source files such as .ts, .tsx, .js, .d.ts, and .map are excluded. Unused files in asset folders are not copied. Metro registerAsset metadata is matched back into the manifest, and Metro-only assets are still included when they appear in the final bundle registry.',
+      'Use rnm bundle-asset directly when you want to inspect the asset manifest. Use --asset-glob only for dynamic require patterns that cannot be resolved statically; use --no-bundle-assets only when you intentionally want the old asset-free path.',
+    ],
+    code: `// MFE source: no manual registration required
+<Image source={require("./test.jpg")} />;
+import logo from "./assets/logo.png";
+import font from "./assets/fonts/Pretendard.ttf";
+import animation from "./assets/lottie/loading.json";
+
+# inspect asset collection directly
+rnm bundle-asset mfe-feature --platform ios --entry ./src/index.tsx
+
+# normal bundle runs the same step automatically
+rnm bundle mfe-feature --platform ios --host ../host-app --yes`,
+  },
+  {
     eyebrow: 'Host loader',
     title: 'loadBundleArchive is the Host-owned evaluation boundary.',
     body: [
-      'The runtime selects your Host loader when bundleArchiveUrl is present. createBundleArchiveLoader reads registered React Native archive assets, gunzips/untars them, and returns the Metro entry module without importing MFE source.',
-      'A production loadBundleArchive should read or download the archive, verify integrity, unpack index.bundle/assets/manifest.json, and evaluate the bundle through your Host runtime or OTA engine. Do not fall back to importing MFE source in the bundle path.',
+      'The runtime selects your Host loader when bundleArchiveUrl is present. createBundleArchiveLoader reads registered React Native archive assets, gunzips/untars them, extracts manifest assets into a deterministic cache, patches the asset resolver before evaluation, and returns the Metro entry module without importing MFE source.',
+      'In React Native, pass an assetFileSystem adapter backed by react-native-fs, react-native-blob-util, Expo FileSystem, or a custom native module. The cache path is <cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/ and is reused only after .rnm-assets-ready.json exists.',
+      'A production loadBundleArchive should read or download the archive, verify integrity, unpack index.bundle, manifest.json, and referenced runtime assets, then evaluate the bundle through your Host runtime or OTA engine. Do not fall back to importing MFE source in the bundle path.',
     ],
-    code: `const loadMfeModule = createMicroFrontendLoader({
+    code: `import { createBundleArchiveLoader } from "@bunin/react-native-micro-frontend/bundle-archive";
+import { createMicroFrontendLoader } from "@bunin/react-native-micro-frontend/runtime";
+
+const loadBundleArchive = createBundleArchiveLoader({
+  runtime: "react-native",
+  assetFileSystem: hostAssetFileSystem,
+});
+
+const loadMfeModule = createMicroFrontendLoader({
   custom: loadBundleArchive,
 });
 
@@ -2055,7 +2084,7 @@ export const localizedGuides = {
         eyebrow: '7단계',
         title: 'Host가 필요한 파일만 bundle로 묶습니다.',
         body: [
-          'Hot-Updater-like archive가 필요하면 MFE project에서 rnm bundle을 실행합니다. React Native bundling을 실행하고 index.bundle, assets, manifest.json만 압축합니다.',
+          'Hot-Updater-like archive가 필요하면 MFE project에서 rnm bundle을 실행합니다. React Native bundling을 실행하고 index.bundle, manifest.json, 검증된 runtime asset set만 압축합니다.',
           '--host로 Host project에 복사합니다. CLI는 rnm.bundle-archives.ts를 생성하고 Host entry import 여부를 묻습니다. 자동 등록하려면 --yes 또는 --register-archives를 사용하고, rnm.registry.json의 bundleArchiveUrl을 설정하려면 --update-registry를 추가합니다.',
         ],
         code: gettingStartedSections[7]?.code ?? '',
@@ -2064,7 +2093,7 @@ export const localizedGuides = {
         eyebrow: 'Easy Way',
         title: 'bundle, Hot Updater/OTA, Expo 메뉴 중 하나를 고릅니다.',
         body: [
-          'Bundle은 portable archive 방식입니다. MFE project에서 rnm bundle을 실행해 index.bundle, assets, manifest.json, .tar.gz만 만들고 bundleArchiveUrl을 createBundleArchiveLoader 및 생성된 archive registration에 연결합니다.',
+          'Bundle은 portable archive 방식입니다. MFE project에서 rnm bundle을 실행해 index.bundle, manifest.json, 검증된 runtime assets, .tar.gz를 만들고 bundleArchiveUrl을 createBundleArchiveLoader 및 생성된 archive registration에 연결합니다.',
           'OTA는 원격 배포 방식입니다. hot-updater 또는 custom OTA metadata로 등록하고 publish 전에 verify를 실행하며, native-safety check 통과 후 OTA engine이 배포와 evaluation을 담당합니다.',
           'isMfe prop은 따로 넘길 필요가 없습니다. MicroFrontendComponent가 loaded subtree를 자동으로 MFE context로 표시합니다.',
         ],
@@ -2077,7 +2106,7 @@ export const localizedGuides = {
         title: 'Bundle: OTA publish 없이 portable archive를 만듭니다.',
         body: [
           'MFE project에서 Host로 복사하거나 release artifact/storage에 올릴 archive가 필요할 때 선택합니다.',
-          'MFE project에서 rnm bundle을 실행하면 index.bundle, assets, manifest.json만 archive에 들어갑니다.',
+          'MFE project에서 rnm bundle을 실행하면 index.bundle, manifest.json, 실제 참조된 runtime asset만 archive에 들어갑니다.',
           'OTA metadata를 원하지 않으면 --update-registry를 빼세요. --host를 쓰면 RNM은 그래도 rnm.bundle-archives.ts를 생성하므로 prompt를 수락하거나 --yes로 Host entry import까지 적용하세요.',
         ],
         code: easyWaySections[0]?.code ?? '',
@@ -2123,19 +2152,30 @@ npx expo prebuild`,
         eyebrow: 'Bundle archive',
         title: 'Host가 필요한 archive 파일만 만듭니다.',
         body: [
-          'OTA publish 없이 portable artifact가 필요하면 MFE project에서 rnm bundle을 실행합니다. archive에는 index.bundle, assets, manifest.json만 들어갑니다.',
+          'OTA publish 없이 portable artifact가 필요하면 MFE project에서 rnm bundle을 실행합니다. archive에는 index.bundle, manifest.json, 실제 참조된 runtime asset만 들어갑니다.',
           '--host는 .tar.gz를 <host>/.bundle/rnm/로 복사하고 rnm.bundle-archives.ts를 생성합니다. prompt를 수락하거나 --yes/--register-archives를 주면 Host entry가 생성된 archive registration을 import합니다. Host registry에 bundleArchiveUrl을 쓰려면 --update-registry를 추가하세요.',
         ],
         code: metroBundleSections[1]?.code ?? '',
       },
       {
+        eyebrow: 'Runtime assets',
+        title: 'require/import asset은 bundle 시 자동 수집됩니다.',
+        body: [
+          'rnm bundle은 기본적으로 bundle-asset 단계를 실행합니다. MFE entry에서 TypeScript/JavaScript AST를 따라가며 require()와 import로 참조된 runtime asset만 모으고, manifest.json의 assets 필드에 기록합니다.',
+          '.ts, .tsx, .js, .d.ts, .map 같은 source 파일은 제외합니다. asset 폴더에 있어도 실제 참조되지 않은 파일은 복사하지 않습니다. 최종 Metro bundle에 나타난 registerAsset metadata도 manifest와 매칭하며, Metro registry에만 나타난 asset도 포함합니다.',
+          '수집 결과만 확인하려면 rnm bundle-asset을 직접 실행하세요. 정적 해석이 불가능한 dynamic require에는 --asset-glob을 fallback으로 사용하고, 자동 수집을 끄려면 --no-bundle-assets를 명시합니다.',
+        ],
+        code: metroBundleSections[2]?.code ?? '',
+      },
+      {
         eyebrow: 'Host loader',
         title: 'loadBundleArchive가 Host-owned evaluation boundary입니다.',
         body: [
-          'bundleArchiveUrl이 있으면 runtime은 Host loader를 선택합니다. createBundleArchiveLoader는 등록된 React Native archive asset을 읽고 gunzip/untar한 뒤 MFE source import 없이 Metro entry module을 반환합니다.',
-          'production loadBundleArchive는 archive 읽기/download, integrity 검증, index.bundle/assets/manifest.json 압축 해제, Host runtime 또는 OTA engine을 통한 evaluation을 담당해야 합니다. bundle path에서 MFE source import로 우회하지 마세요.',
+          'bundleArchiveUrl이 있으면 runtime은 Host loader를 선택합니다. createBundleArchiveLoader는 등록된 React Native archive asset을 읽고 gunzip/untar한 뒤, manifest asset을 deterministic cache에 extract하고 JS evaluate 전에 asset resolver를 patch해서 MFE source import 없이 Metro entry module을 반환합니다.',
+          'React Native Host에서는 react-native-fs, react-native-blob-util, Expo FileSystem 또는 custom native module 기반 assetFileSystem adapter를 넘기세요. cache path는 <cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/이며 .rnm-assets-ready.json marker가 있을 때만 재사용합니다.',
+          'production loadBundleArchive는 archive 읽기/download, integrity 검증, index.bundle, manifest.json, 실제 참조된 runtime asset 압축 해제, Host runtime 또는 OTA engine을 통한 evaluation을 담당해야 합니다. bundle path에서 MFE source import로 우회하지 마세요.',
         ],
-        code: metroBundleSections[2]?.code ?? '',
+        code: metroBundleSections[3]?.code ?? '',
       },
     ],
     cliCommandSections: [
@@ -2466,7 +2506,7 @@ npx expo prebuild`,
         eyebrow: '步骤 7',
         title: '只 bundle Host 需要的文件。',
         body: [
-          '需要 Hot-Updater-like archive 时，在 MFE project 中运行 rnm bundle。它执行 React Native bundling，只压缩 index.bundle、assets 和 manifest.json。',
+          '需要 Hot-Updater-like archive 时，在 MFE project 中运行 rnm bundle。它执行 React Native bundling，只压缩 index.bundle、manifest.json 和已验证的 runtime asset set。',
           '用 --host 复制到 Host project。CLI 会生成 rnm.bundle-archives.ts，并询问是否导入到 Host entry。要自动注册请使用 --yes 或 --register-archives；要设置 rnm.registry.json 的 bundleArchiveUrl 请添加 --update-registry。',
         ],
         code: gettingStartedSections[7]?.code ?? '',
@@ -2475,7 +2515,7 @@ npx expo prebuild`,
         eyebrow: 'Easy Way',
         title: '在 bundle、Hot Updater/OTA、Expo 菜单中选择一个。',
         body: [
-          'Bundle 是 portable archive 方式。在 MFE project 中运行 rnm bundle，只生成 index.bundle、assets、manifest.json 和 .tar.gz，并通过 createBundleArchiveLoader 与生成的 archive registration 使用 bundleArchiveUrl。',
+          'Bundle 是 portable archive 方式。在 MFE project 中运行 rnm bundle，生成 index.bundle、manifest.json、已验证的 runtime assets 和 .tar.gz，并通过 createBundleArchiveLoader 与生成的 archive registration 使用 bundleArchiveUrl。',
           'OTA 是远程发布方式。使用 hot-updater 或 custom OTA metadata 注册，publish 前运行 verify，并在 native-safety check 通过后由 OTA engine 负责分发和 evaluation。',
           '不需要传 isMfe prop。MicroFrontendComponent 会自动把 loaded subtree 标记为 MFE context。',
         ],
@@ -2488,7 +2528,7 @@ npx expo prebuild`,
         title: 'Bundle：不做 OTA publish，只创建 portable archive。',
         body: [
           '当 MFE project 需要生成可复制到 Host、附加到 release 或上传到自有 storage 的 artifact 时选择 Bundle。',
-          '在 MFE project 中运行 rnm bundle，archive 只包含 index.bundle、assets 和 manifest.json。',
+          '在 MFE project 中运行 rnm bundle，archive 包含 index.bundle、manifest.json 和实际引用的 runtime asset。',
           '如果不需要 OTA metadata，就不要传 --update-registry。使用 --host 时 RNM 仍会生成 rnm.bundle-archives.ts；请接受提示或传 --yes，让 Host entry 导入它。',
         ],
         code: easyWaySections[0]?.code ?? '',
@@ -2534,19 +2574,30 @@ npx expo prebuild`,
         eyebrow: 'Bundle archive',
         title: '只创建 Host 需要的 archive 文件。',
         body: [
-          '如果需要不做 OTA publish 的 portable artifact，请在 MFE project 中运行 rnm bundle。archive 只包含 index.bundle、assets 和 manifest.json。',
+          '如果需要不做 OTA publish 的 portable artifact，请在 MFE project 中运行 rnm bundle。archive 包含 index.bundle、manifest.json 和实际引用的 runtime asset。',
           '--host 会把 .tar.gz 复制到 <host>/.bundle/rnm/ 并生成 rnm.bundle-archives.ts。接受提示，或传 --yes/--register-archives，让 Host entry 导入生成的 archive registration。需要把 bundleArchiveUrl 写入 Host registry 时添加 --update-registry。',
         ],
         code: metroBundleSections[1]?.code ?? '',
       },
       {
+        eyebrow: 'Runtime assets',
+        title: 'require/import asset 会在 bundle 时自动收集。',
+        body: [
+          'rnm bundle 默认运行 bundle-asset 阶段。它从 MFE entry 出发，用 TypeScript/JavaScript AST 追踪 require() 与 import 引用的 runtime asset，并写入 manifest.json 的 assets 字段。',
+          '.ts、.tsx、.js、.d.ts、.map 等 source 文件会被排除。即使文件位于 asset 目录，只要没有实际引用就不会复制。最终 Metro bundle 中的 registerAsset metadata 也会回填到 manifest，只有 Metro registry 中出现的 asset 也会被包含。',
+          '如果只想检查收集结果，可直接运行 rnm bundle-asset。无法静态解析的 dynamic require 使用 --asset-glob 作为 fallback；如需关闭自动收集，显式传 --no-bundle-assets。',
+        ],
+        code: metroBundleSections[2]?.code ?? '',
+      },
+      {
         eyebrow: 'Host loader',
         title: 'loadBundleArchive 是 Host-owned evaluation boundary。',
         body: [
-          '存在 bundleArchiveUrl 时 runtime 会选择 Host loader。createBundleArchiveLoader 会读取已注册的 React Native archive asset，gunzip/untar，并在不导入 MFE source 的情况下返回 Metro entry module。',
-          'production loadBundleArchive 应负责读取/下载 archive、校验 integrity、解压 index.bundle/assets/manifest.json，并通过 Host runtime 或 OTA engine evaluate。不要在 bundle path 中退回到 import MFE source。',
+          '存在 bundleArchiveUrl 时 runtime 会选择 Host loader。createBundleArchiveLoader 会读取已注册的 React Native archive asset，gunzip/untar，把 manifest asset extract 到 deterministic cache，并在 JS evaluate 前 patch asset resolver，然后在不导入 MFE source 的情况下返回 Metro entry module。',
+          'React Native Host 应传入基于 react-native-fs、react-native-blob-util、Expo FileSystem 或 custom native module 的 assetFileSystem adapter。cache path 为 <cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/，只有 .rnm-assets-ready.json marker 存在时才复用。',
+          'production loadBundleArchive 应负责读取/下载 archive、校验 integrity、解压 index.bundle、manifest.json 和实际引用的 runtime assets，并通过 Host runtime 或 OTA engine evaluate。不要在 bundle path 中退回到 import MFE source。',
         ],
-        code: metroBundleSections[2]?.code ?? '',
+        code: metroBundleSections[3]?.code ?? '',
       },
     ],
     cliCommandSections: [
@@ -2868,7 +2919,7 @@ beerware spirit: appreciated`,
         eyebrow: 'Step 7',
         title: 'Host が必要な files だけを bundle します。',
         body: [
-          'Hot-Updater-like archive が必要な場合は MFE project で rnm bundle を実行します。React Native bundling を実行し、index.bundle、assets、manifest.json だけを圧縮します。',
+          'Hot-Updater-like archive が必要な場合は MFE project で rnm bundle を実行します。React Native bundling を実行し、index.bundle、manifest.json、検証済み runtime asset set だけを圧縮します。',
           '--host で Host project へ copy します。CLI は rnm.bundle-archives.ts を生成し、Host entry に import するか確認します。自動登録は --yes または --register-archives、rnm.registry.json の bundleArchiveUrl 設定は --update-registry を追加します。',
         ],
         code: gettingStartedSections[7]?.code ?? '',
@@ -2877,7 +2928,7 @@ beerware spirit: appreciated`,
         eyebrow: 'Easy Way',
         title: 'bundle、Hot Updater/OTA、Expo のメニューから選びます。',
         body: [
-          'Bundle は portable archive 方式です。MFE project で rnm bundle を実行し、index.bundle、assets、manifest.json、.tar.gz だけを作成して bundleArchiveUrl を createBundleArchiveLoader と生成された archive registration に接続します。',
+          'Bundle は portable archive 方式です。MFE project で rnm bundle を実行し、index.bundle、manifest.json、検証済み runtime assets、.tar.gz を作成して bundleArchiveUrl を createBundleArchiveLoader と生成された archive registration に接続します。',
           'OTA は remote delivery 方式です。hot-updater または custom OTA metadata で登録し、publish 前に verify を実行し、native-safety check 通過後は OTA engine が配布と evaluation を担当します。',
           'isMfe prop を渡す必要はありません。MicroFrontendComponent が loaded subtree を自動で MFE context として mark します。',
         ],
@@ -2890,7 +2941,7 @@ beerware spirit: appreciated`,
         title: 'Bundle: OTA publish なしで portable archive を作ります。',
         body: [
           'MFE project から Host に copy したり、release artifact/storage に upload する artifact が必要な場合に Bundle を選びます。',
-          'MFE project で rnm bundle を実行すると、archive には index.bundle、assets、manifest.json だけが入ります。',
+          'MFE project で rnm bundle を実行すると、archive には index.bundle、manifest.json、実際に参照された runtime asset だけが入ります。',
           'OTA metadata が不要なら --update-registry を外します。--host を使うと RNM は rnm.bundle-archives.ts を生成するため、prompt を受け入れるか --yes で Host entry import まで適用してください。',
         ],
         code: easyWaySections[0]?.code ?? '',
@@ -2936,19 +2987,30 @@ npx expo prebuild`,
         eyebrow: 'Bundle archive',
         title: 'Host が必要な archive files だけを作成します。',
         body: [
-          'OTA publish なしの portable artifact が必要な場合は、MFE project で rnm bundle を実行します。archive には index.bundle、assets、manifest.json だけが含まれます。',
+          'OTA publish なしの portable artifact が必要な場合は、MFE project で rnm bundle を実行します。archive には index.bundle、manifest.json、実際に参照された runtime asset だけが含まれます。',
           '--host は .tar.gz を <host>/.bundle/rnm/ に copy し、rnm.bundle-archives.ts を生成します。prompt を受け入れるか --yes/--register-archives を渡すと、Host entry が生成された archive registration を import します。Host registry に bundleArchiveUrl を書く場合は --update-registry を追加してください。',
         ],
         code: metroBundleSections[1]?.code ?? '',
       },
       {
+        eyebrow: 'Runtime assets',
+        title: 'require/import asset は bundle 時に自動収集されます。',
+        body: [
+          'rnm bundle は既定で bundle-asset step を実行します。MFE entry から TypeScript/JavaScript AST をたどり、require() と import で参照された runtime asset だけを集め、manifest.json の assets field に書き込みます。',
+          '.ts、.tsx、.js、.d.ts、.map などの source file は除外します。asset folder 内でも実際に参照されない file は copy しません。最終 Metro bundle の registerAsset metadata も manifest に matching し、Metro registry にだけ現れた asset も含めます。',
+          '収集結果だけを確認する場合は rnm bundle-asset を直接実行してください。静的解析できない dynamic require には --asset-glob を fallback として使い、自動収集を切る場合は --no-bundle-assets を明示します。',
+        ],
+        code: metroBundleSections[2]?.code ?? '',
+      },
+      {
         eyebrow: 'Host loader',
         title: 'loadBundleArchive が Host-owned evaluation boundary です。',
         body: [
-          'bundleArchiveUrl がある場合、runtime は Host loader を選択します。createBundleArchiveLoader は登録済み React Native archive asset を読み、gunzip/untar し、MFE source を import せず Metro entry module を返します。',
-          'production loadBundleArchive は archive の read/download、integrity verification、index.bundle/assets/manifest.json の unpack、Host runtime または OTA engine による evaluation を担当します。bundle path で MFE source import に戻さないでください。',
+          'bundleArchiveUrl がある場合、runtime は Host loader を選択します。createBundleArchiveLoader は登録済み React Native archive asset を読み、gunzip/untar し、manifest asset を deterministic cache に extract し、JS evaluate 前に asset resolver を patch して、MFE source を import せず Metro entry module を返します。',
+          'React Native Host では react-native-fs、react-native-blob-util、Expo FileSystem、または custom native module による assetFileSystem adapter を渡してください。cache path は <cacheRoot>/rnm-assets/<mfeName>/<version>/<platform>/<bundleHash>/ で、.rnm-assets-ready.json marker がある場合だけ再利用します。',
+          'production loadBundleArchive は archive の read/download、integrity verification、index.bundle、manifest.json、実際に参照された runtime assets の unpack、Host runtime または OTA engine による evaluation を担当します。bundle path で MFE source import に戻さないでください。',
         ],
-        code: metroBundleSections[2]?.code ?? '',
+        code: metroBundleSections[3]?.code ?? '',
       },
     ],
     cliCommandSections: [

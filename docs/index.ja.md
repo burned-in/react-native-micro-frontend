@@ -39,7 +39,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-`index.bundle`、`assets/`、`manifest.json` だけを含む `.tar.gz` を作り、`--update-registry` を外すと bundle-only/no-OTA flow のままです。
+`index.bundle`、`manifest.json`、実際に参照された runtime assets を含む `.tar.gz` を作り、`--update-registry` を外すと bundle-only/no-OTA flow のままです。
 
 ### 2. OTA — Hot Updater/custom delivery
 
@@ -72,5 +72,5 @@ MFE を登録
 - **No hidden native patches**: generated file と manual integration を review 可能に保ちます。
 - **Hot Updater compatible**: compatibility check 後に Hot Updater へ OTA delivery を委譲します。
 - **Metro-ready by default**: `withMfe` が Metro config を merge し、registered MFE root と shared package alias を自動設定します。
-- **Portable bundle archives**: `rnm bundle` は `index.bundle`, `assets/`, `manifest.json` だけを package し、Host copy/CDN upload に使えます。
+- **Portable bundle archives**: `rnm bundle` は `index.bundle`, `manifest.json`, 実際に参照された runtime assets を package し、Host copy/CDN upload に使えます。
 - **Host-provided shared state**: Host から session、locale、feature flags を MFE に安全に提供できます。

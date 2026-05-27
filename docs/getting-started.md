@@ -235,9 +235,9 @@ Run this in the MFE project when you want a Hot-Updater-like archive that can be
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
-The command executes the local React Native `bundle`, writes only `index.bundle`, `assets/`, and `manifest.json`, compresses them into `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`, copies the archive to `<host>/.bundle/rnm/`, generates `rnm.bundle-archives.ts`, and updates `bundleArchiveUrl` in `rnm.registry.json` when `--update-registry` is set. In an interactive terminal it asks whether to import `rnm.bundle-archives` from the detected Host entry file; pass `--yes` or `--register-archives` to apply automatically.
+The command executes the local React Native `bundle`, writes `index.bundle`, `manifest.json`, and only referenced runtime assets, compresses them into `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`, copies the archive to `<host>/.bundle/rnm/`, generates `rnm.bundle-archives.ts`, and updates `bundleArchiveUrl` in `rnm.registry.json` when `--update-registry` is set. In an interactive terminal it asks whether to import `rnm.bundle-archives` from the detected Host entry file; pass `--yes` or `--register-archives` to apply automatically.
 
-Use `bundleArchiveUrl` with `createBundleArchiveLoader()`. The generated registration file lets React Native resolve the copied `.tar.gz` as an asset; the loader reads it, gunzips/untars it, and returns the Metro entry module without importing MFE source.
+Use `bundleArchiveUrl` with `createBundleArchiveLoader()`. The generated registration file lets React Native resolve the copied `.tar.gz` as an asset; the loader reads it, gunzips/untars it, extracts manifest assets into a deterministic cache, patches the asset resolver before evaluation, and returns the Metro entry module without importing MFE source.
 
 
 ## 8. Easy Way: bundle, Hot Updater/OTA, Expo menus
@@ -257,7 +257,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` creates only `index.bundle`, `assets/`, `manifest.json`, and a `.tar.gz` archive. `--host` copies it to `<host>/.bundle/rnm/` and generates `rnm.bundle-archives.ts`; use `--yes` for automatic Host entry import, or import it manually once. Add `--update-registry` when you want `bundleArchiveUrl` in `rnm.registry.json`.
+`rnm bundle` creates `index.bundle`, `manifest.json`, only referenced runtime assets, and a `.tar.gz` archive. It runs `rnm bundle-asset` automatically unless `--no-bundle-assets` is passed. `--host` copies it to `<host>/.bundle/rnm/` and generates `rnm.bundle-archives.ts`; use `--yes` for automatic Host entry import, or import it manually once. Add `--update-registry` when you want `bundleArchiveUrl` in `rnm.registry.json`.
 
 ### Menu 2. OTA — publish through Hot Updater or a custom OTA pipeline
 

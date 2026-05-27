@@ -30,7 +30,7 @@ React Native Micro Frontend
 | OTA gate                | 当 native assumptions 与 host binary 不一致时阻止 OTA。                                                                                              |
 | Runtime policy          | 拒绝加载 blocked/incompatible MFE，并安全 fallback。                                                                                                 |
 | Metro integration       | `withMfe` merge Metro config，自动把 registered MFE root 与 shared package 映射到 Host `node_modules`；`rnm build` 仍会打印可审查的 bundle command。 |
-| Bundle archive          | `rnm bundle` 执行 React Native bundling，只归档 `index.bundle`、Metro `assets/` 和 `manifest.json`，用于 Host copy/CDN delivery。                    |
+| Bundle archive          | `rnm bundle` 执行 React Native bundling，只归档 `index.bundle`、`manifest.json` 和实际引用的 runtime assets，用于 Host copy/CDN delivery。                    |
 | Hot Updater adapter     | 复用现有 Hot Updater 发布流程。                                                                                                                      |
 | Package manager support | 支持 Bun、npm、pnpm、Yarn、Deno 的使用方 workflow。                                                                                                  |
 | Expo 支持             | 支持 Expo managed、prebuild、bare/prebuilt Host App；native folders 不存在时 watcher 会生成 Expo config plugin。                                                                  |
@@ -81,7 +81,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`，生成 `rnm.bundle-archives.ts`，并在交互式终端询问是否导入 Host entry。传 `--yes` 或 `--register-archives` 可自动注册；要把 `bundleArchiveUrl` 写入 registry 时添加 `--update-registry`。Host 侧的 `createBundleArchiveLoader()` 会读取已注册的 archive asset，gunzip/untar 后返回 Metro entry module。
+`rnm bundle` 只生成 `index.bundle`、`manifest.json`、实际引用的 runtime assets 和 `.tar.gz` archive。除非传入 `--no-bundle-assets`，否则会自动运行 `rnm bundle-asset`。`--host` 会复制到 `<host>/.bundle/rnm/`，生成 `rnm.bundle-archives.ts`，并在交互式终端询问是否导入 Host entry。传 `--yes` 或 `--register-archives` 可自动注册；要把 `bundleArchiveUrl` 写入 registry 时添加 `--update-registry`。Host 侧的 `createBundleArchiveLoader()` 会读取已注册的 archive asset，gunzip/untar，将 manifest assets 解压到 deterministic cache 后返回 Metro entry module。
 
 ### 菜单 2. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 
@@ -489,7 +489,7 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 含义：
 
 - 不只是打印命令，而是执行本地 React Native `bundle`
-- 只输出 `index.bundle`、Metro `assets/` 和 `manifest.json`
+- 只输出 `index.bundle`、`manifest.json` 和实际引用的 runtime assets
 - 只压缩这些文件到 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`
 - 提供 `--host` 时，将 archive 复制到 `<host>/.bundle/rnm/`
 - 同时提供 `--update-registry` 时，更新 Host `rnm.registry.json` 的 `bundleArchiveUrl`

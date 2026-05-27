@@ -39,7 +39,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-它会创建只包含 `index.bundle`、`assets/` 和 `manifest.json` 的 `.tar.gz`；不传 `--update-registry` 时保持 bundle-only/no-OTA 流程。
+它会创建包含 `index.bundle`、`manifest.json` 和实际引用 runtime assets 的 `.tar.gz`；不传 `--update-registry` 时保持 bundle-only/no-OTA 流程。
 
 ### 2. OTA — Hot Updater/custom delivery
 
@@ -72,5 +72,5 @@ rnm expo mfe-feature --channel production --platform all --non-interactive
 - **No hidden native patches**：generated file 和 manual integration 保持可审查。
 - **Hot Updater compatible**：compatibility check 通过后再委托 Hot Updater 进行 OTA delivery。
 - **Metro-ready by default**：`withMfe` merge Metro config，并自动配置 registered MFE root 与 shared package alias。
-- **Portable bundle archives**：`rnm bundle` 只打包 `index.bundle`、`assets/` 和 `manifest.json`，用于 Host copy/CDN upload。
+- **Portable bundle archives**：`rnm bundle` 打包 `index.bundle`、`manifest.json` 和实际引用的 runtime assets，用于 Host copy/CDN upload。
 - **Host-provided shared state**：Host 可安全地向 MFE 提供 session、locale、feature flags。

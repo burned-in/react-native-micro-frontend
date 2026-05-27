@@ -39,7 +39,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-This creates a `.tar.gz` containing only `index.bundle`, `assets/`, and `manifest.json`; without `--update-registry` it stays bundle-only/no-OTA.
+This creates a `.tar.gz` containing `index.bundle`, `manifest.json`, and only referenced runtime assets; without `--update-registry` it stays bundle-only/no-OTA.
 
 ### 2. OTA — Hot Updater/custom delivery
 
@@ -72,5 +72,5 @@ register MFE
 - **No hidden native patches**: generated files and manual integration stay reviewable.
 - **Hot Updater compatible**: OTA delivery is delegated to Hot Updater after compatibility checks pass.
 - **Metro-ready by default**: `withMfe` merges Metro config, watches registered MFE roots, and maps shared packages to Host `node_modules`.
-- **Portable bundle archives**: `rnm bundle` packages only `index.bundle`, `assets/`, and `manifest.json` for Host copy/CDN upload.
+- **Portable bundle archives**: `rnm bundle` packages `index.bundle`, `manifest.json`, and only referenced runtime assets for Host copy/CDN upload.
 - **Host-provided shared state**: the host can provide session, locale, and feature flags to feature modules without exposing the whole app store.

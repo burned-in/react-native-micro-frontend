@@ -61,11 +61,13 @@ EAS workflow가 필요로 하면 `--branch`, `--auto`, `--environment`, `--non-i
 
 ## Bundle archive 명령
 
-CLI를 설치한 뒤 MFE project에서 실행하세요. React Native bundling을 실행하고 `index.bundle`, `assets/`, `manifest.json`만 archive로 묶습니다.
+CLI를 설치한 뒤 MFE project에서 실행하세요. React Native bundling을 실행하고 참조된 runtime asset을 자동 수집한 뒤 `index.bundle`, `manifest.json`, 검증된 asset 파일만 archive로 묶습니다.
 
 ```bash
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
+
+최종 tarball 없이 asset 수집 결과만 확인하려면 `rnm bundle-asset mfe-feature --platform ios --entry ./src/index.tsx`를 실행하세요. Dynamic require에는 `--asset-glob`을 fallback으로 사용합니다.
 
 각 runner에서도 같은 방식으로 실행할 수 있습니다: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, `deno run -A ... bundle`. `--host`를 쓰면 CLI가 `rnm.bundle-archives.ts`를 만들고 Host entry import 여부를 묻습니다. `--yes` 또는 `--register-archives`를 주면 자동 적용됩니다.
 
@@ -138,7 +140,7 @@ rnm expo mfe-feature --channel production --platform all --skip-integration
 | --- | --- |
 | `rnm init` | review 가능한 Host config, registry, native contract, generated include file을 만듭니다. |
 | `rnm build` | React Native bundle command와 선택적 archive output path를 출력합니다. |
-| `rnm bundle` | `index.bundle`, `assets/`, `manifest.json`만 포함하는 최소 archive를 만듭니다. |
+| `rnm bundle` | `index.bundle`, `manifest.json`, 실제 참조된 runtime asset만 포함하는 최소 archive를 만듭니다. |
 | `rnm diff` | Host와 MFE native contract를 비교합니다. |
 | `rnm sync` | MFE block 또는 native change 후 OTA disable 같은 native-change decision을 기록합니다. |
 | `rnm status` | `rnm.registry.json`에 등록된 MFE 상태를 출력합니다. |

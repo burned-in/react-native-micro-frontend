@@ -241,9 +241,9 @@ Hot Updater のような archive を作って Host project に取り込む場合
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
-この command は local React Native `bundle` を実行し、`index.bundle`, `assets/`, `manifest.json` だけを生成して `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz` に圧縮します。`--host` を指定すると `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。`--update-registry` を指定すると `rnm.registry.json` の `bundleArchiveUrl` も更新します。interactive terminal では検出した Host entry file から `rnm.bundle-archives` を import するか確認し、`--yes` または `--register-archives` で自動適用します。
+この command は local React Native `bundle` を実行し、`index.bundle`, `manifest.json`, 実際に参照された runtime assets だけを生成して `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz` に圧縮します。`--host` を指定すると `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。`--update-registry` を指定すると `rnm.registry.json` の `bundleArchiveUrl` も更新します。interactive terminal では検出した Host entry file から `rnm.bundle-archives` を import するか確認し、`--yes` または `--register-archives` で自動適用します。
 
-`bundleArchiveUrl` は `createBundleArchiveLoader()` と一緒に使ってください。生成された registration file により React Native は copy 済み `.tar.gz` を asset として resolve でき、loader はそれを読み、gunzip/untar して、MFE source を import せず Metro entry module を返します。
+`bundleArchiveUrl` は `createBundleArchiveLoader()` と一緒に使ってください。生成された registration file により React Native は copy 済み `.tar.gz` を asset として resolve でき、loader はそれを読み、gunzip/untar し、manifest assets を deterministic cache に extract し、evaluation 前に asset resolver を patch して、MFE source を import せず Metro entry module を返します。
 
 
 ## 8. Easy Way: bundle, Hot Updater/OTA, Expo メニュー
@@ -263,7 +263,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。Host entry import は `--yes` で自動適用するか、一度手動 import してください。`rnm.registry.json` に `bundleArchiveUrl` を書く場合は `--update-registry` を追加してください。
+`rnm bundle` は `index.bundle`、`manifest.json`、実際に参照された runtime assets、`.tar.gz` archive だけを作ります。`--no-bundle-assets` を渡さない限り `rnm bundle-asset` を自動実行します。`--host` は `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。Host entry import は `--yes` で自動適用するか、一度手動 import してください。`rnm.registry.json` に `bundleArchiveUrl` を書く場合は `--update-registry` を追加してください。
 
 ### メニュー 2. OTA — Hot Updater または custom OTA pipeline で配布
 

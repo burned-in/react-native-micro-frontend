@@ -39,7 +39,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 rnm bundle mfe-feature --platform ios --host ../host-app
 ```
 
-`index.bundle`, `assets/`, `manifest.json`만 들어 있는 `.tar.gz`를 만들고, `--update-registry`를 빼면 bundle-only/no-OTA 흐름으로 유지됩니다.
+`index.bundle`, `manifest.json`, 실제 참조된 runtime asset만 들어 있는 `.tar.gz`를 만들고, `--update-registry`를 빼면 bundle-only/no-OTA 흐름으로 유지됩니다.
 
 ### 2. OTA — Hot Updater/custom delivery
 
@@ -72,5 +72,5 @@ MFE 등록
 - **No hidden native patches**: generated file과 manual integration을 review 가능하게 유지합니다.
 - **Hot Updater compatible**: compatibility check를 통과한 뒤 Hot Updater로 OTA delivery를 위임합니다.
 - **Metro-ready by default**: `withMfe`가 Metro config를 merge하고 registered MFE root와 shared package alias를 자동 구성합니다.
-- **Portable bundle archives**: `rnm bundle`이 `index.bundle`, `assets/`, `manifest.json`만 묶어 Host copy/CDN upload에 쓰게 합니다.
+- **Portable bundle archives**: `rnm bundle`이 `index.bundle`, `manifest.json`, 실제 참조된 runtime asset만 묶어 Host copy/CDN upload에 쓰게 합니다.
 - **Host-provided shared state**: Host가 session, locale, feature flag를 MFE에 안전하게 제공합니다.

@@ -91,7 +91,7 @@ Use `--yes` for non-interactive apply, direct integration commands with `--dry-r
 | --- | --- |
 | `rnm init` | Create reviewable Host config, registry, native contract, and generated include files. |
 | `rnm build` | Print React Native bundle commands and optional archive output paths. |
-| `rnm bundle` | Build a minimal archive containing only `index.bundle`, `assets/`, and `manifest.json`. |
+| `rnm bundle` | Build a minimal archive containing `index.bundle`, `manifest.json`, and only referenced runtime assets. |
 | `rnm diff` | Compare Host and MFE native contracts. |
 | `rnm sync` | Record native-change decisions such as blocking an MFE or disabling OTA after native changes. |
 | `rnm status` | Print registered MFE status from `rnm.registry.json`. |
@@ -137,10 +137,12 @@ Use `--branch`, `--auto`, `--environment`, and `--non-interactive` when your EAS
 
 ## Bundle archive command
 
-Run this from the MFE project after installing the CLI. It executes React Native bundling and archives only `index.bundle`, `assets/`, and `manifest.json`.
+Run this from the MFE project after installing the CLI. It executes React Native bundling, automatically collects referenced runtime assets, and archives `index.bundle`, `manifest.json`, and the verified asset files.
 
 ```bash
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
+
+To inspect asset collection without creating the final tarball, run `rnm bundle-asset mfe-feature --platform ios --entry ./src/index.tsx`. Use `--asset-glob` only as a fallback for dynamic require patterns.
 
 Use the same command through each runner: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, or `deno run -A ... bundle`. With `--host`, the CLI generates `rnm.bundle-archives.ts`; it prompts for the Host entry import unless you pass `--yes` or `--register-archives`.
