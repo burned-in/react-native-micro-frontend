@@ -782,13 +782,19 @@ function evaluateCommonJsBundle<TModule>(input: {
   readonly moduleGlobalName?: string;
 }): TModule {
   const module = { exports: {} as unknown };
-  const runtimeGlobal: Record<string, unknown> = {
-    ...(input.globalObject ?? {}),
-  };
+  const runtimeGlobal = globalThis as Record<string, unknown>;
   const moduleGlobalName =
     input.moduleGlobalName ??
     input.archiveManifest.moduleGlobalName ??
     '__rnm_mfe_module__';
+  const restoreGlobalObject = exposeTemporaryGlobals(
+    runtimeGlobal,
+    input.globalObject,
+  );
+  const moduleGlobalSnapshot = snapshotGlobalProperty(
+    runtimeGlobal,
+    moduleGlobalName,
+  );
   const requireFn =
     input.require ??
     ((specifier: string) => {
@@ -801,55 +807,67 @@ function evaluateCommonJsBundle<TModule>(input: {
       );
     });
 
-  runtimeGlobal.globalThis = runtimeGlobal;
-  runtimeGlobal.global = runtimeGlobal;
-  runtimeGlobal.self = runtimeGlobal;
-  runtimeGlobal.window = runtimeGlobal;
-  runtimeGlobal.module = module;
-  runtimeGlobal.exports = module.exports;
+  delete runtimeGlobal[moduleGlobalName];
 
-  const evaluate = new Function(
-    'module',
-    'exports',
-    'require',
-    'globalThis',
-    'global',
-    'self',
-    'window',
-    '__DEV__',
-    '__rnmEntryModuleId',
-    '__rnmModuleGlobalName',
-    `${input.bundleCode}\n${createMetroEntryExportFooter()}\n//# sourceURL=rnm://${input.manifest.name}/${input.archiveManifest.bundleFile}`,
-  );
+  try {
+    const evaluate = new Function(
+      'module',
+      'exports',
+      'require',
+      'globalThis',
+      'global',
+      'self',
+      'window',
+      '__DEV__',
+      '__rnmEntryModuleId',
+      '__rnmModuleGlobalName',
+      `${input.bundleCode}\n${createMetroEntryExportFooter()}\n//# sourceURL=rnm://${input.manifest.name}/${input.archiveManifest.bundleFile}`,
+    );
 
-  evaluate(
-    module,
-    module.exports,
-    requireFn,
-    runtimeGlobal,
-    runtimeGlobal,
-    runtimeGlobal,
-    runtimeGlobal,
-    input.archiveManifest.dev,
-    input.archiveManifest.entryModuleId,
-    moduleGlobalName,
-  );
+    const evaluated = evaluate.call(
+      runtimeGlobal,
+      module,
+      module.exports,
+      requireFn,
+      runtimeGlobal,
+      runtimeGlobal,
+      runtimeGlobal,
+      runtimeGlobal,
+      input.archiveManifest.dev,
+      input.archiveManifest.entryModuleId,
+      moduleGlobalName,
+    );
+    const exported = selectBundleExport({
+      archiveManifest: input.archiveManifest,
+      evaluated,
+      moduleExports: module.exports,
+      moduleGlobal: runtimeGlobal[moduleGlobalName],
+    });
 
-  const exported = hasExports(module.exports)
-    ? module.exports
-    : runtimeGlobal[moduleGlobalName];
+    if (isReactComponentModule(exported)) {
+      return exported as TModule;
+    }
 
-  if (typeof exported === 'function') {
-    return { default: exported } as TModule;
+    if (
+      input.archiveManifest.entryModuleId === undefined &&
+      typeof exported === 'function'
+    ) {
+      return { default: exported } as TModule;
+    }
+
+    throw new Error(
+      `Bundle ${input.archiveManifest.name} did not export a React component module.`,
+    );
+  } catch (error) {
+    restoreGlobalProperty(
+      runtimeGlobal,
+      moduleGlobalName,
+      moduleGlobalSnapshot,
+    );
+    throw error;
+  } finally {
+    restoreGlobalObject();
   }
-
-  if (isRecord(exported) && 'default' in exported) {
-    return exported as TModule;
-  }
-
-  throw new Error(
-    `Bundle ${input.archiveManifest.name} did not export a React component module.`,
-  );
 }
 
 function isReactNativeRuntime(
@@ -876,19 +894,62 @@ function isNodeRuntime(): boolean {
 }
 
 function createMetroEntryExportFooter(): string {
-  return `;(() => {
+  return `;return (() => {
+  const g = globalThis;
   const metroRequire = typeof __r === 'function'
     ? __r
-    : (globalThis && typeof globalThis.__r === 'function' ? globalThis.__r : undefined);
+    : (g && typeof g.__r === 'function' ? g.__r : undefined);
+  const entryModule =
+    __rnmEntryModuleId !== undefined && typeof metroRequire === 'function'
+      ? metroRequire(__rnmEntryModuleId)
+      : undefined;
   if (
-    globalThis &&
+    g &&
     __rnmEntryModuleId !== undefined &&
-    globalThis[__rnmModuleGlobalName] === undefined &&
-    typeof metroRequire === 'function'
+    entryModule !== undefined
   ) {
-    globalThis[__rnmModuleGlobalName] = metroRequire(__rnmEntryModuleId);
+    g[__rnmModuleGlobalName] = entryModule;
   }
+  return {
+    entryModule,
+    globalModule: g ? g[__rnmModuleGlobalName] : undefined,
+  };
 })();`;
+}
+
+function selectBundleExport(input: {
+  readonly archiveManifest: MicroFrontendBundleArchiveManifest;
+  readonly evaluated: unknown;
+  readonly moduleExports: unknown;
+  readonly moduleGlobal: unknown;
+}): unknown {
+  const evaluated = isRecord(input.evaluated) ? input.evaluated : {};
+  const entryModule = evaluated.entryModule;
+  const globalModule = evaluated.globalModule ?? input.moduleGlobal;
+
+  if (input.archiveManifest.entryModuleId !== undefined) {
+    return entryModule ?? globalModule;
+  }
+
+  return (
+    globalModule ??
+    (hasExports(input.moduleExports) ? input.moduleExports : undefined)
+  );
+}
+
+function isReactComponentModule(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    'default' in value &&
+    isReactComponentExport(value.default)
+  );
+}
+
+function isReactComponentExport(value: unknown): boolean {
+  if (typeof value === 'function') return true;
+  if (!isRecord(value)) return false;
+
+  return '$$typeof' in value;
 }
 
 function hasExports(value: unknown): boolean {
@@ -896,6 +957,50 @@ function hasExports(value: unknown): boolean {
   if (!isRecord(value)) return false;
 
   return Object.keys(value).length > 0;
+}
+
+function exposeTemporaryGlobals(
+  runtimeGlobal: Record<string, unknown>,
+  globals: Readonly<Record<string, unknown>> | undefined,
+): () => void {
+  if (!globals) return () => {};
+
+  const snapshots = Object.keys(globals).map(
+    (key) => [key, snapshotGlobalProperty(runtimeGlobal, key)] as const,
+  );
+
+  for (const [key, value] of Object.entries(globals)) {
+    runtimeGlobal[key] = value;
+  }
+
+  return () => {
+    for (const [key, snapshot] of snapshots.reverse()) {
+      restoreGlobalProperty(runtimeGlobal, key, snapshot);
+    }
+  };
+}
+
+function snapshotGlobalProperty(
+  runtimeGlobal: Record<string, unknown>,
+  key: string,
+): { readonly exists: boolean; readonly value: unknown } {
+  return {
+    exists: Object.hasOwn(runtimeGlobal, key),
+    value: runtimeGlobal[key],
+  };
+}
+
+function restoreGlobalProperty(
+  runtimeGlobal: Record<string, unknown>,
+  key: string,
+  snapshot: { readonly exists: boolean; readonly value: unknown },
+): void {
+  if (snapshot.exists) {
+    runtimeGlobal[key] = snapshot.value;
+    return;
+  }
+
+  delete runtimeGlobal[key];
 }
 
 function normalizeTarPath(path: string): string {

@@ -16,10 +16,29 @@ interface TestProps {
 }
 
 const tempRoots: string[] = [];
+const metroGlobalKeys = ['__d', '__r', '__rnm_mfe_module__'] as const;
+const originalMetroGlobals = new Map(
+  metroGlobalKeys.map((key) => [
+    key,
+    {
+      exists: Object.hasOwn(globalThis, key),
+      value: (globalThis as Record<string, unknown>)[key],
+    },
+  ]),
+);
 
 afterEach(() => {
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { force: true, recursive: true });
+  }
+
+  for (const key of metroGlobalKeys) {
+    const original = originalMetroGlobals.get(key);
+    if (original?.exists) {
+      (globalThis as Record<string, unknown>)[key] = original.value;
+    } else {
+      delete (globalThis as Record<string, unknown>)[key];
+    }
   }
 });
 
@@ -279,6 +298,84 @@ describe('bundle archive loader', () => {
     >(manifest, { readArchive: () => archive });
 
     expect(module.default({ title: 'component' })).toBe('metro:component');
+  });
+
+  test('evaluates Metro bundles against one shared runtime global', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        (function (global) {
+          if (global !== globalThis) {
+            throw new Error('Metro global split from evaluator globalThis');
+          }
+          const modules = new Map();
+          global.__d = function (factory, id) {
+            modules.set(id, { factory, exports: {}, initialized: false });
+          };
+          global.__r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(global, global.__r, undefined, undefined, module, module.exports);
+            }
+            return module.exports;
+          };
+        })(this);
+        __d(function (global, require, importDefault, importAll, module, exports) {
+          exports.default = function SharedGlobalMfe(props) {
+            return 'shared:' + (props.title || 'entry');
+          };
+        }, 0);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, { readArchive: () => archive });
+
+    expect(module.default({ title: 'global' })).toBe('shared:global');
+  });
+
+  test('prefers the Metro entry module over non-empty CommonJS exports', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        module.exports.notTheMetroEntry = true;
+        var __r;
+        var __d;
+        (function () {
+          const modules = new Map();
+          __d = function (factory, id) {
+            modules.set(id, { factory, exports: {}, initialized: false });
+          };
+          __r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(globalThis, __r, undefined, undefined, module, module.exports);
+            }
+            return module.exports;
+          };
+        })();
+        __d(function (global, require, importDefault, importAll, module, exports) {
+          exports.default = function PreferredMetroEntryMfe(props) {
+            return 'entry:' + (props.title || 'module');
+          };
+        }, 0);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, { readArchive: () => archive });
+
+    expect(module.default({ title: 'preferred' })).toBe('entry:preferred');
   });
 
   test('does not ship the Hermes-invalid dynamic import Function body literally', () => {
