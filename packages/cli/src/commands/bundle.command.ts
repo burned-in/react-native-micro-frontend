@@ -31,6 +31,7 @@ interface BundleTarget {
   readonly dev: boolean;
   readonly outDir: string;
   readonly bundleOutput: string;
+  readonly sourceMapOutput: string;
   readonly assetsDest: string;
   readonly manifestOutput: string;
   readonly archiveOutput: string;
@@ -51,12 +52,31 @@ interface BundleManifest {
   readonly createdAt: string;
   readonly entryModuleId?: string | number;
   readonly moduleGlobalName?: string;
+  readonly externalModules?: readonly string[];
+  readonly sharedModules?: readonly BundleSharedModule[];
+  readonly metroModuleId?: Readonly<Record<string, string | number>>;
+}
+
+interface BundleSharedModule {
+  readonly name: string;
+  readonly moduleId?: string | number;
 }
 
 interface BundleExportMetadata {
   readonly entryModuleId?: string | number;
   readonly moduleGlobalName: string;
+  readonly externalModules: readonly string[];
+  readonly sharedModules: readonly BundleSharedModule[];
+  readonly metroModuleId: Readonly<Record<string, string | number>>;
 }
+
+const DEFAULT_SHARED_MODULES = [
+  'react',
+  'react/jsx-runtime',
+  'react-native',
+  '@bunin/react-native-micro-frontend',
+  '@bunin/react-native-micro-frontend/runtime',
+] as const;
 
 /**
  * Handles `rnm bundle [mfe-name]` by executing React Native bundling and
@@ -146,6 +166,7 @@ function createBundleTarget(
   const outDir = resolve(root, baseOutDir, name, platform);
   const type = stringFlag(flags.type) ?? 'ota';
   const bundleOutput = join(outDir, 'index.bundle');
+  const sourceMapOutput = `${bundleOutput}.map`;
   const assetsDest = join(outDir, 'assets');
   const manifestOutput = join(outDir, 'manifest.json');
   const archiveOutput = join(outDir, `${name}.${platform}.${type}.tar.gz`);
@@ -158,6 +179,7 @@ function createBundleTarget(
     dev,
     outDir,
     bundleOutput,
+    sourceMapOutput,
     assetsDest,
     manifestOutput,
     archiveOutput,
@@ -171,6 +193,7 @@ function bundleTarget(
 ): number {
   mkdirSync(target.outDir, { recursive: true });
   rmSync(target.bundleOutput, { force: true });
+  rmSync(target.sourceMapOutput, { force: true });
   rmSync(target.assetsDest, { force: true, recursive: true });
   rmSync(target.manifestOutput, { force: true });
   rmSync(target.archiveOutput, { force: true });
@@ -186,6 +209,8 @@ function bundleTarget(
     target.dev ? 'true' : 'false',
     '--bundle-output',
     target.bundleOutput,
+    '--sourcemap-output',
+    target.sourceMapOutput,
     '--assets-dest',
     target.assetsDest,
   ];
@@ -275,6 +300,9 @@ function writeBundleManifest(
     assetsDir: basename(target.assetsDest),
     createdAt: new Date().toISOString(),
     moduleGlobalName: exportMetadata.moduleGlobalName,
+    externalModules: exportMetadata.externalModules,
+    sharedModules: exportMetadata.sharedModules,
+    metroModuleId: exportMetadata.metroModuleId,
     ...(exportMetadata.entryModuleId !== undefined
       ? { entryModuleId: exportMetadata.entryModuleId }
       : {}),
@@ -293,11 +321,20 @@ function appendBundleEntryExport(
   const bundleCode = readFileSync(target.bundleOutput, 'utf8');
   const entryModuleId = findMetroEntryModuleId(bundleCode);
 
+  const sharedMetadata = createSharedModuleMetadata(
+    bundleCode,
+    target.sourceMapOutput,
+    target.entryFile,
+  );
+
   if (entryModuleId === undefined) {
     printer.log(
       `[WARN] Could not detect Metro entry module id for ${target.name}:${target.platform}; default evaluator may require a custom evaluate adapter.`,
     );
-    return { moduleGlobalName: DEFAULT_BUNDLE_MODULE_GLOBAL_NAME };
+    return {
+      moduleGlobalName: DEFAULT_BUNDLE_MODULE_GLOBAL_NAME,
+      ...sharedMetadata,
+    };
   }
 
   writeFileSync(
@@ -308,7 +345,306 @@ function appendBundleEntryExport(
   return {
     entryModuleId,
     moduleGlobalName: DEFAULT_BUNDLE_MODULE_GLOBAL_NAME,
+    ...sharedMetadata,
   };
+}
+
+function createSharedModuleMetadata(
+  bundleCode: string,
+  sourceMapOutput: string,
+  entryFile: string,
+): Pick<
+  BundleExportMetadata,
+  'externalModules' | 'sharedModules' | 'metroModuleId'
+> {
+  const metroModuleId = findSharedMetroModuleIds(
+    bundleCode,
+    sourceMapOutput,
+    entryFile,
+  );
+  const sharedModules = DEFAULT_SHARED_MODULES.map((name) => ({
+    name,
+    ...(metroModuleId[name] !== undefined
+      ? { moduleId: metroModuleId[name] }
+      : {}),
+  }));
+
+  return {
+    externalModules: DEFAULT_SHARED_MODULES,
+    sharedModules,
+    metroModuleId,
+  };
+}
+
+function findSharedMetroModuleIds(
+  bundleCode: string,
+  sourceMapOutput: string,
+  entryFile: string,
+): Readonly<Record<string, string | number>> {
+  const idsByName: Record<string, string | number> = {
+    ...findSharedMetroModuleIdsFromSourceMap(
+      bundleCode,
+      sourceMapOutput,
+      entryFile,
+    ),
+  };
+
+  for (const args of parseMetroDefineArguments(bundleCode)) {
+    const moduleId = parseLiteralModuleId(args[1]);
+    const verboseName = parseStringLiteral(args[3]);
+
+    if (moduleId === undefined || verboseName === undefined) continue;
+
+    const sharedModuleName = findSharedModuleNameForPath(verboseName);
+    if (sharedModuleName && idsByName[sharedModuleName] === undefined) {
+      idsByName[sharedModuleName] = moduleId;
+    }
+  }
+
+  return idsByName;
+}
+
+function findSharedMetroModuleIdsFromSourceMap(
+  bundleCode: string,
+  sourceMapOutput: string,
+  entryFile: string,
+): Readonly<Record<string, string | number>> {
+  if (!existsSync(sourceMapOutput)) return {};
+
+  const sourceMap = JSON.parse(readFileSync(sourceMapOutput, 'utf8')) as {
+    readonly sources?: readonly string[];
+  };
+  const sources = sourceMap.sources ?? [];
+  const moduleIds = parseMetroDefineArguments(bundleCode)
+    .map((args) => parseLiteralModuleId(args[1]))
+    .filter((moduleId) => moduleId !== undefined);
+  const sourceIndexToModuleId = createSourceMapModuleIdResolver(
+    sources,
+    moduleIds,
+    entryFile,
+  );
+
+  const idsByName: Record<string, string | number> = {};
+  sources.forEach((source, sourceIndex) => {
+    const moduleId = sourceIndexToModuleId(sourceIndex);
+    if (moduleId === undefined) return;
+
+    const sharedModuleName = findSharedModuleNameForPath(source);
+    if (sharedModuleName && idsByName[sharedModuleName] === undefined) {
+      idsByName[sharedModuleName] = moduleId;
+    }
+  });
+
+  return idsByName;
+}
+
+function createSourceMapModuleIdResolver(
+  sources: readonly string[],
+  moduleIds: readonly (string | number)[],
+  entryFile: string,
+): (sourceIndex: number) => string | number | undefined {
+  const firstModuleSourceIndex = findEntrySourceIndex(sources, entryFile);
+
+  if (
+    firstModuleSourceIndex !== undefined &&
+    hasSequentialNumericIds(moduleIds)
+  ) {
+    return (sourceIndex) => {
+      const moduleId = sourceIndex - firstModuleSourceIndex;
+      return moduleId >= 0 ? moduleId : undefined;
+    };
+  }
+
+  const preludeSourceCount = sources.length - moduleIds.length;
+  if (preludeSourceCount < 0) return () => undefined;
+
+  return (sourceIndex) => moduleIds[sourceIndex - preludeSourceCount];
+}
+
+function findEntrySourceIndex(
+  sources: readonly string[],
+  entryFile: string,
+): number | undefined {
+  const normalizedEntry = normalizeRelativePath(entryFile);
+  const entryIndex = sources.findIndex((source) => {
+    const normalizedSource = normalizeRelativePath(source);
+    return (
+      normalizedSource === normalizedEntry ||
+      normalizedSource.endsWith(`/${normalizedEntry}`)
+    );
+  });
+
+  return entryIndex === -1 ? undefined : entryIndex;
+}
+
+function hasSequentialNumericIds(
+  moduleIds: readonly (string | number)[],
+): boolean {
+  if (moduleIds.length === 0) return false;
+
+  return moduleIds
+    .slice(0, Math.min(moduleIds.length, 16))
+    .every((moduleId, index) => moduleId === index);
+}
+
+function parseMetroDefineArguments(bundleCode: string): string[][] {
+  const calls: string[][] = [];
+  let searchFrom = 0;
+
+  while (searchFrom < bundleCode.length) {
+    const defineIndex = bundleCode.indexOf('__d(', searchFrom);
+    if (defineIndex === -1) break;
+
+    const args = parseCallArguments(bundleCode, defineIndex + '__d'.length);
+    if (args) calls.push(args);
+    searchFrom = defineIndex + '__d('.length;
+  }
+
+  return calls;
+}
+
+function parseCallArguments(
+  source: string,
+  openParenIndex: number,
+): string[] | undefined {
+  if (source[openParenIndex] !== '(') return undefined;
+
+  const args: string[] = [];
+  let depth = 0;
+  let argStart = openParenIndex + 1;
+  let quote: '"' | "'" | '`' | undefined;
+  let escaped = false;
+
+  for (let index = openParenIndex + 1; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === quote) quote = undefined;
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char;
+      continue;
+    }
+
+    if (char === '(' || char === '[' || char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === ')' || char === ']' || char === '}') {
+      if (depth === 0 && char === ')') {
+        args.push(source.slice(argStart, index).trim());
+        return args;
+      }
+      depth -= 1;
+      continue;
+    }
+
+    if (char === ',' && depth === 0) {
+      args.push(source.slice(argStart, index).trim());
+      argStart = index + 1;
+    }
+  }
+
+  return undefined;
+}
+
+function parseLiteralModuleId(
+  value: string | undefined,
+): string | number | undefined {
+  if (value === undefined) return undefined;
+
+  if (/^\d+$/u.test(value)) return Number.parseInt(value, 10);
+
+  return parseStringLiteral(value);
+}
+
+function parseStringLiteral(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    try {
+      return JSON.parse(
+        trimmed.startsWith('"')
+          ? trimmed
+          : `"${trimmed.slice(1, -1).replace(/\\'/gu, "'").replace(/"/gu, '\\"')}"`,
+      ) as string;
+    } catch {
+      return trimmed.slice(1, -1).replace(/\\([\\"'])/gu, '$1');
+    }
+  }
+
+  return undefined;
+}
+
+function findSharedModuleNameForPath(modulePath: string): string | undefined {
+  const normalized = toPosixPath(modulePath);
+  const candidates = [...DEFAULT_SHARED_MODULES].sort(
+    (a, b) => b.length - a.length,
+  );
+
+  return candidates.find((moduleName) =>
+    modulePathMatchesSpecifier(normalized, moduleName),
+  );
+}
+
+function modulePathMatchesSpecifier(
+  modulePath: string,
+  specifier: string,
+): boolean {
+  const [packageName, subpath] = splitPackageSpecifier(specifier);
+  const packagePath = packageName.split('/').join('/');
+  const marker = `/node_modules/${packagePath}/`;
+  const startMarker = `node_modules/${packagePath}/`;
+  const markerIndex = modulePath.indexOf(marker);
+  const startMarkerIndex = modulePath.startsWith(startMarker) ? 0 : -1;
+
+  if (markerIndex === -1 && startMarkerIndex === -1) return false;
+
+  const afterPackage =
+    markerIndex === -1
+      ? modulePath.slice(startMarker.length)
+      : modulePath.slice(markerIndex + marker.length);
+  if (!subpath) {
+    return (
+      afterPackage === 'index.js' ||
+      afterPackage === 'index.mjs' ||
+      afterPackage.endsWith('/index.js') ||
+      afterPackage.endsWith('/index.mjs')
+    );
+  }
+
+  const normalizedSubpath = subpath.replace(/^\//u, '');
+  return (
+    afterPackage === normalizedSubpath ||
+    afterPackage.startsWith(`${normalizedSubpath}.`) ||
+    afterPackage.startsWith(`${normalizedSubpath}/`) ||
+    afterPackage.includes(`/${normalizedSubpath}.`)
+  );
+}
+
+function splitPackageSpecifier(specifier: string): readonly [string, string] {
+  if (!specifier.startsWith('@')) {
+    const [packageName = specifier, ...subpath] = specifier.split('/');
+    return [packageName, subpath.join('/')];
+  }
+
+  const parts = specifier.split('/');
+  const packageName = parts.slice(0, 2).join('/');
+  return [packageName, parts.slice(2).join('/')];
 }
 
 function findMetroEntryModuleId(
@@ -491,14 +827,28 @@ function writeBundleArchiveAssetRegistry(hostRoot: string): void {
   });
   const contents = [
     '/* Auto-generated by @bunin/react-native-micro-frontend. */',
+    "import * as React from 'react';",
+    "import * as ReactJsxRuntime from 'react/jsx-runtime';",
+    "import * as ReactNative from 'react-native';",
+    "import * as ReactNativeMicroFrontend from '@bunin/react-native-micro-frontend';",
+    "import * as ReactNativeMicroFrontendRuntime from '@bunin/react-native-micro-frontend/runtime';",
     "import { Image } from 'react-native';",
-    "import { registerBundleArchiveAssets } from '@bunin/react-native-micro-frontend/bundle-archive';",
+    "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
     '',
     'export const bundleArchiveAssets = {',
     ...entries,
     '} as const;',
     '',
+    'export const bundleArchiveExternalModules = {',
+    "  'react': React,",
+    "  'react/jsx-runtime': ReactJsxRuntime,",
+    "  'react-native': ReactNative,",
+    "  '@bunin/react-native-micro-frontend': ReactNativeMicroFrontend,",
+    "  '@bunin/react-native-micro-frontend/runtime': ReactNativeMicroFrontendRuntime,",
+    '} as const;',
+    '',
     'registerBundleArchiveAssets(bundleArchiveAssets);',
+    'registerBundleArchiveExternalModules(bundleArchiveExternalModules);',
     '',
   ].join('\n');
 
@@ -623,4 +973,8 @@ function stringFlag(value: string | boolean | undefined): string | undefined {
 
 function toPosixPath(path: string): string {
   return path.split(sep).join('/');
+}
+
+function normalizeRelativePath(path: string): string {
+  return toPosixPath(path).replace(/^\.\//u, '');
 }

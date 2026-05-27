@@ -80,6 +80,20 @@ test('records Metro entry module metadata and appends an archive export footer',
   expect(readManifest(root, 'metro-feature', 'android')).toMatchObject({
     entryModuleId: 0,
     moduleGlobalName: '__rnm_mfe_module__',
+    externalModules: [
+      'react',
+      'react/jsx-runtime',
+      'react-native',
+      '@bunin/react-native-micro-frontend',
+      '@bunin/react-native-micro-frontend/runtime',
+    ],
+    metroModuleId: {
+      react: 1,
+      'react/jsx-runtime': 2,
+      'react-native': 3,
+      '@bunin/react-native-micro-frontend': 4,
+      '@bunin/react-native-micro-frontend/runtime': 5,
+    },
   });
   expect(
     readFileSync(
@@ -119,6 +133,9 @@ test('copies host archive and generates React Native archive asset registration'
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).toContain('registerBundleArchiveAssets');
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).toContain('registerBundleArchiveExternalModules');
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).toContain('require("./.bundle/rnm/host-asset-feature.ios.ota.tar.gz")');
@@ -167,7 +184,34 @@ function createBundleFixture(configFile: string, configSource: string): string {
   const reactNativeBin = join(binDir, 'react-native');
   writeFileSync(
     reactNativeBin,
-    `#!/usr/bin/env node\nconst fs = require('node:fs');\nconst path = require('node:path');\nconst args = process.argv.slice(2);\nconst value = (flag) => args[args.indexOf(flag) + 1];\nconst bundleOutput = value('--bundle-output');\nconst assetsDest = value('--assets-dest');\nfs.mkdirSync(path.dirname(bundleOutput), { recursive: true });\nfs.writeFileSync(bundleOutput, 'var __r = () => ({ default: function FixtureMfe() {} });\\n__r(0);\\n');
+    `#!/usr/bin/env node\nconst fs = require('node:fs');\nconst path = require('node:path');\nconst args = process.argv.slice(2);\nconst value = (flag) => args[args.indexOf(flag) + 1];\nconst bundleOutput = value('--bundle-output');\nconst assetsDest = value('--assets-dest');
+const sourceMapOutput = value('--sourcemap-output');\nfs.mkdirSync(path.dirname(bundleOutput), { recursive: true });\nfs.writeFileSync(bundleOutput, [
+  'var __r = () => ({ default: function FixtureMfe() {} });',
+  '__d(function(){}, 0, [], "src/index.tsx");',
+  '__d(function(){}, 1, [], "node_modules/react/index.js");',
+  '__d(function(){}, 2, [], "node_modules/react/jsx-runtime.js");',
+  '__d(function(){}, 3, [], "node_modules/react-native/index.js");',
+  '__d(function(){}, 4, [], "node_modules/@bunin/react-native-micro-frontend/dist/mjs/index.mjs");',
+  '__d(function(){}, 5, [], "node_modules/@bunin/react-native-micro-frontend/dist/mjs/runtime.mjs");',
+  '__r(0);',
+  '',
+].join('\\n'));
+if (sourceMapOutput) {
+  fs.writeFileSync(sourceMapOutput, JSON.stringify({
+    version: 3,
+    sources: [
+      '__prelude__',
+      '__require_polyfill__',
+      'src/index.tsx',
+      'node_modules/react/index.js',
+      'node_modules/react/jsx-runtime.js',
+      'node_modules/react-native/index.js',
+      'node_modules/@bunin/react-native-micro-frontend/dist/mjs/index.mjs',
+      'node_modules/@bunin/react-native-micro-frontend/dist/mjs/runtime.mjs',
+    ],
+    mappings: '',
+  }));
+}
 fs.mkdirSync(assetsDest, { recursive: true });\n`,
   );
   chmodSync(reactNativeBin, 0o755);

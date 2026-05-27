@@ -20,6 +20,17 @@ export interface MicroFrontendBundleArchiveManifest {
   readonly entryModuleId?: string | number;
   /** Global variable used by the bundle/evaluator to expose the entry module. */
   readonly moduleGlobalName?: string;
+  /** Host-owned module names that should be used instead of bundled copies. */
+  readonly externalModules?: readonly string[];
+  /** Shared module metadata emitted by the bundle CLI. */
+  readonly sharedModules?: readonly MicroFrontendBundleArchiveSharedModule[];
+  /** Shared module name to Metro module id mapping for numeric Metro bundles. */
+  readonly metroModuleId?: Readonly<Record<string, string | number>>;
+}
+
+export interface MicroFrontendBundleArchiveSharedModule {
+  readonly name: string;
+  readonly moduleId?: string | number;
 }
 
 /** Extracted file map keyed by normalized archive-relative path. */
@@ -79,6 +90,14 @@ export interface MicroFrontendBundleArchiveLoaderOptions<TModule> {
 }
 
 const registeredReactNativeArchiveAssets = new Map<string, string>();
+const registeredBundleArchiveExternalModules: Record<string, unknown> = {};
+const METRO_GLOBAL_KEYS = [
+  '__r',
+  '__d',
+  '__c',
+  '__registerSegment',
+  '__METRO_GLOBAL_PREFIX__',
+] as const;
 
 /** Registers React Native asset URIs for relative bundleArchiveUrl values. */
 export function registerBundleArchiveAsset(
@@ -101,6 +120,13 @@ export function registerBundleArchiveAssets(
   for (const [archiveUrl, asset] of Object.entries(assets)) {
     registerBundleArchiveAsset(archiveUrl, asset);
   }
+}
+
+/** Registers Host-owned modules used to replace shared modules in bundle archives. */
+export function registerBundleArchiveExternalModules(
+  modules: Readonly<Record<string, unknown>>,
+): void {
+  Object.assign(registeredBundleArchiveExternalModules, modules);
 }
 
 /**
@@ -157,13 +183,15 @@ export async function loadBundleArchiveModule<
     });
   }
 
+  const externalModules = resolveBundleArchiveExternalModules(
+    options.externalModules,
+  );
+
   return evaluateCommonJsBundle<TModule>({
     manifest,
     archiveManifest,
     bundleCode,
-    ...(options.externalModules !== undefined
-      ? { externalModules: options.externalModules }
-      : {}),
+    ...(externalModules !== undefined ? { externalModules } : {}),
     ...(options.require !== undefined ? { require: options.require } : {}),
     ...(options.globalObject !== undefined
       ? { globalObject: options.globalObject }
@@ -172,6 +200,21 @@ export async function loadBundleArchiveModule<
       ? { moduleGlobalName: options.moduleGlobalName }
       : {}),
   });
+}
+
+function resolveBundleArchiveExternalModules(
+  externalModules: Readonly<Record<string, unknown>> | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+  const registeredEntries = Object.entries(
+    registeredBundleArchiveExternalModules,
+  );
+
+  if (registeredEntries.length === 0) return externalModules;
+
+  return {
+    ...registeredBundleArchiveExternalModules,
+    ...(externalModules ?? {}),
+  };
 }
 
 async function readBundleArchive(
@@ -769,6 +812,46 @@ function readBundleManifest(
     );
   }
 
+  if (
+    archiveManifest.externalModules !== undefined &&
+    (!Array.isArray(archiveManifest.externalModules) ||
+      archiveManifest.externalModules.some((name) => typeof name !== 'string'))
+  ) {
+    throw new Error(
+      'Bundle archive manifest externalModules must be an array of strings.',
+    );
+  }
+
+  if (
+    archiveManifest.sharedModules !== undefined &&
+    (!Array.isArray(archiveManifest.sharedModules) ||
+      archiveManifest.sharedModules.some(
+        (sharedModule) =>
+          !isRecord(sharedModule) ||
+          typeof sharedModule.name !== 'string' ||
+          (sharedModule.moduleId !== undefined &&
+            typeof sharedModule.moduleId !== 'string' &&
+            typeof sharedModule.moduleId !== 'number'),
+      ))
+  ) {
+    throw new Error(
+      'Bundle archive manifest sharedModules must contain name and optional moduleId fields.',
+    );
+  }
+
+  if (
+    archiveManifest.metroModuleId !== undefined &&
+    (!isRecord(archiveManifest.metroModuleId) ||
+      Object.values(archiveManifest.metroModuleId).some(
+        (moduleId) =>
+          typeof moduleId !== 'string' && typeof moduleId !== 'number',
+      ))
+  ) {
+    throw new Error(
+      'Bundle archive manifest metroModuleId must map module names to string or number ids.',
+    );
+  }
+
   return archiveManifest;
 }
 
@@ -787,6 +870,10 @@ function evaluateCommonJsBundle<TModule>(input: {
     input.moduleGlobalName ??
     input.archiveManifest.moduleGlobalName ??
     '__rnm_mfe_module__';
+  const metroGlobalSnapshots = snapshotGlobalProperties(
+    runtimeGlobal,
+    METRO_GLOBAL_KEYS,
+  );
   const restoreGlobalObject = exposeTemporaryGlobals(
     runtimeGlobal,
     input.globalObject,
@@ -794,6 +881,14 @@ function evaluateCommonJsBundle<TModule>(input: {
   const moduleGlobalSnapshot = snapshotGlobalProperty(
     runtimeGlobal,
     moduleGlobalName,
+  );
+  const metroExternalModules = createMetroExternalModuleMap(
+    input.archiveManifest,
+    input.externalModules,
+  );
+  const restoreMetroDefineInterceptors = installMetroDefineInterceptors(
+    runtimeGlobal,
+    metroExternalModules,
   );
   const requireFn =
     input.require ??
@@ -821,7 +916,9 @@ function evaluateCommonJsBundle<TModule>(input: {
       '__DEV__',
       '__rnmEntryModuleId',
       '__rnmModuleGlobalName',
-      `${input.bundleCode}\n${createMetroEntryExportFooter()}\n//# sourceURL=rnm://${input.manifest.name}/${input.archiveManifest.bundleFile}`,
+      `${input.bundleCode}
+${createMetroEntryExportFooter()}
+//# sourceURL=rnm://${input.manifest.name}/${input.archiveManifest.bundleFile}`,
     );
 
     const evaluated = evaluate.call(
@@ -858,16 +955,150 @@ function evaluateCommonJsBundle<TModule>(input: {
     throw new Error(
       `Bundle ${input.archiveManifest.name} did not export a React component module.`,
     );
-  } catch (error) {
+  } finally {
     restoreGlobalProperty(
       runtimeGlobal,
       moduleGlobalName,
       moduleGlobalSnapshot,
     );
-    throw error;
-  } finally {
+    restoreMetroDefineInterceptors();
     restoreGlobalObject();
+    restoreGlobalProperties(runtimeGlobal, metroGlobalSnapshots);
   }
+}
+
+function createMetroExternalModuleMap(
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+  externalModules: Readonly<Record<string, unknown>> | undefined,
+): ReadonlyMap<
+  string | number,
+  { readonly name: string; readonly value: unknown }
+> {
+  const modulesById = new Map<
+    string | number,
+    { readonly name: string; readonly value: unknown }
+  >();
+
+  if (!externalModules) return modulesById;
+
+  for (const sharedModule of archiveManifest.sharedModules ?? []) {
+    if (
+      sharedModule.moduleId !== undefined &&
+      sharedModule.name in externalModules
+    ) {
+      modulesById.set(sharedModule.moduleId, {
+        name: sharedModule.name,
+        value: externalModules[sharedModule.name],
+      });
+    }
+  }
+
+  for (const [name, moduleId] of Object.entries(
+    archiveManifest.metroModuleId ?? {},
+  )) {
+    if (name in externalModules) {
+      modulesById.set(moduleId, { name, value: externalModules[name] });
+    }
+  }
+
+  return modulesById;
+}
+
+function installMetroDefineInterceptors(
+  runtimeGlobal: Record<string, unknown>,
+  externalModulesById: ReadonlyMap<
+    string | number,
+    { readonly name: string; readonly value: unknown }
+  >,
+): () => void {
+  if (externalModulesById.size === 0) return () => {};
+
+  const snapshots = [
+    snapshotGlobalDescriptor(runtimeGlobal, '__d'),
+    snapshotGlobalDescriptor(runtimeGlobal, '$$RNM_SHARED__d'),
+  ];
+  let currentDefine = runtimeGlobal.__d;
+
+  const defineProperty = (key: string): void => {
+    const descriptor = Object.getOwnPropertyDescriptor(runtimeGlobal, key);
+    if (descriptor && descriptor.configurable === false) return;
+
+    Object.defineProperty(runtimeGlobal, key, {
+      configurable: true,
+      enumerable: descriptor?.enumerable ?? true,
+      get() {
+        return currentDefine;
+      },
+      set(value: unknown) {
+        currentDefine = wrapMetroDefine(value, externalModulesById);
+      },
+    });
+  };
+
+  defineProperty('__d');
+  defineProperty('$$RNM_SHARED__d');
+
+  return () => {
+    for (const snapshot of snapshots.reverse()) {
+      restoreGlobalDescriptor(runtimeGlobal, snapshot);
+    }
+  };
+}
+
+function wrapMetroDefine(
+  candidate: unknown,
+  externalModulesById: ReadonlyMap<
+    string | number,
+    { readonly name: string; readonly value: unknown }
+  >,
+): unknown {
+  if (typeof candidate !== 'function') return candidate;
+
+  return function defineWithHostSharedModule(
+    this: unknown,
+    factory: unknown,
+    moduleId: string | number,
+    dependencyMap?: unknown,
+    ...rest: unknown[]
+  ) {
+    const externalModule = externalModulesById.get(moduleId);
+    const nextFactory = externalModule
+      ? createExternalMetroModuleFactory(
+          externalModule.name,
+          externalModule.value,
+        )
+      : factory;
+
+    return candidate.call(this, nextFactory, moduleId, dependencyMap, ...rest);
+  };
+}
+
+function createExternalMetroModuleFactory(
+  name: string,
+  value: unknown,
+): (
+  global: unknown,
+  require: unknown,
+  importDefault: unknown,
+  importAll: unknown,
+  module: { exports: unknown },
+  exports: unknown,
+) => void {
+  return function hostSharedMetroModuleFactory(
+    _global,
+    _require,
+    _importDefault,
+    _importAll,
+    module,
+  ) {
+    if (!module || typeof module !== 'object') {
+      throw new Error(
+        `Metro external module ${name} received no module object.`,
+      );
+    }
+
+    module.exports = value;
+  };
 }
 
 function isReactNativeRuntime(
@@ -1001,6 +1232,55 @@ function restoreGlobalProperty(
   }
 
   delete runtimeGlobal[key];
+}
+
+function snapshotGlobalProperties<TKeys extends readonly string[]>(
+  runtimeGlobal: Record<string, unknown>,
+  keys: TKeys,
+): Map<string, { readonly exists: boolean; readonly value: unknown }> {
+  return new Map(
+    keys.map((key) => [key, snapshotGlobalProperty(runtimeGlobal, key)]),
+  );
+}
+
+function restoreGlobalProperties(
+  runtimeGlobal: Record<string, unknown>,
+  snapshots: ReadonlyMap<
+    string,
+    { readonly exists: boolean; readonly value: unknown }
+  >,
+): void {
+  for (const [key, snapshot] of snapshots) {
+    restoreGlobalProperty(runtimeGlobal, key, snapshot);
+  }
+}
+
+function snapshotGlobalDescriptor(
+  runtimeGlobal: Record<string, unknown>,
+  key: string,
+): {
+  readonly key: string;
+  readonly descriptor: PropertyDescriptor | undefined;
+} {
+  return {
+    key,
+    descriptor: Object.getOwnPropertyDescriptor(runtimeGlobal, key),
+  };
+}
+
+function restoreGlobalDescriptor(
+  runtimeGlobal: Record<string, unknown>,
+  snapshot: {
+    readonly key: string;
+    readonly descriptor: PropertyDescriptor | undefined;
+  },
+): void {
+  if (snapshot.descriptor) {
+    Object.defineProperty(runtimeGlobal, snapshot.key, snapshot.descriptor);
+    return;
+  }
+
+  delete runtimeGlobal[snapshot.key];
 }
 
 function normalizeTarPath(path: string): string {

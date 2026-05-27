@@ -7,6 +7,7 @@ import {
   createBundleArchiveLoader,
   loadBundleArchiveModule,
   registerBundleArchiveAsset,
+  registerBundleArchiveExternalModules,
 } from './bundle-archive.js';
 import type { MfeManifest } from './domain/mfe-manifest.type.js';
 import type { MicroFrontendModule } from './runtime.js';
@@ -16,7 +17,14 @@ interface TestProps {
 }
 
 const tempRoots: string[] = [];
-const metroGlobalKeys = ['__d', '__r', '__rnm_mfe_module__'] as const;
+const metroGlobalKeys = [
+  '__d',
+  '__r',
+  '__c',
+  '__registerSegment',
+  '__METRO_GLOBAL_PREFIX__',
+  '__rnm_mfe_module__',
+] as const;
 const originalMetroGlobals = new Map(
   metroGlobalKeys.map((key) => [
     key,
@@ -378,6 +386,261 @@ describe('bundle archive loader', () => {
     expect(module.default({ title: 'preferred' })).toBe('entry:preferred');
   });
 
+  test('restores Host Metro globals after successful Metro bundle evaluation', async () => {
+    const originalRequire = function hostRequire() {
+      return { default: function HostMfe() {} };
+    };
+    const originalDefine = function hostDefine() {};
+    const originalClear = function hostClear() {};
+    const originalSegment = function hostRegisterSegment() {};
+    const runtimeGlobal = globalThis as Record<string, unknown>;
+
+    runtimeGlobal.__r = originalRequire;
+    runtimeGlobal.__d = originalDefine;
+    runtimeGlobal.__c = originalClear;
+    runtimeGlobal.__registerSegment = originalSegment;
+    runtimeGlobal.__METRO_GLOBAL_PREFIX__ = 'host_';
+
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        globalThis.__r = function mfeRequire(id) {
+          if (id !== 0) throw new Error('missing module ' + id);
+          return { default: function RestoredMfe() { return 'ok'; } };
+        };
+        globalThis.__d = function mfeDefine() {};
+        globalThis.__c = function mfeClear() {};
+        globalThis.__registerSegment = function mfeRegisterSegment() {};
+        globalThis.__METRO_GLOBAL_PREFIX__ = 'mfe_';
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      { readArchive: () => archive },
+    );
+
+    expect(module.default()).toBe('ok');
+    expect(runtimeGlobal.__r).toBe(originalRequire);
+    expect(runtimeGlobal.__d).toBe(originalDefine);
+    expect(runtimeGlobal.__c).toBe(originalClear);
+    expect(runtimeGlobal.__registerSegment).toBe(originalSegment);
+    expect(runtimeGlobal.__METRO_GLOBAL_PREFIX__).toBe('host_');
+    expect(runtimeGlobal.__rnm_mfe_module__).toBeUndefined();
+  });
+
+  test('restores Host Metro globals when Metro bundle evaluation fails', async () => {
+    const runtimeGlobal = globalThis as Record<string, unknown>;
+    const originalRequire = function hostRequire() {};
+    runtimeGlobal.__r = originalRequire;
+    runtimeGlobal.__d = 'host-define';
+    runtimeGlobal.__c = 'host-clear';
+    runtimeGlobal.__registerSegment = 'host-segment';
+    runtimeGlobal.__METRO_GLOBAL_PREFIX__ = 'host_';
+
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      bundleCode: `
+        globalThis.__r = function mfeRequire() {};
+        globalThis.__d = function mfeDefine() {};
+        globalThis.__c = function mfeClear() {};
+        globalThis.__registerSegment = function mfeRegisterSegment() {};
+        globalThis.__METRO_GLOBAL_PREFIX__ = 'mfe_';
+        throw new Error('bundle exploded');
+      `,
+    });
+
+    await expect(
+      loadBundleArchiveModule(manifest, { readArchive: () => archive }),
+    ).rejects.toThrow('bundle exploded');
+
+    expect(runtimeGlobal.__r).toBe(originalRequire);
+    expect(runtimeGlobal.__d).toBe('host-define');
+    expect(runtimeGlobal.__c).toBe('host-clear');
+    expect(runtimeGlobal.__registerSegment).toBe('host-segment');
+    expect(runtimeGlobal.__METRO_GLOBAL_PREFIX__).toBe('host_');
+  });
+
+  test('applies externalModules to Metro numeric shared dependency modules', async () => {
+    const hostReact = {
+      createElement: (type: string, props: unknown, children: unknown) => ({
+        type,
+        props,
+        children,
+        owner: 'host-react',
+      }),
+    };
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      sharedModules: [{ name: 'react', moduleId: 1 }],
+      metroModuleId: { react: 1 },
+      externalModules: ['react'],
+      bundleCode: `
+        (function (global) {
+          const modules = new Map();
+          global.__d = function (factory, id, dependencyMap) {
+            modules.set(id, { factory, dependencyMap, exports: {}, initialized: false });
+          };
+          global.__r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(global, global.__r, undefined, undefined, module, module.exports, module.dependencyMap);
+            }
+            return module.exports;
+          };
+        })(globalThis);
+        __d(function (global, require, importDefault, importAll, module, exports) {
+          throw new Error('bundled React must not initialize');
+        }, 1, []);
+        __d(function (global, require, importDefault, importAll, module, exports, dependencyMap) {
+          const React = require(dependencyMap[0]);
+          exports.default = function SharedReactMfe(props) {
+            return React.createElement('Text', null, 'shared:' + (props.title || 'react'));
+          };
+        }, 0, [1]);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, {
+      readArchive: () => archive,
+      externalModules: { react: hostReact },
+    });
+
+    expect(module.default({ title: 'host' })).toEqual({
+      type: 'Text',
+      props: null,
+      children: 'shared:host',
+      owner: 'host-react',
+    });
+  });
+
+  test('uses host React and runtime hooks for Metro numeric shared dependencies', async () => {
+    const hostReact = { marker: 'host-react' };
+    const hostRuntime = {
+      useIsMfe: () => true,
+      useMicroFrontendSharedState: () => ({ source: 'host-runtime' }),
+    };
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      sharedModules: [
+        { name: 'react', moduleId: 1 },
+        { name: '@bunin/react-native-micro-frontend/runtime', moduleId: 2 },
+      ],
+      metroModuleId: {
+        react: 1,
+        '@bunin/react-native-micro-frontend/runtime': 2,
+      },
+      externalModules: ['react', '@bunin/react-native-micro-frontend/runtime'],
+      bundleCode: `
+        (function (global) {
+          const modules = new Map();
+          global.__d = function (factory, id, dependencyMap) {
+            modules.set(id, { factory, dependencyMap, exports: {}, initialized: false });
+          };
+          global.__r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(global, global.__r, undefined, undefined, module, module.exports, module.dependencyMap);
+            }
+            return module.exports;
+          };
+        })(globalThis);
+        __d(function () { throw new Error('duplicate React initialized'); }, 1, []);
+        __d(function () { throw new Error('duplicate runtime initialized'); }, 2, []);
+        __d(function (global, require, importDefault, importAll, module, exports, dependencyMap) {
+          const React = require(dependencyMap[0]);
+          const runtime = require(dependencyMap[1]);
+          exports.default = function HookMfe() {
+            if (React.marker !== 'host-react') throw new Error('renderer mismatch');
+            return runtime.useIsMfe() ? runtime.useMicroFrontendSharedState().source : 'not-mfe';
+          };
+        }, 0, [1, 2]);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      {
+        readArchive: () => archive,
+        externalModules: {
+          react: hostReact,
+          '@bunin/react-native-micro-frontend/runtime': hostRuntime,
+        },
+      },
+    );
+
+    expect(module.default()).toBe('host-runtime');
+  });
+
+  test('uses registered host external modules when loader options omit externalModules', async () => {
+    const registeredReact = {
+      createElement: (type: string, props: unknown, children: unknown) => ({
+        type,
+        props,
+        children,
+        owner: 'registered-host-react',
+      }),
+    };
+    registerBundleArchiveExternalModules({ react: registeredReact });
+
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      sharedModules: [{ name: 'react', moduleId: 1 }],
+      metroModuleId: { react: 1 },
+      externalModules: ['react'],
+      bundleCode: `
+        (function (global) {
+          const modules = new Map();
+          global.__d = function (factory, id, dependencyMap) {
+            modules.set(id, { factory, dependencyMap, exports: {}, initialized: false });
+          };
+          global.__r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(global, global.__r, undefined, undefined, module, module.exports, module.dependencyMap);
+            }
+            return module.exports;
+          };
+        })(globalThis);
+        __d(function () { throw new Error('registered shared React was not used'); }, 1, []);
+        __d(function (global, require, importDefault, importAll, module, exports, dependencyMap) {
+          const React = require(dependencyMap[0]);
+          exports.default = function RegisteredSharedReactMfe() {
+            return React.createElement('Text', null, 'registered');
+          };
+        }, 0, [1]);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      { readArchive: () => archive },
+    );
+
+    expect(module.default()).toEqual({
+      type: 'Text',
+      props: null,
+      children: 'registered',
+      owner: 'registered-host-react',
+    });
+  });
+
   test('does not ship the Hermes-invalid dynamic import Function body literally', () => {
     const source = Bun.file(new URL('./bundle-archive.ts', import.meta.url));
     return expect(source.text()).resolves.not.toContain(
@@ -404,6 +667,12 @@ function createFixtureArchive(input: {
   readonly bundleCode: string;
   readonly entryModuleId?: string | number;
   readonly moduleGlobalName?: string;
+  readonly externalModules?: readonly string[];
+  readonly sharedModules?: readonly {
+    readonly name: string;
+    readonly moduleId?: string | number;
+  }[];
+  readonly metroModuleId?: Readonly<Record<string, string | number>>;
 }): Uint8Array {
   const manifest = JSON.stringify(
     {
@@ -422,6 +691,15 @@ function createFixtureArchive(input: {
         : {}),
       ...(input.moduleGlobalName !== undefined
         ? { moduleGlobalName: input.moduleGlobalName }
+        : {}),
+      ...(input.externalModules !== undefined
+        ? { externalModules: input.externalModules }
+        : {}),
+      ...(input.sharedModules !== undefined
+        ? { sharedModules: input.sharedModules }
+        : {}),
+      ...(input.metroModuleId !== undefined
+        ? { metroModuleId: input.metroModuleId }
         : {}),
     },
     null,
