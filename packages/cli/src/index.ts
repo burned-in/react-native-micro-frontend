@@ -3,6 +3,7 @@ export * from './cli-output.printer.js';
 export * from './commands/add.command.js';
 export * from './commands/build.command.js';
 export * from './commands/bundle.command.js';
+export * from './commands/bundle-asset.command.js';
 export * from './commands/diff.command.js';
 export * from './commands/doctor.command.js';
 export * from './commands/help.command.js';

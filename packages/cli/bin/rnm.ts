@@ -5,6 +5,7 @@ import { createConsolePrinter } from '../src/cli-output.printer.js';
 import { runAddCommand } from '../src/commands/add.command.js';
 import { runBuildCommand } from '../src/commands/build.command.js';
 import { runBundleCommand } from '../src/commands/bundle.command.js';
+import { runBundleAssetCommand } from '../src/commands/bundle-asset.command.js';
 import { runDiffCommand } from '../src/commands/diff.command.js';
 import { runDoctorCommand } from '../src/commands/doctor.command.js';
 import { runHelpCommand } from '../src/commands/help.command.js';
@@ -53,6 +54,13 @@ const exitCode = await (async () => {
       return runBuildCommand(args.positional[0], args.flags, printer);
     case 'bundle':
       return runBundleWithIntegration();
+    case 'bundle-asset':
+      return runBundleAssetCommand(
+        root,
+        args.positional[0],
+        args.flags,
+        printer,
+      );
     case 'publish':
       return runWithIntegrationWatcher(args.positional[0], () =>
         runPublishCommand(root, args.positional[0], args.flags, printer),

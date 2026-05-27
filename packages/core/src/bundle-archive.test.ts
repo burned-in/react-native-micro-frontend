@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   createBundleArchiveLoader,
+  createDefaultRnmAssetFileSystem,
   loadBundleArchiveModule,
   registerBundleArchiveAsset,
   registerBundleArchiveExternalModules,
@@ -648,6 +649,62 @@ describe('bundle archive loader', () => {
     );
   });
 
+  test('extracts archive assets and resolves them through React Native Image before evaluation', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      assets: [
+        {
+          sourcePath: 'src/test.jpg',
+          name: 'test',
+          type: 'jpg',
+          httpServerLocation: '/assets/src',
+          scales: [1],
+          hash: '074e25',
+          width: 550,
+          height: 366,
+          files: [
+            {
+              scale: 1,
+              archivePath: 'assets/assets/src/test.jpg',
+              originalPath: 'src/test.jpg',
+            },
+          ],
+        },
+      ],
+      assetFiles: [{ path: 'assets/assets/src/test.jpg', contents: 'jpg' }],
+      bundleCode: `
+        const ReactNative = require('react-native');
+        module.exports.default = function AssetUriMfe() {
+          return ReactNative.Image.resolveAssetSource({
+            sourcePath: 'src/test.jpg',
+            name: 'test',
+            type: 'jpg',
+            httpServerLocation: '/assets/src'
+          }).uri;
+        };
+      `,
+    });
+    const root = mkdtempSync(join(tmpdir(), 'rnm-asset-cache-'));
+    tempRoots.push(root);
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      {
+        readArchive: () => archive,
+        assetFileSystem: createDefaultRnmAssetFileSystem(root),
+        externalModules: {
+          'react-native': {
+            Image: { resolveAssetSource: () => ({ uri: 'host://fallback' }) },
+          },
+        },
+      },
+    );
+
+    const uri = module.default();
+    expect(uri).toContain('/rnm-assets/mfe-feature/1.0.0/ios/');
+    expect(uri).toEndWith('/assets/assets/src/test.jpg');
+  });
+
   test('rejects archives for the wrong MFE name', async () => {
     const archive = createFixtureArchive({
       name: 'other-feature',
@@ -673,6 +730,11 @@ function createFixtureArchive(input: {
     readonly moduleId?: string | number;
   }[];
   readonly metroModuleId?: Readonly<Record<string, string | number>>;
+  readonly assets?: readonly Record<string, unknown>[];
+  readonly assetFiles?: readonly {
+    readonly path: string;
+    readonly contents: string;
+  }[];
 }): Uint8Array {
   const manifest = JSON.stringify(
     {
@@ -701,6 +763,7 @@ function createFixtureArchive(input: {
       ...(input.metroModuleId !== undefined
         ? { metroModuleId: input.metroModuleId }
         : {}),
+      ...(input.assets !== undefined ? { assets: input.assets } : {}),
     },
     null,
     2,
@@ -711,6 +774,7 @@ function createFixtureArchive(input: {
       { path: 'index.bundle', contents: input.bundleCode },
       { path: 'manifest.json', contents: manifest },
       { path: 'assets/.keep', contents: '' },
+      ...(input.assetFiles ?? []),
     ]),
   );
 }

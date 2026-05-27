@@ -30,7 +30,8 @@
     "@bunin/react-native-micro-frontend-hot-updater-adapter": "workspace:*",
     "@bunin/react-native-micro-frontend-integration": "workspace:*",
     "@bunin/react-native-micro-frontend-metro-adapter": "workspace:*",
-    "@bunin/react-native-micro-frontend-native-contract": "workspace:*"
+    "@bunin/react-native-micro-frontend-native-contract": "workspace:*",
+    "typescript": "^5.8.3"
   },
   "publishConfig": {
     "access": "public"

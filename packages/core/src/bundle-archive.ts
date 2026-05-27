@@ -26,6 +26,28 @@ export interface MicroFrontendBundleArchiveManifest {
   readonly sharedModules?: readonly MicroFrontendBundleArchiveSharedModule[];
   /** Shared module name to Metro module id mapping for numeric Metro bundles. */
   readonly metroModuleId?: Readonly<Record<string, string | number>>;
+  /** Runtime assets collected from MFE require/import references. */
+  readonly assets?: readonly MicroFrontendBundleAsset[];
+}
+
+export interface MicroFrontendBundleAsset {
+  readonly id?: string | number;
+  readonly sourcePath: string;
+  readonly name: string;
+  readonly type: string;
+  readonly httpServerLocation?: string;
+  readonly scales?: readonly number[];
+  readonly hash?: string;
+  readonly width?: number;
+  readonly height?: number;
+  readonly files: readonly MicroFrontendBundleAssetFile[];
+}
+
+export interface MicroFrontendBundleAssetFile {
+  readonly scale?: number;
+  readonly archivePath: string;
+  readonly originalPath?: string;
+  readonly platformPath?: string;
 }
 
 export interface MicroFrontendBundleArchiveSharedModule {
@@ -68,6 +90,22 @@ export type MicroFrontendBundleArchiveAsset =
   | null
   | undefined;
 
+export interface MicroFrontendBundleArchiveAssetFileSystem {
+  readonly cacheRoot: string | (() => string | Promise<string>);
+  readonly exists?: (path: string) => boolean | Promise<boolean>;
+  readonly mkdir: (path: string) => void | Promise<void>;
+  readonly writeFile: (path: string, bytes: Uint8Array) => void | Promise<void>;
+  readonly readFile?: (path: string) => Uint8Array | Promise<Uint8Array>;
+  readonly remove?: (path: string) => void | Promise<void>;
+}
+
+export interface PreparedMicroFrontendBundleAssets {
+  readonly rootPath: string;
+  readonly rootUri: string;
+  readonly markerPath: string;
+  readonly assetsByKey: ReadonlyMap<string, string>;
+}
+
 export interface MicroFrontendBundleArchiveLoaderOptions<TModule> {
   /** Runtime guard. Defaults to auto-detecting React Native. */
   readonly runtime?: MicroFrontendBundleArchiveRuntime;
@@ -87,6 +125,8 @@ export interface MicroFrontendBundleArchiveLoaderOptions<TModule> {
   readonly globalObject?: Readonly<Record<string, unknown>>;
   /** Global variable fallback read after evaluation. Defaults to __rnm_mfe_module__. */
   readonly moduleGlobalName?: string;
+  /** File-system adapter used to extract archive assets before JS evaluation. */
+  readonly assetFileSystem?: MicroFrontendBundleArchiveAssetFileSystem;
 }
 
 const registeredReactNativeArchiveAssets = new Map<string, string>();
@@ -173,6 +213,15 @@ export async function loadBundleArchiveModule<
   }
 
   const bundleCode = decodeUtf8(bundleBytes);
+  const preparedAssets = options.assetFileSystem
+    ? await prepareBundleArchiveAssets({
+        manifest,
+        archiveManifest,
+        archiveBytes,
+        files,
+        fileSystem: options.assetFileSystem,
+      })
+    : undefined;
 
   if (options.evaluate) {
     return await options.evaluate({
@@ -183,8 +232,10 @@ export async function loadBundleArchiveModule<
     });
   }
 
-  const externalModules = resolveBundleArchiveExternalModules(
-    options.externalModules,
+  const externalModules = patchReactNativeAssetResolver(
+    resolveBundleArchiveExternalModules(options.externalModules),
+    archiveManifest,
+    preparedAssets,
   );
 
   return evaluateCommonJsBundle<TModule>({
@@ -215,6 +266,349 @@ function resolveBundleArchiveExternalModules(
     ...registeredBundleArchiveExternalModules,
     ...(externalModules ?? {}),
   };
+}
+
+/** Creates a Node/Bun-compatible file-system adapter for bundle asset extraction. */
+export function createDefaultRnmAssetFileSystem(
+  cacheRoot = '.rnm-assets-cache',
+): MicroFrontendBundleArchiveAssetFileSystem {
+  return {
+    cacheRoot,
+    async exists(path) {
+      const { existsSync } =
+        await importNodeBuiltin<typeof import('node:fs')>('fs');
+      return existsSync(path);
+    },
+    async mkdir(path) {
+      const { mkdir } =
+        await importNodeBuiltin<typeof import('node:fs/promises')>(
+          'fs/promises',
+        );
+      await mkdir(path, { recursive: true });
+    },
+    async writeFile(path, bytes) {
+      const { dirname } =
+        await importNodeBuiltin<typeof import('node:path')>('path');
+      const { mkdir, writeFile } =
+        await importNodeBuiltin<typeof import('node:fs/promises')>(
+          'fs/promises',
+        );
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, bytes);
+    },
+    async readFile(path) {
+      const { readFile } =
+        await importNodeBuiltin<typeof import('node:fs/promises')>(
+          'fs/promises',
+        );
+      return toUint8Array(await readFile(path));
+    },
+    async remove(path) {
+      const { rm } =
+        await importNodeBuiltin<typeof import('node:fs/promises')>(
+          'fs/promises',
+        );
+      await rm(path, { force: true, recursive: true });
+    },
+  };
+}
+
+async function prepareBundleArchiveAssets(input: {
+  readonly manifest: MfeManifest;
+  readonly archiveManifest: MicroFrontendBundleArchiveManifest;
+  readonly archiveBytes: Uint8Array;
+  readonly files: MicroFrontendBundleArchiveFiles;
+  readonly fileSystem: MicroFrontendBundleArchiveAssetFileSystem;
+}): Promise<PreparedMicroFrontendBundleAssets | undefined> {
+  const assets = input.archiveManifest.assets ?? [];
+  if (assets.length === 0) return undefined;
+
+  const cacheRoot = await resolveAssetCacheRoot(input.fileSystem.cacheRoot);
+  const bundleHash = hashBytes(input.archiveBytes);
+  const rootPath = joinRuntimePath(
+    cacheRoot,
+    'rnm-assets',
+    safePathSegment(input.archiveManifest.name),
+    safePathSegment(input.archiveManifest.version),
+    input.archiveManifest.platform,
+    bundleHash,
+  );
+  const markerPath = joinRuntimePath(rootPath, '.rnm-assets-ready.json');
+  const marker = {
+    name: input.archiveManifest.name,
+    version: input.archiveManifest.version,
+    platform: input.archiveManifest.platform,
+    bundleHash,
+    assetCount: assets.length,
+  };
+
+  if (await assetFileExists(input.fileSystem, markerPath)) {
+    return createPreparedAssetMap(rootPath, markerPath, assets);
+  }
+
+  const tempRoot = `${rootPath}.tmp-${Date.now().toString(36)}`;
+  if (input.fileSystem.remove) await input.fileSystem.remove(tempRoot);
+  await input.fileSystem.mkdir(tempRoot);
+
+  for (const asset of assets) {
+    for (const file of asset.files) {
+      const bytes = input.files.get(normalizeArchivePath(file.archivePath));
+      if (!bytes) {
+        throw new Error(
+          `Bundle archive asset is missing ${file.archivePath} for ${asset.sourcePath}.`,
+        );
+      }
+      await input.fileSystem.writeFile(
+        joinRuntimePath(tempRoot, file.archivePath),
+        bytes,
+      );
+    }
+  }
+
+  await input.fileSystem.writeFile(
+    joinRuntimePath(tempRoot, '.rnm-assets-ready.json'),
+    encodeUtf8(`${JSON.stringify(marker, null, 2)}\n`),
+  );
+
+  if (input.fileSystem.remove) await input.fileSystem.remove(rootPath);
+
+  // The adapter intentionally stays small; without a native rename primitive we
+  // copy from the completed temp tree into the deterministic final tree and write
+  // the marker last, so readers only reuse fully marked extractions.
+  for (const asset of assets) {
+    for (const file of asset.files) {
+      const bytes = input.files.get(normalizeArchivePath(file.archivePath));
+      if (!bytes) continue;
+      await input.fileSystem.writeFile(
+        joinRuntimePath(rootPath, file.archivePath),
+        bytes,
+      );
+    }
+  }
+  await input.fileSystem.writeFile(
+    markerPath,
+    encodeUtf8(`${JSON.stringify(marker, null, 2)}\n`),
+  );
+  if (input.fileSystem.remove) await input.fileSystem.remove(tempRoot);
+
+  return createPreparedAssetMap(rootPath, markerPath, assets);
+}
+
+function createPreparedAssetMap(
+  rootPath: string,
+  markerPath: string,
+  assets: readonly MicroFrontendBundleAsset[],
+): PreparedMicroFrontendBundleAssets {
+  const assetsByKey = new Map<string, string>();
+  for (const asset of assets) {
+    const primary = asset.files[0];
+    if (!primary) continue;
+    const uri = pathToFileUri(joinRuntimePath(rootPath, primary.archivePath));
+    for (const key of assetLookupKeys(asset)) {
+      assetsByKey.set(key, uri);
+    }
+    for (const file of asset.files) {
+      assetsByKey.set(
+        normalizeArchivePath(file.archivePath),
+        pathToFileUri(joinRuntimePath(rootPath, file.archivePath)),
+      );
+    }
+  }
+
+  return {
+    rootPath,
+    rootUri: pathToFileUri(rootPath),
+    markerPath,
+    assetsByKey,
+  };
+}
+
+function patchReactNativeAssetResolver(
+  externalModules: Readonly<Record<string, unknown>> | undefined,
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+  preparedAssets: PreparedMicroFrontendBundleAssets | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+  if (
+    !preparedAssets ||
+    !externalModules ||
+    !isRecord(externalModules['react-native'])
+  ) {
+    return externalModules;
+  }
+
+  const reactNative = externalModules['react-native'];
+  const image = isRecord(reactNative.Image) ? reactNative.Image : {};
+  const assetRegistry = isRecord(reactNative.AssetRegistry)
+    ? reactNative.AssetRegistry
+    : {};
+  const originalResolve = image.resolveAssetSource;
+  const originalGetAssetByID = assetRegistry.getAssetByID;
+  const resolveFromPrepared = (source: unknown): unknown => {
+    const uri = resolvePreparedAssetUri(
+      source,
+      archiveManifest,
+      preparedAssets,
+    );
+    if (uri) {
+      return isRecord(source) ? { ...source, uri } : { uri };
+    }
+
+    return typeof originalResolve === 'function'
+      ? originalResolve.call(image, source)
+      : source;
+  };
+  const getAssetByID = (id: unknown): unknown => {
+    const asset = findManifestAssetById(archiveManifest, id);
+    if (asset) {
+      const uri = resolvePreparedAssetUri(
+        asset,
+        archiveManifest,
+        preparedAssets,
+      );
+      return uri ? { ...asset, uri } : asset;
+    }
+    return typeof originalGetAssetByID === 'function'
+      ? originalGetAssetByID.call(assetRegistry, id)
+      : undefined;
+  };
+
+  return {
+    ...externalModules,
+    'react-native': {
+      ...reactNative,
+      Image: {
+        ...image,
+        resolveAssetSource: resolveFromPrepared,
+      },
+      AssetRegistry: {
+        ...assetRegistry,
+        getAssetByID,
+      },
+    },
+  };
+}
+
+function resolvePreparedAssetUri(
+  source: unknown,
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+  preparedAssets: PreparedMicroFrontendBundleAssets,
+): string | undefined {
+  for (const key of runtimeAssetLookupKeys(source, archiveManifest)) {
+    const uri = preparedAssets.assetsByKey.get(key);
+    if (uri) return uri;
+  }
+  return undefined;
+}
+
+function runtimeAssetLookupKeys(
+  source: unknown,
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+): readonly string[] {
+  if (typeof source === 'number' || typeof source === 'string')
+    return [String(source)];
+  if (!isRecord(source)) return [];
+
+  const keys: string[] = [];
+  const id = source.id;
+  if (typeof id === 'string' || typeof id === 'number') keys.push(String(id));
+
+  const sourcePath = source.sourcePath;
+  if (typeof sourcePath === 'string')
+    keys.push(normalizeArchivePath(sourcePath));
+
+  const name = source.name;
+  const type = source.type;
+  const httpServerLocation = source.httpServerLocation;
+  if (typeof name === 'string' && typeof type === 'string') {
+    keys.push(`${name}.${type}`);
+    if (typeof httpServerLocation === 'string') {
+      keys.push(`${normalizeArchivePath(httpServerLocation)}/${name}.${type}`);
+      keys.push(
+        `/assets/${normalizeArchivePath(httpServerLocation).replace(/^assets\//u, '')}/${name}.${type}`,
+      );
+    }
+  }
+
+  const matched = archiveManifest.assets?.find((asset) =>
+    assetLookupKeys(asset).some((key) => keys.includes(key)),
+  );
+  if (matched) keys.push(...assetLookupKeys(matched));
+
+  return [...new Set(keys)];
+}
+
+function assetLookupKeys(asset: MicroFrontendBundleAsset): readonly string[] {
+  const keys = [
+    asset.sourcePath,
+    normalizeArchivePath(asset.sourcePath),
+    `${asset.name}.${asset.type}`,
+  ];
+  if (asset.id !== undefined) keys.push(String(asset.id));
+  if (asset.httpServerLocation) {
+    keys.push(
+      `${normalizeArchivePath(asset.httpServerLocation)}/${asset.name}.${asset.type}`,
+    );
+  }
+  return [...new Set(keys)];
+}
+
+function findManifestAssetById(
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+  id: unknown,
+): MicroFrontendBundleAsset | undefined {
+  return archiveManifest.assets?.find(
+    (asset) => asset.id !== undefined && String(asset.id) === String(id),
+  );
+}
+
+async function resolveAssetCacheRoot(
+  cacheRoot: string | (() => string | Promise<string>),
+): Promise<string> {
+  return typeof cacheRoot === 'function' ? await cacheRoot() : cacheRoot;
+}
+
+async function assetFileExists(
+  fileSystem: MicroFrontendBundleArchiveAssetFileSystem,
+  path: string,
+): Promise<boolean> {
+  if (fileSystem.exists) return await fileSystem.exists(path);
+  if (!fileSystem.readFile) return false;
+  try {
+    await fileSystem.readFile(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hashBytes(bytes: Uint8Array): string {
+  let hash = 0x811c9dc5;
+  for (const byte of bytes) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+function safePathSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]/gu, '_');
+}
+
+function joinRuntimePath(...parts: readonly string[]): string {
+  return parts
+    .filter((part) => part.length > 0)
+    .join('/')
+    .replace(/\/+/gu, '/');
+}
+
+function pathToFileUri(path: string): string {
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) return path;
+  return `file://${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+function encodeUtf8(value: string): Uint8Array {
+  if (typeof TextEncoder === 'function') return new TextEncoder().encode(value);
+  return Uint8Array.from([...value].map((char) => char.charCodeAt(0) & 0xff));
 }
 
 async function readBundleArchive(
@@ -1281,6 +1675,10 @@ function restoreGlobalDescriptor(
   }
 
   delete runtimeGlobal[snapshot.key];
+}
+
+function normalizeArchivePath(path: string): string {
+  return path.replaceAll('\\', '/').replace(/^\.\//u, '').replace(/^\/+/, '');
 }
 
 function normalizeTarPath(path: string): string {

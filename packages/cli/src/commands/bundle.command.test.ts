@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -10,6 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runBundleCommand } from './bundle.command.js';
+import { runBundleAssetCommand } from './bundle-asset.command.js';
 
 const tempRoots: string[] = [];
 
@@ -172,6 +174,250 @@ test('auto-imports generated archive registration into host entry with --yes', (
   );
 });
 
+test('bundle-asset traces require/import assets and excludes unused/code files', () => {
+  const root = createAssetFixture();
+
+  const result = runBundleAssetCommand(
+    root,
+    'asset-feature',
+    { platform: 'ios', entry: './src/index.tsx' },
+    printer(),
+  );
+
+  expect(result).toBe(0);
+  const manifest = JSON.parse(
+    readFileSync(
+      join(
+        root,
+        'dist',
+        'rnm-bundles',
+        'asset-feature',
+        'ios',
+        'asset-manifest.json',
+      ),
+      'utf8',
+    ),
+  ) as { assets: { sourcePath: string; files: { archivePath: string }[] }[] };
+  const sourcePaths = manifest.assets.map((asset) => asset.sourcePath).sort();
+
+  expect(sourcePaths).toEqual([
+    'src/assets/data.json',
+    'src/assets/fonts/Pretendard.ttf',
+    'src/assets/local.db',
+    'src/assets/logo.png',
+    'src/assets/lottie/loading.lottie',
+    'src/assets/manual.pdf',
+    'src/test.jpg',
+  ]);
+  expect(sourcePaths).not.toContain('src/assets/unused.png');
+  expect(sourcePaths).not.toContain('src/assets/component.ts');
+  expect(sourcePaths).not.toContain('src/assets/types.d.ts');
+  expect(sourcePaths).not.toContain('src/assets/app.js.map');
+  expect(
+    existsSync(
+      join(
+        root,
+        'dist',
+        'rnm-bundles',
+        'asset-feature',
+        'ios',
+        'assets',
+        'assets',
+        'src',
+        'test.jpg',
+      ),
+    ),
+  ).toBe(true);
+});
+
+test('bundle-asset writes Android density archive paths', () => {
+  const root = createAssetFixture();
+
+  const result = runBundleAssetCommand(
+    root,
+    'asset-feature',
+    { platform: 'android', entry: './src/index.tsx' },
+    printer(),
+  );
+
+  expect(result).toBe(0);
+  const manifest = JSON.parse(
+    readFileSync(
+      join(
+        root,
+        'dist',
+        'rnm-bundles',
+        'asset-feature',
+        'android',
+        'asset-manifest.json',
+      ),
+      'utf8',
+    ),
+  ) as {
+    assets: {
+      sourcePath: string;
+      files: { archivePath: string; platformPath?: string }[];
+    }[];
+  };
+  const jpg = manifest.assets.find(
+    (asset) => asset.sourcePath === 'src/test.jpg',
+  );
+
+  expect(jpg?.files[0]).toEqual({
+    scale: 1,
+    archivePath: 'assets/drawable-mdpi/src_test.jpg',
+    originalPath: 'src/test.jpg',
+    platformPath: 'drawable-mdpi/src_test.jpg',
+  });
+});
+
+test('bundle-asset supports glob fallback for dynamic require warnings', () => {
+  const root = createAssetFixture(
+    "const name = 'logo';\n" +
+      'export const image = require(`./assets/${' +
+      'name' +
+      '}.png`);\n',
+  );
+
+  const logs: string[] = [];
+  const result = runBundleAssetCommand(
+    root,
+    'asset-feature',
+    {
+      platform: 'ios',
+      entry: './src/index.tsx',
+      'asset-glob': 'src/assets/*.png',
+    },
+    {
+      log: (message) => logs.push(message),
+      error: (message) => logs.push(message),
+    },
+  );
+
+  expect(result).toBe(0);
+  expect(
+    logs.some((line) =>
+      line.includes('Dynamic require could not be statically resolved'),
+    ),
+  ).toBe(true);
+  const manifest = JSON.parse(
+    readFileSync(
+      join(
+        root,
+        'dist',
+        'rnm-bundles',
+        'asset-feature',
+        'ios',
+        'asset-manifest.json',
+      ),
+      'utf8',
+    ),
+  ) as { assets: { sourcePath: string }[] };
+  expect(manifest.assets.map((asset) => asset.sourcePath)).toContain(
+    'src/assets/logo.png',
+  );
+});
+
+test('rnm bundle automatically embeds asset metadata matched with Metro registerAsset', () => {
+  const root = createBundleFixture(
+    'mfe.config.mjs',
+    `export default { name: 'asset-bundle-feature', version: '5.0.0', entry: './src/index.tsx' };
+`,
+  );
+  mkdirSync(join(root, 'src'), { recursive: true });
+  writeFileSync(
+    join(root, 'src', 'index.tsx'),
+    "export const image = require('./test.jpg');\n",
+  );
+  writeFileSync(join(root, 'src', 'test.jpg'), 'jpg');
+  writeFileSync(join(root, 'src', 'dead.jpg'), 'dead');
+
+  const result = runBundleCommand(
+    root,
+    undefined,
+    { platform: 'ios' },
+    printer(),
+  );
+
+  expect(result).toBe(0);
+  const manifest = readManifest(root, 'asset-bundle-feature', 'ios') as {
+    assets?: {
+      sourcePath: string;
+      hash?: string;
+      width?: number;
+      height?: number;
+      httpServerLocation?: string;
+      files: { archivePath: string }[];
+    }[];
+  };
+
+  expect(manifest.assets).toHaveLength(1);
+  expect(manifest.assets?.[0]).toMatchObject({
+    sourcePath: 'src/test.jpg',
+    hash: '074e25',
+    width: 550,
+    height: 366,
+    httpServerLocation: '/assets/src',
+    files: [{ archivePath: 'assets/assets/src/test.jpg' }],
+  });
+  expect(
+    existsSync(
+      join(
+        root,
+        'dist',
+        'rnm-bundles',
+        'asset-bundle-feature',
+        'ios',
+        'assets',
+        'assets',
+        'src',
+        'test.jpg',
+      ),
+    ),
+  ).toBe(true);
+  expect(
+    existsSync(
+      join(
+        root,
+        'dist',
+        'rnm-bundles',
+        'asset-bundle-feature',
+        'ios',
+        'assets',
+        'assets',
+        'src',
+        'dead.jpg',
+      ),
+    ),
+  ).toBe(false);
+});
+
+test('rnm bundle includes assets that appear in Metro registerAsset even when static tracing misses them', () => {
+  const root = createBundleFixture(
+    'mfe.config.mjs',
+    `export default { name: 'metro-only-asset-feature', version: '5.1.0', entry: './src/index.tsx' };
+`,
+  );
+  mkdirSync(join(root, 'src'), { recursive: true });
+  writeFileSync(join(root, 'src', 'index.tsx'), 'export const value = 1;\n');
+  writeFileSync(join(root, 'src', 'test.jpg'), 'jpg');
+
+  const result = runBundleCommand(
+    root,
+    undefined,
+    { platform: 'ios' },
+    printer(),
+  );
+
+  expect(result).toBe(0);
+  const manifest = readManifest(root, 'metro-only-asset-feature', 'ios') as {
+    assets?: { sourcePath: string; files: { archivePath: string }[] }[];
+  };
+
+  expect(manifest.assets).toHaveLength(1);
+  expect(manifest.assets?.[0]?.sourcePath).toBe('src/test.jpg');
+});
+
 function createBundleFixture(configFile: string, configSource: string): string {
   const root = mkdtempSync(join(tmpdir(), 'rnm-bundle-config-'));
   tempRoots.push(root);
@@ -193,6 +439,7 @@ const sourceMapOutput = value('--sourcemap-output');\nfs.mkdirSync(path.dirname(
   '__d(function(){}, 3, [], "node_modules/react-native/index.js");',
   '__d(function(){}, 4, [], "node_modules/@bunin/react-native-micro-frontend/dist/mjs/index.mjs");',
   '__d(function(){}, 5, [], "node_modules/@bunin/react-native-micro-frontend/dist/mjs/runtime.mjs");',
+  'require("react-native/Libraries/Image/AssetRegistry").registerAsset({__packager_asset:true,httpServerLocation:"/assets/src",name:"test",type:"jpg",scales:[1],hash:"074e25",width:550,height:366});',
   '__r(0);',
   '',
 ].join('\\n'));
@@ -216,6 +463,44 @@ fs.mkdirSync(assetsDest, { recursive: true });\n`,
   );
   chmodSync(reactNativeBin, 0o755);
 
+  return root;
+}
+
+function createAssetFixture(
+  entrySource = `
+  import logo from './assets/logo.png';
+  import font from './assets/fonts/Pretendard.ttf';
+  import data from './assets/data.json';
+  import animation from './assets/lottie/loading.lottie';
+  import manual from './assets/manual.pdf';
+  import database from './assets/local.db';
+  export const image = require('./test.jpg');
+  export const assets = [logo, font, data, animation, manual, database, image];
+`,
+): string {
+  const root = mkdtempSync(join(tmpdir(), 'rnm-bundle-assets-'));
+  tempRoots.push(root);
+  mkdirSync(join(root, 'src', 'assets', 'fonts'), { recursive: true });
+  mkdirSync(join(root, 'src', 'assets', 'lottie'), { recursive: true });
+  writeFileSync(join(root, 'src', 'index.tsx'), entrySource);
+  writeFileSync(join(root, 'src', 'test.jpg'), 'jpg');
+  writeFileSync(join(root, 'src', 'assets', 'logo.png'), 'png');
+  writeFileSync(join(root, 'src', 'assets', 'unused.png'), 'unused');
+  writeFileSync(join(root, 'src', 'assets', 'fonts', 'Pretendard.ttf'), 'font');
+  writeFileSync(join(root, 'src', 'assets', 'data.json'), '{"ok":true}');
+  writeFileSync(join(root, 'src', 'assets', 'lottie', 'loading.lottie'), '{}');
+  writeFileSync(join(root, 'src', 'assets', 'manual.pdf'), 'pdf');
+  writeFileSync(join(root, 'src', 'assets', 'local.db'), 'db');
+  writeFileSync(
+    join(root, 'metro.config.js'),
+    "module.exports = { resolver: { assetExts: ['db'] } };\n",
+  );
+  writeFileSync(join(root, 'src', 'assets', 'component.ts'), 'export {};');
+  writeFileSync(
+    join(root, 'src', 'assets', 'types.d.ts'),
+    'declare const x: string;',
+  );
+  writeFileSync(join(root, 'src', 'assets', 'app.js.map'), '{}');
   return root;
 }
 

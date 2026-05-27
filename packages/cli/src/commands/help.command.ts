@@ -240,6 +240,15 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
       { flags: '--out-dir <dir>', description: 'Output directory.' },
       { flags: '--dev', description: 'Create a development bundle.' },
       {
+        flags: '--no-bundle-assets',
+        description:
+          'Disable automatic runtime asset collection for this bundle.',
+      },
+      {
+        flags: '--asset-glob <glob>',
+        description: 'Fallback glob for dynamic require asset references.',
+      },
+      {
         flags: '--yes, -y',
         description:
           'Apply detected Host archive registration imports without prompting.',
@@ -273,6 +282,28 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
       'MFE defaults: mfe.config.ts, mfe.config.mjs, mfe.config.cjs, or mfe.config.json',
       'Optional Host registry update: rnm.registry.json bundleArchiveUrl',
       'Optional Host entry import: rnm.bundle-archives.ts registers copied .tar.gz assets for React Native',
+    ],
+  },
+
+  'bundle-asset': {
+    usage:
+      'rnm bundle-asset <mfe-name> [--platform ios|android|all] [--entry <file>] [--out-dir <dir>] [--asset-glob <glob>]',
+    description:
+      'Collect only runtime assets referenced by MFE require/import statements and write an asset manifest.',
+    options: [
+      {
+        flags: '--platform ios|android|all',
+        description: 'Target platform. Defaults to ios.',
+      },
+      {
+        flags: '--entry <file>',
+        description: 'Entry file to statically trace.',
+      },
+      { flags: '--out-dir <dir>', description: 'Output directory.' },
+      {
+        flags: '--asset-glob <glob>',
+        description: 'Fallback glob for dynamic require cases.',
+      },
     ],
   },
   build: {
@@ -432,6 +463,7 @@ const commandOrder = [
   'all',
   'sync',
   'bundle',
+  'bundle-asset',
   'build',
   'publish',
   'expo',

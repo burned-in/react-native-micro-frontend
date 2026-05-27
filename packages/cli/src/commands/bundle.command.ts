@@ -22,6 +22,8 @@ import {
   loadMfeConfigFile,
 } from '@bunin/react-native-micro-frontend-config';
 import type { CliPrinter } from '../cli-output.printer.js';
+import type { MicroFrontendBundleAsset } from './bundle-asset.command.js';
+import { bundleAssetsForTarget } from './bundle-asset.command.js';
 
 interface BundleTarget {
   readonly name: string;
@@ -55,6 +57,7 @@ interface BundleManifest {
   readonly externalModules?: readonly string[];
   readonly sharedModules?: readonly BundleSharedModule[];
   readonly metroModuleId?: Readonly<Record<string, string | number>>;
+  readonly assets?: readonly MicroFrontendBundleAsset[];
 }
 
 interface BundleSharedModule {
@@ -138,7 +141,7 @@ export function runBundleCommand(
       dev,
       flags,
     );
-    const result = bundleTarget(root, target, printer);
+    const result = bundleTarget(root, target, flags, printer);
 
     if (result !== 0) {
       return result;
@@ -189,6 +192,7 @@ function createBundleTarget(
 function bundleTarget(
   root: string,
   target: BundleTarget,
+  flags: Readonly<Record<string, string | boolean>>,
   printer: CliPrinter,
 ): number {
   mkdirSync(target.outDir, { recursive: true });
@@ -243,7 +247,23 @@ function bundleTarget(
 
   mkdirSync(target.assetsDest, { recursive: true });
   const exportMetadata = appendBundleEntryExport(target, printer);
-  writeBundleManifest(target, exportMetadata);
+  const assetResult =
+    flags['no-bundle-assets'] === true
+      ? {
+          assets: [] as readonly MicroFrontendBundleAsset[],
+          warnings: [] as readonly string[],
+        }
+      : bundleAssetsForTarget(root, target, flags, printer);
+
+  if (!assetResult) return 1;
+
+  if (flags['no-bundle-assets'] === true) {
+    printer.log(
+      '[SKIP] Bundle asset collection disabled by --no-bundle-assets',
+    );
+  }
+
+  writeBundleManifest(target, exportMetadata, assetResult.assets);
 
   const archiveFiles = [
     basename(target.bundleOutput),
@@ -287,6 +307,7 @@ function bundleTarget(
 function writeBundleManifest(
   target: BundleTarget,
   exportMetadata: BundleExportMetadata,
+  assets: readonly MicroFrontendBundleAsset[],
 ): void {
   const manifest: BundleManifest = {
     schemaVersion: 1,
@@ -306,6 +327,7 @@ function writeBundleManifest(
     ...(exportMetadata.entryModuleId !== undefined
       ? { entryModuleId: exportMetadata.entryModuleId }
       : {}),
+    ...(assets.length > 0 ? { assets } : {}),
   };
 
   writeFileSync(
