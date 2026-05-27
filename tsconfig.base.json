@@ -20,6 +20,9 @@
       "@bunin/react-native-micro-frontend/hot-updater": [
         "packages/core/src/hot-updater.ts"
       ],
+      "@bunin/react-native-micro-frontend/bundle-archive": [
+        "packages/core/src/bundle-archive.ts"
+      ],
       "@bunin/react-native-micro-frontend/runtime": [
         "packages/core/src/runtime.ts"
       ],

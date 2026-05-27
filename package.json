@@ -1,7 +1,7 @@
 {
   "name": "react-native-micro-frontend-monorepo",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "author": "bunin contributors",
   "homepage": "https://rnmfe.bunin.app/",
   "repository": {
@@ -38,7 +38,8 @@
     "docs:preview": "cd apps/docs-site && bun run preview",
     "docs:build:github-pages": "GITHUB_PAGES_BASE=${GITHUB_PAGES_BASE:-/react-native-micro-frontend/} VITE_PUBLIC_SITE_ORIGIN=${VITE_PUBLIC_SITE_ORIGIN:-https://burned-in.github.io} bun run docs:build && touch apps/docs-site/dist/client/.nojekyll",
     "docs:build:github-pages:root": "GITHUB_PAGES_BASE=${GITHUB_PAGES_BASE:-/} VITE_PUBLIC_SITE_ORIGIN=${VITE_PUBLIC_SITE_ORIGIN:-https://burned-in.github.io} bun run docs:build && touch apps/docs-site/dist/client/.nojekyll",
-    "docs:seo-assets": "bun scripts/docs/generate-seo-assets.mjs"
+    "docs:seo-assets": "bun scripts/docs/generate-seo-assets.mjs",
+    "test:loaders": "bun test ./packages/core/src/runtime.test.ts ./packages/core/src/bundle-archive.test.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",

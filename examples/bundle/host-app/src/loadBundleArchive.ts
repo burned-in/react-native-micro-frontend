@@ -1,22 +1,25 @@
 import type { MfeManifest } from '@bunin/react-native-micro-frontend';
+import { createBundleArchiveLoader } from '@bunin/react-native-micro-frontend/bundle-archive';
 import type { MicroFrontendModule } from '@bunin/react-native-micro-frontend/runtime';
 
 /**
- * Bundle archive transport boundary.
+ * Custom compressed bundle archive loader.
  *
- * This example intentionally does not import `../../mfe-feature/src/index`.
- * A real Host should read or download manifest.bundleArchiveUrl, verify the
- * archive, unpack index.bundle + assets + manifest.json, and evaluate the JS
- * bundle through its own runtime engine.
+ * The runtime selects this callback from `bundleArchiveUrl`; this loader then
+ * reads/downloads the archive, gunzips it, extracts `index.bundle` +
+ * `manifest.json`, and evaluates the JS bundle into a React component module.
+ *
+ * React Native production apps can pass app-specific `readArchive`, `gunzip`, or
+ * `evaluate` bridges to `createBundleArchiveLoader()` when native storage or an
+ * OTA engine owns those steps.
  */
+const defaultBundleArchiveLoader =
+  createBundleArchiveLoader<MicroFrontendModule<Record<string, unknown>>>();
+
 export async function loadBundleArchive<TProps extends object>(
   manifest: MfeManifest,
 ): Promise<MicroFrontendModule<TProps>> {
-  if (!manifest.bundleArchiveUrl) {
-    throw new Error(`bundleArchiveUrl is missing for ${manifest.name}.`);
-  }
-
-  throw new Error(
-    `Implement archive evaluation for ${manifest.bundleArchiveUrl} in the Host runtime layer.`,
-  );
+  return (await defaultBundleArchiveLoader(
+    manifest,
+  )) as MicroFrontendModule<TProps>;
 }

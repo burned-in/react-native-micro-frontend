@@ -1,6 +1,6 @@
 {
   "name": "@bunin/react-native-micro-frontend",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "author": "bunin contributors",
   "homepage": "https://rnmfe.bunin.app/",
   "repository": {
@@ -20,6 +20,11 @@
       "types": "./dist/src/hot-updater.d.ts",
       "import": "./dist/mjs/hot-updater.mjs",
       "require": "./dist/cjs/hot-updater.cjs"
+    },
+    "./bundle-archive": {
+      "types": "./dist/src/bundle-archive.d.ts",
+      "import": "./dist/mjs/bundle-archive.mjs",
+      "require": "./dist/cjs/bundle-archive.cjs"
     },
     "./runtime": {
       "types": "./dist/src/runtime.d.ts",

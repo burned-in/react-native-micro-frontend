@@ -187,6 +187,61 @@ describe('loadMicroFrontendModule', () => {
     });
   });
 
+  test('routes general TS, Hot Updater, Expo, and custom archive transports', async () => {
+    const calls: string[] = [];
+    const load = createMicroFrontendLoader({
+      fallback: (mfe) => {
+        calls.push(`general:${mfe.name}`);
+        return { default: 'general-ts' };
+      },
+      hotUpdater: (mfe) => {
+        calls.push(`hot-updater:${mfe.name}`);
+        return { default: 'hot-updater' };
+      },
+      expo: (mfe) => {
+        calls.push(`expo:${mfe.name}`);
+        return { default: 'expo' };
+      },
+      custom: (mfe) => {
+        calls.push(`custom:${mfe.name}`);
+        return { default: mfe.bundleArchiveUrl };
+      },
+    });
+
+    await expect(
+      load({
+        ...activeManifest,
+        ota: { enabled: false, mode: 'disabled', provider: 'none' },
+      }),
+    ).resolves.toEqual({ default: 'general-ts' });
+    await expect(load(activeManifest)).resolves.toEqual({
+      default: 'hot-updater',
+    });
+    await expect(
+      load({
+        ...activeManifest,
+        name: 'expo-mfe-feature',
+        ota: { enabled: true, mode: 'manual', provider: 'expo' },
+      }),
+    ).resolves.toEqual({ default: 'expo' });
+    await expect(
+      load({
+        ...activeManifest,
+        ota: { enabled: true, mode: 'manual', provider: 'custom' },
+        bundleArchiveUrl: '.bundle/rnm/mfe-feature.ios.ota.tar.gz',
+      }),
+    ).resolves.toEqual({
+      default: '.bundle/rnm/mfe-feature.ios.ota.tar.gz',
+    });
+
+    expect(calls).toEqual([
+      'general:mfe-feature',
+      'hot-updater:mfe-feature',
+      'expo:expo-mfe-feature',
+      'custom:mfe-feature',
+    ]);
+  });
+
   test('throws when no matching Host loader is configured', async () => {
     await expect(loadMicroFrontendModule(activeManifest, {})).rejects.toThrow(
       'No bundle loader configured for MFE "mfe-feature" (provider: hot-updater).',

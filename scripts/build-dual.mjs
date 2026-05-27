@@ -19,6 +19,7 @@ const packages = [
     entries: {
       index: 'src/index.ts',
       'hot-updater': 'src/hot-updater.ts',
+      'bundle-archive': 'src/bundle-archive.ts',
       runtime: 'src/runtime.ts',
       metro: 'src/metro.ts',
     },

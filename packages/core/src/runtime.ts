@@ -64,6 +64,8 @@ export type MicroFrontendBundleLoader<TModule> = (
 export interface MicroFrontendBundleLoaders<TModule> {
   /** Loader used when `manifest.ota.provider` is `hot-updater`. */
   readonly hotUpdater?: MicroFrontendBundleLoader<TModule>;
+  /** Loader used when `manifest.ota.provider` is `expo`. */
+  readonly expo?: MicroFrontendBundleLoader<TModule>;
   /** Loader used when `manifest.embeddedBundlePath` is present. */
   readonly embedded?: MicroFrontendBundleLoader<TModule>;
   /** Loader used for custom OTA URLs, keys, or provider-specific metadata. */
@@ -103,9 +105,10 @@ export type ConfiguredMicroFrontendLoader<TModule> = (
  *
  * Loader selection order:
  * 1. Hot Updater callback when `ota.provider` is `hot-updater`
- * 2. Custom callback when `ota.provider` is `custom`, `otaBundleUrl`, or `bundleArchiveUrl` exists
- * 3. Embedded callback when `embeddedBundlePath` exists
- * 4. Fallback callback
+ * 2. Expo callback when `ota.provider` is `expo`
+ * 3. Custom callback when `ota.provider` is `custom`, `otaBundleUrl`, or `bundleArchiveUrl` exists
+ * 4. Embedded callback when `embeddedBundlePath` exists
+ * 5. Fallback callback
  *
  * @param manifest Registry manifest that passed the runtime safety gate.
  * @param loaders Host bundle transport callbacks.
@@ -176,6 +179,10 @@ function selectMicroFrontendBundleLoader<TModule>(
 ): MicroFrontendBundleLoader<TModule> | undefined {
   if (manifest.ota.provider === 'hot-updater' && loaders.hotUpdater) {
     return loaders.hotUpdater;
+  }
+
+  if (manifest.ota.provider === 'expo' && loaders.expo) {
+    return loaders.expo;
   }
 
   if (
