@@ -129,6 +129,46 @@ describe('bundle archive loader', () => {
     }
   });
 
+  test('loads a React Native archive when Hermes has no TextDecoder', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        var __r = function (id) {
+          if (id !== 0) throw new Error('missing module ' + id);
+          return { default: function HermesNoTextDecoderMfe() {
+            return 'rn:한글🚀';
+          } };
+        };
+        __r(0);
+      `,
+    });
+    const originalTextDecoder = globalThis.TextDecoder;
+
+    Object.defineProperty(globalThis, 'TextDecoder', {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      const module = await loadBundleArchiveModule<MicroFrontendModule>(
+        manifest,
+        {
+          runtime: 'react-native',
+          readArchive: () => archive,
+        },
+      );
+
+      expect(module.default()).toBe('rn:한글🚀');
+    } finally {
+      Object.defineProperty(globalThis, 'TextDecoder', {
+        configurable: true,
+        value: originalTextDecoder,
+      });
+    }
+  });
+
   test('loads a React Native archive with built-in JS gunzip and evaluator', async () => {
     const archive = createFixtureArchive({
       name: manifest.name,

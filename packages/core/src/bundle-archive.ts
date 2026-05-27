@@ -927,8 +927,114 @@ function isEmptyBlock(bytes: Uint8Array): boolean {
   return bytes.every((byte) => byte === 0);
 }
 
+type TextDecoderLike = new () => {
+  readonly decode: (input: ArrayBuffer | ArrayBufferView) => string;
+};
+
 function decodeUtf8(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes);
+  const textDecoder = (globalThis as { readonly TextDecoder?: TextDecoderLike })
+    .TextDecoder;
+
+  if (typeof textDecoder === 'function') {
+    return new textDecoder().decode(bytes);
+  }
+
+  return decodeUtf8JavaScript(bytes);
+}
+
+function decodeUtf8JavaScript(bytes: Uint8Array): string {
+  let result = '';
+  let pendingCodeUnits: number[] = [];
+  let offset =
+    bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
+
+  const flush = (): void => {
+    if (pendingCodeUnits.length === 0) return;
+    result += String.fromCharCode(...pendingCodeUnits);
+    pendingCodeUnits = [];
+  };
+  const appendCodePoint = (codePoint: number): void => {
+    if (codePoint <= 0xffff) {
+      pendingCodeUnits.push(codePoint);
+    } else {
+      const adjusted = codePoint - 0x10000;
+      pendingCodeUnits.push(
+        0xd800 + (adjusted >> 10),
+        0xdc00 + (adjusted & 0x3ff),
+      );
+    }
+
+    if (pendingCodeUnits.length >= 8192) flush();
+  };
+  const appendReplacement = (): void => appendCodePoint(0xfffd);
+
+  while (offset < bytes.length) {
+    const byte1 = bytes[offset];
+    if (byte1 === undefined) break;
+
+    if (byte1 <= 0x7f) {
+      appendCodePoint(byte1);
+      offset += 1;
+      continue;
+    }
+
+    if (byte1 >= 0xc2 && byte1 <= 0xdf) {
+      const byte2 = bytes[offset + 1];
+      if (isUtf8ContinuationByte(byte2)) {
+        appendCodePoint(((byte1 & 0x1f) << 6) | (byte2 & 0x3f));
+        offset += 2;
+        continue;
+      }
+    } else if (byte1 >= 0xe0 && byte1 <= 0xef) {
+      const byte2 = bytes[offset + 1];
+      const byte3 = bytes[offset + 2];
+      if (isUtf8ContinuationByte(byte2) && isUtf8ContinuationByte(byte3)) {
+        const codePoint =
+          ((byte1 & 0x0f) << 12) | ((byte2 & 0x3f) << 6) | (byte3 & 0x3f);
+
+        if (codePoint >= 0x800 && !isUtf16Surrogate(codePoint)) {
+          appendCodePoint(codePoint);
+          offset += 3;
+          continue;
+        }
+      }
+    } else if (byte1 >= 0xf0 && byte1 <= 0xf4) {
+      const byte2 = bytes[offset + 1];
+      const byte3 = bytes[offset + 2];
+      const byte4 = bytes[offset + 3];
+      if (
+        isUtf8ContinuationByte(byte2) &&
+        isUtf8ContinuationByte(byte3) &&
+        isUtf8ContinuationByte(byte4)
+      ) {
+        const codePoint =
+          ((byte1 & 0x07) << 18) |
+          ((byte2 & 0x3f) << 12) |
+          ((byte3 & 0x3f) << 6) |
+          (byte4 & 0x3f);
+
+        if (codePoint >= 0x10000 && codePoint <= 0x10ffff) {
+          appendCodePoint(codePoint);
+          offset += 4;
+          continue;
+        }
+      }
+    }
+
+    appendReplacement();
+    offset += 1;
+  }
+
+  flush();
+  return result;
+}
+
+function isUtf8ContinuationByte(byte: number | undefined): byte is number {
+  return byte !== undefined && byte >= 0x80 && byte <= 0xbf;
+}
+
+function isUtf16Surrogate(codePoint: number): boolean {
+  return codePoint >= 0xd800 && codePoint <= 0xdfff;
 }
 
 function toUint8Array(value: ArrayBuffer | ArrayBufferView): Uint8Array {
