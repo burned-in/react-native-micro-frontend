@@ -27,7 +27,7 @@ mfe-feature/
 | `rnm.registry.json` | `rnm add` が生成する runtime registry。Host がどの MFE を知っていて、entry file がどこにあるかを示します。 |
 | runtime hooks | Host loader が render する前に missing、blocked、native-incompatible MFE を止める safety gate です。 |
 
-重要: この library は native-safety と registry layer です。remote JavaScript を自動実行するものではありません。実際の実行は Host App が Hot Updater、embedded bundle、custom loader のいずれかで接続します。
+重要: この library は native-safety と registry layer です。Host に copy された bundle archive は `createBundleArchiveLoader()` で実行できます。remote JavaScript delivery は引き続き Hot Updater、embedded bundle、Host-owned loader のいずれかに接続します。
 
 ## 1. Install
 
@@ -134,7 +134,7 @@ export default function MfeFeature() {
 
 ## 5. Host App で mount する
 
-runtime package は missing module、blocked module、native hash mismatch を防ぐ registry safety gate を担当します。JavaScript bundle の download や evaluation は行いません。実際の loader は Hot Updater、embedded bundle、custom loader のいずれかを Host App が選びます。
+runtime package は missing module、blocked module、native hash mismatch を防ぐ registry safety gate を担当します。copy 済み archive は `createBundleArchiveLoader()` が読み、remote download/evaluation は Hot Updater、embedded bundle、Host-owned loader のいずれかを Host App が選びます。
 
 `createMicroFrontendLoader()` で loader を作り、`MicroFrontendComponent` に渡してください。loader はまず `rnm.registry.json` の config 値（`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`、`bundleArchiveUrl`）を読みます。registry に入れられない値は `loadOptions`、または作成された loader の第 2 引数で直接指定できます。
 
@@ -241,9 +241,9 @@ Hot Updater のような archive を作って Host project に取り込む場合
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
-この command は local React Native `bundle` を実行し、`index.bundle`, `assets/`, `manifest.json` だけを生成して `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz` に圧縮します。`--host` を指定すると `<host>/.bundle/rnm/` に copy し、`--update-registry` を指定すると `rnm.registry.json` の `bundleArchiveUrl` を更新します。
+この command は local React Native `bundle` を実行し、`index.bundle`, `assets/`, `manifest.json` だけを生成して `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz` に圧縮します。`--host` を指定すると `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。`--update-registry` を指定すると `rnm.registry.json` の `bundleArchiveUrl` も更新します。interactive terminal では検出した Host entry file から `rnm.bundle-archives` を import するか確認し、`--yes` または `--register-archives` で自動適用します。
 
-`bundleArchiveUrl` は archive を download/verify/unpack/evaluate する custom loader と一緒に使ってください。runtime は custom loader を選択しますが、remote JavaScript を直接実行しません。
+`bundleArchiveUrl` は `createBundleArchiveLoader()` と一緒に使ってください。生成された registration file により React Native は copy 済み `.tar.gz` を asset として resolve でき、loader はそれを読み、gunzip/untar して、MFE source を import せず Metro entry module を返します。
 
 
 ## 8. Easy Way: generic, bundle, OTA メニュー
@@ -300,7 +300,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`--update-registry` を外すと bundle-only/no-OTA flow です。custom loader は archive download/read、verify、unpack、runtime engine での evaluation を担当します。`rnm.registry.json` に `bundleArchiveUrl` を書きたい場合だけ `--update-registry` を追加してください。
+`rnm bundle` は `index.bundle`、`assets/`、`manifest.json`、`.tar.gz` archive だけを作ります。`--host` は `<host>/.bundle/rnm/` に copy し、`rnm.bundle-archives.ts` を生成します。Host entry import は `--yes` で自動適用するか、一度手動 import してください。`rnm.registry.json` に `bundleArchiveUrl` を書く場合は `--update-registry` を追加してください。
 
 ### メニュー 3. OTA — Hot Updater または custom OTA pipeline で配布
 

@@ -140,7 +140,7 @@ Use `--branch`, `--auto`, `--environment`, and `--non-interactive` when your EAS
 Run this from the MFE project after installing the CLI. It executes React Native bundling and archives only `index.bundle`, `assets/`, and `manifest.json`.
 
 ```bash
-rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
 
-Use the same command through each runner: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, or `deno run -A ... bundle`.
+Use the same command through each runner: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, or `deno run -A ... bundle`. With `--host`, the CLI generates `rnm.bundle-archives.ts`; it prompts for the Host entry import unless you pass `--yes` or `--register-archives`.

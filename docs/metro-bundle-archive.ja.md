@@ -23,7 +23,7 @@ module.exports = (async () => {
 })();
 ```
 
-既存の `resolver.extraNodeModules` は保持され、自動 alias より優先されます。
+既存の `resolver.extraNodeModules` は保持され、自動 alias より優先されます。`withMfe` は React Native が copy 済み archive asset を bundle できるように、`gz`、`tgz`、`tar` も Metro asset extension に追加します。
 
 ## OTA publish なしの Bundle archive
 
@@ -34,11 +34,11 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 rnm bundle mfe-feature --platform android --host ../host-app
 ```
 
-Host `rnm.registry.json` に `bundleArchiveUrl` を書き込む場合だけ `--update-registry` を追加してください。
+Host `rnm.registry.json` に `bundleArchiveUrl` を書き込む場合は `--update-registry` を追加してください。`--host` を使うと CLI は `rnm.bundle-archives.ts` も生成し、検出した Host entry file から import するか確認します。自動適用する場合は `--yes` または `--register-archives`、file 生成だけにする場合は `--no-register-archives` を使います。
 
 ## Host loader boundary
 
-`bundleArchiveUrl` は custom loader を選択しますが、runtime が compressed JavaScript を直接実行するわけではありません。
+`bundleArchiveUrl` は Host loader を選択します。`createBundleArchiveLoader()` は登録済み React Native archive asset を読み、gunzip/untar して、MFE source を import せず Metro entry module を返せます。
 
 ```tsx
 const loadMfeModule = createMicroFrontendLoader({
@@ -46,4 +46,16 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-production `loadBundleArchive` は archive の read/download、integrity verification、`index.bundle` / `assets` / `manifest.json` の unpack、Host runtime または OTA engine による evaluation を担当します。この bundle path で MFE source import に戻さないでください。
+CLI が自動 patch しなかった場合は、Host entry file で生成された登録 file を 1 回 import してください:
+
+```ts
+import './rnm.bundle-archives';
+```
+
+その後 loader を通常通り接続します:
+
+```ts
+const loadBundleArchive = createBundleArchiveLoader();
+```
+
+この bundle path で MFE source import に迂回しないでください。

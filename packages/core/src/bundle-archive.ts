@@ -16,6 +16,10 @@ export interface MicroFrontendBundleArchiveManifest {
   readonly bundleFile: string;
   readonly assetsDir: string;
   readonly createdAt: string;
+  /** Metro entry module id to require after evaluating the bundle. */
+  readonly entryModuleId?: string | number;
+  /** Global variable used by the bundle/evaluator to expose the entry module. */
+  readonly moduleGlobalName?: string;
 }
 
 /** Extracted file map keyed by normalized archive-relative path. */
@@ -40,7 +44,22 @@ export type MicroFrontendBundleArchiveEvaluator<TModule> = (input: {
 }) => TModule | Promise<TModule>;
 
 /** Options for the built-in compressed archive loader. */
+export type MicroFrontendBundleArchiveRuntime =
+  | 'auto'
+  | 'node'
+  | 'react-native';
+
+/** React Native asset URI or resolved asset object for a bundle archive. */
+export type MicroFrontendBundleArchiveAsset =
+  | string
+  | { readonly uri?: string | undefined }
+  | { readonly default?: string | { readonly uri?: string | undefined } }
+  | null
+  | undefined;
+
 export interface MicroFrontendBundleArchiveLoaderOptions<TModule> {
+  /** Runtime guard. Defaults to auto-detecting React Native. */
+  readonly runtime?: MicroFrontendBundleArchiveRuntime;
   /** Base folder used when `bundleArchiveUrl` is relative. Defaults to cwd. */
   readonly hostRoot?: string;
   /** Custom archive fetcher. Use this on React Native to bridge native FS/network. */
@@ -59,14 +78,41 @@ export interface MicroFrontendBundleArchiveLoaderOptions<TModule> {
   readonly moduleGlobalName?: string;
 }
 
+const registeredReactNativeArchiveAssets = new Map<string, string>();
+
+/** Registers React Native asset URIs for relative bundleArchiveUrl values. */
+export function registerBundleArchiveAsset(
+  archiveUrl: string,
+  asset: MicroFrontendBundleArchiveAsset,
+): void {
+  const uri = resolveBundleArchiveAssetUri(asset);
+
+  if (!uri) return;
+
+  for (const key of archiveUrlAliases(archiveUrl)) {
+    registeredReactNativeArchiveAssets.set(key, uri);
+  }
+}
+
+/** Registers multiple React Native asset URIs for relative bundleArchiveUrl values. */
+export function registerBundleArchiveAssets(
+  assets: Readonly<Record<string, MicroFrontendBundleArchiveAsset>>,
+): void {
+  for (const [archiveUrl, asset] of Object.entries(assets)) {
+    registerBundleArchiveAsset(archiveUrl, asset);
+  }
+}
+
 /**
- * Creates a Host custom loader that reads/downloads, gunzips, untars, verifies,
- * and evaluates an `rnm bundle` archive.
+ * Creates a Host bundle archive loader that reads/downloads, gunzips,
+ * untars, verifies, and evaluates an `rnm bundle` archive.
  *
- * React Native Hosts should usually provide `readArchive` and may provide
- * `gunzip`/`evaluate` to bridge app-controlled native storage and the selected
- * OTA runtime engine. Bun/Node tests and CLIs can use the defaults for local
- * file, file://, and http(s) archive URLs.
+ * React Native Hosts can use the built-in fetch/gzip/tar/Metro evaluator for
+ * http(s), file, data, or blob archive URLs. Provide `readArchive` only when an
+ * archive lives in app-private/native storage that fetch cannot read, and
+ * provide `evaluate` only when delegating execution to a host OTA engine.
+ * Bun/Node tests and CLIs can use the defaults for local file, file://, and
+ * http(s) archive URLs.
  */
 export function createBundleArchiveLoader<
   TModule = MicroFrontendModule<Record<string, never>>,
@@ -86,9 +132,11 @@ export async function loadBundleArchiveModule<
   const archiveBytes = toUint8Array(
     await (options.readArchive
       ? options.readArchive(manifest)
-      : readBundleArchive(manifest, options.hostRoot)),
+      : readBundleArchive(manifest, options.hostRoot, options.runtime)),
   );
-  const tarBytes = await (options.gunzip ?? gunzipArchive)(archiveBytes);
+  const tarBytes = await (
+    options.gunzip ?? ((bytes) => gunzipArchive(bytes, options.runtime))
+  )(archiveBytes);
   const files = extractTarFiles(tarBytes);
   const archiveManifest = readBundleManifest(files, manifest);
   const bundlePath = archiveManifest.bundleFile;
@@ -129,6 +177,7 @@ export async function loadBundleArchiveModule<
 async function readBundleArchive(
   manifest: MfeManifest,
   hostRoot?: string,
+  runtime?: MicroFrontendBundleArchiveRuntime,
 ): Promise<ArrayBuffer | ArrayBufferView> {
   const archiveUrl = manifest.bundleArchiveUrl ?? manifest.otaBundleUrl;
 
@@ -148,6 +197,10 @@ async function readBundleArchive(
     return await response.arrayBuffer();
   }
 
+  if (isReactNativeRuntime(runtime)) {
+    return await readReactNativeArchiveUrl(manifest, archiveUrl);
+  }
+
   const filePath = archiveUrl.startsWith('file://')
     ? fileUrlToPath(archiveUrl)
     : resolveArchivePath(hostRoot, archiveUrl);
@@ -157,11 +210,23 @@ async function readBundleArchive(
     return await bun.file(filePath).arrayBuffer();
   }
 
-  const { readFile } = await import('node:fs/promises');
+  if (!isNodeRuntime()) {
+    return await readFetchArchiveUrl(manifest, archiveUrl);
+  }
+
+  const { readFile } =
+    await importNodeBuiltin<typeof import('node:fs/promises')>('fs/promises');
   return await readFile(filePath);
 }
 
-async function gunzipArchive(bytes: Uint8Array): Promise<Uint8Array> {
+async function gunzipArchive(
+  bytes: Uint8Array,
+  runtime?: MicroFrontendBundleArchiveRuntime,
+): Promise<Uint8Array> {
+  if (isReactNativeRuntime(runtime)) {
+    return gunzipSyncJavaScript(bytes);
+  }
+
   const bun = getBunRuntime();
 
   if (bun?.gunzipSync) {
@@ -177,9 +242,448 @@ async function gunzipArchive(bytes: Uint8Array): Promise<Uint8Array> {
     return toUint8Array(await new Response(stream).arrayBuffer());
   }
 
-  const { gunzipSync } = await import('node:zlib');
+  if (!isNodeRuntime()) {
+    return gunzipSyncJavaScript(bytes);
+  }
+
+  const { gunzipSync } =
+    await importNodeBuiltin<typeof import('node:zlib')>('zlib');
   return toUint8Array(gunzipSync(bytes));
 }
+
+async function readReactNativeArchiveUrl(
+  manifest: MfeManifest,
+  archiveUrl: string,
+): Promise<ArrayBuffer> {
+  const candidates = reactNativeArchiveUrlCandidates(archiveUrl);
+  let lastError: unknown;
+
+  for (const candidate of candidates) {
+    try {
+      return await readFetchArchiveUrl(manifest, candidate);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(
+    `React Native could not read bundleArchiveUrl "${archiveUrl}" for ${manifest.name}. ` +
+      'Use an http(s), file, data, or blob URL, import the generated rnm.bundle-archives module, or provide readArchive for app-private/native storage. ' +
+      formatCause(lastError),
+  );
+}
+
+function reactNativeArchiveUrlCandidates(archiveUrl: string): string[] {
+  const candidates = new Set<string>();
+  const registered = resolveRegisteredBundleArchiveAssetUri(archiveUrl);
+
+  if (registered) candidates.add(registered);
+
+  if (/^(?:https?|file|data|blob):/u.test(archiveUrl)) {
+    candidates.add(archiveUrl);
+    return [...candidates];
+  }
+
+  const normalized = archiveUrl.replace(/^\.\//u, '');
+  candidates.add(`file:///android_asset/${normalized}`);
+  candidates.add(`file:///android_asset/${archiveUrl}`);
+  candidates.add(archiveUrl);
+
+  return [...candidates];
+}
+
+function resolveRegisteredBundleArchiveAssetUri(
+  archiveUrl: string,
+): string | undefined {
+  for (const key of archiveUrlAliases(archiveUrl)) {
+    const uri = registeredReactNativeArchiveAssets.get(key);
+    if (uri) return uri;
+  }
+
+  return undefined;
+}
+
+function archiveUrlAliases(archiveUrl: string): string[] {
+  const noLeadingDot = archiveUrl.replace(/^\.\//u, '');
+  const withLeadingDot = noLeadingDot.startsWith('/')
+    ? noLeadingDot
+    : `./${noLeadingDot}`;
+
+  return [...new Set([archiveUrl, noLeadingDot, withLeadingDot])];
+}
+
+function resolveBundleArchiveAssetUri(
+  asset: MicroFrontendBundleArchiveAsset,
+): string | undefined {
+  if (!asset) return undefined;
+  if (typeof asset === 'string') return asset;
+
+  if ('uri' in asset && typeof asset.uri === 'string') return asset.uri;
+
+  if ('default' in asset) {
+    return resolveBundleArchiveAssetUri(asset.default);
+  }
+
+  return undefined;
+}
+
+async function readFetchArchiveUrl(
+  manifest: MfeManifest,
+  archiveUrl: string,
+): Promise<ArrayBuffer> {
+  if (typeof fetch !== 'function') {
+    throw new Error(
+      `No fetch implementation is available to read ${archiveUrl} for ${manifest.name}. Provide readArchive.`,
+    );
+  }
+
+  const response = await fetch(archiveUrl);
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download ${archiveUrl}: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return await response.arrayBuffer();
+}
+
+function formatCause(error: unknown): string {
+  if (error instanceof Error && error.message) return `Cause: ${error.message}`;
+  return 'Cause: unknown fetch failure.';
+}
+
+function gunzipSyncJavaScript(bytes: Uint8Array): Uint8Array {
+  if (bytes.length < 18 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) {
+    throw new Error('Bundle archive is not a gzip payload.');
+  }
+
+  const method = bytes[2];
+  if (method !== 8) {
+    throw new Error(`Unsupported gzip compression method: ${method}.`);
+  }
+
+  const flags = bytes[3] ?? 0;
+  let offset = 10;
+
+  if (flags & 0x04) {
+    offset += 2 + (bytes[offset] ?? 0) + ((bytes[offset + 1] ?? 0) << 8);
+  }
+
+  if (flags & 0x08) {
+    while (offset < bytes.length && bytes[offset] !== 0) offset += 1;
+    offset += 1;
+  }
+
+  if (flags & 0x10) {
+    while (offset < bytes.length && bytes[offset] !== 0) offset += 1;
+    offset += 1;
+  }
+
+  if (flags & 0x02) offset += 2;
+
+  const deflateEnd = bytes.length - 8;
+  if (offset > deflateEnd) {
+    throw new Error('Invalid gzip header.');
+  }
+
+  const output = inflateRawSyncJavaScript(bytes.subarray(offset, deflateEnd));
+  const expectedSize = readUint32Le(bytes, bytes.length - 4);
+
+  if (output.length >>> 0 !== expectedSize) {
+    throw new Error(
+      `Invalid gzip size: expected ${expectedSize}, got ${output.length}.`,
+    );
+  }
+
+  return output;
+}
+
+function inflateRawSyncJavaScript(bytes: Uint8Array): Uint8Array {
+  const bits = createBitReader(bytes);
+  const output: number[] = [];
+  let finalBlock = false;
+
+  while (!finalBlock) {
+    finalBlock = bits.readBits(1) === 1;
+    const blockType = bits.readBits(2);
+
+    if (blockType === 0) {
+      bits.alignToByte();
+      const len = bits.readBits(16);
+      const nlen = bits.readBits(16);
+      if (((len ^ 0xffff) & 0xffff) !== nlen) {
+        throw new Error('Invalid uncompressed deflate block length.');
+      }
+      for (let i = 0; i < len; i += 1) output.push(bits.readBits(8));
+      continue;
+    }
+
+    if (blockType === 1) {
+      inflateCompressedBlock(
+        bits,
+        output,
+        FIXED_LITERAL_LENGTH_TREE,
+        FIXED_DISTANCE_TREE,
+      );
+      continue;
+    }
+
+    if (blockType === 2) {
+      const trees = readDynamicHuffmanTrees(bits);
+      inflateCompressedBlock(
+        bits,
+        output,
+        trees.literalLengthTree,
+        trees.distanceTree,
+      );
+      continue;
+    }
+
+    throw new Error('Unsupported reserved deflate block type.');
+  }
+
+  return Uint8Array.from(output);
+}
+
+function inflateCompressedBlock(
+  bits: BitReader,
+  output: number[],
+  literalLengthTree: HuffmanTree,
+  distanceTree: HuffmanTree,
+): void {
+  while (true) {
+    const symbol = readHuffmanSymbol(bits, literalLengthTree);
+
+    if (symbol < 256) {
+      output.push(symbol);
+      continue;
+    }
+
+    if (symbol === 256) return;
+
+    const lengthIndex = symbol - 257;
+    const baseLength = LENGTH_BASE[lengthIndex];
+    const extraLengthBits = LENGTH_EXTRA[lengthIndex];
+
+    if (baseLength === undefined || extraLengthBits === undefined) {
+      throw new Error(`Invalid deflate length symbol: ${symbol}.`);
+    }
+
+    const length = baseLength + bits.readBits(extraLengthBits);
+    const distanceSymbol = readHuffmanSymbol(bits, distanceTree);
+    const baseDistance = DISTANCE_BASE[distanceSymbol];
+    const extraDistanceBits = DISTANCE_EXTRA[distanceSymbol];
+
+    if (baseDistance === undefined || extraDistanceBits === undefined) {
+      throw new Error(`Invalid deflate distance symbol: ${distanceSymbol}.`);
+    }
+
+    const distance = baseDistance + bits.readBits(extraDistanceBits);
+    if (distance <= 0 || distance > output.length) {
+      throw new Error(`Invalid deflate distance: ${distance}.`);
+    }
+
+    for (let i = 0; i < length; i += 1) {
+      output.push(output[output.length - distance] ?? 0);
+    }
+  }
+}
+
+function readDynamicHuffmanTrees(bits: BitReader): {
+  readonly literalLengthTree: HuffmanTree;
+  readonly distanceTree: HuffmanTree;
+} {
+  const literalLengthCount = bits.readBits(5) + 257;
+  const distanceCount = bits.readBits(5) + 1;
+  const codeLengthCount = bits.readBits(4) + 4;
+  const codeLengthLengths = new Array<number>(19).fill(0);
+
+  for (let i = 0; i < codeLengthCount; i += 1) {
+    codeLengthLengths[CODE_LENGTH_ORDER[i] ?? 0] = bits.readBits(3);
+  }
+
+  const codeLengthTree = buildHuffmanTree(codeLengthLengths);
+  const lengths: number[] = [];
+  const total = literalLengthCount + distanceCount;
+
+  while (lengths.length < total) {
+    const symbol = readHuffmanSymbol(bits, codeLengthTree);
+
+    if (symbol <= 15) {
+      lengths.push(symbol);
+      continue;
+    }
+
+    if (symbol === 16) {
+      const repeat = bits.readBits(2) + 3;
+      const previous = lengths[lengths.length - 1];
+      if (previous === undefined) {
+        throw new Error('Invalid deflate repeat code.');
+      }
+      for (let i = 0; i < repeat; i += 1) lengths.push(previous);
+      continue;
+    }
+
+    if (symbol === 17) {
+      const repeat = bits.readBits(3) + 3;
+      for (let i = 0; i < repeat; i += 1) lengths.push(0);
+      continue;
+    }
+
+    if (symbol === 18) {
+      const repeat = bits.readBits(7) + 11;
+      for (let i = 0; i < repeat; i += 1) lengths.push(0);
+      continue;
+    }
+
+    throw new Error(`Invalid deflate code length symbol: ${symbol}.`);
+  }
+
+  return {
+    literalLengthTree: buildHuffmanTree(lengths.slice(0, literalLengthCount)),
+    distanceTree: buildHuffmanTree(lengths.slice(literalLengthCount)),
+  };
+}
+
+interface BitReader {
+  readonly readBits: (count: number) => number;
+  readonly alignToByte: () => void;
+}
+
+function createBitReader(bytes: Uint8Array): BitReader {
+  let bitOffset = 0;
+
+  return {
+    readBits(count: number): number {
+      let value = 0;
+      for (let i = 0; i < count; i += 1) {
+        const byte = bytes[bitOffset >> 3];
+        if (byte === undefined) {
+          throw new Error('Unexpected end of deflate data.');
+        }
+        value |= ((byte >> (bitOffset & 7)) & 1) << i;
+        bitOffset += 1;
+      }
+      return value;
+    },
+    alignToByte(): void {
+      bitOffset = Math.ceil(bitOffset / 8) * 8;
+    },
+  };
+}
+
+interface HuffmanTree {
+  readonly root: HuffmanNode;
+}
+
+interface HuffmanNode {
+  symbol?: number;
+  zero?: HuffmanNode;
+  one?: HuffmanNode;
+}
+
+function buildHuffmanTree(lengths: readonly number[]): HuffmanTree {
+  const root: HuffmanNode = {};
+  const maxBits = lengths.reduce((max, length) => Math.max(max, length), 0);
+  const blCount = new Array<number>(maxBits + 1).fill(0);
+
+  for (const length of lengths) {
+    if (length > 0) blCount[length] = (blCount[length] ?? 0) + 1;
+  }
+
+  const nextCode = new Array<number>(maxBits + 1).fill(0);
+  let code = 0;
+  for (let bits = 1; bits <= maxBits; bits += 1) {
+    code = (code + (blCount[bits - 1] ?? 0)) << 1;
+    nextCode[bits] = code;
+  }
+
+  for (let symbol = 0; symbol < lengths.length; symbol += 1) {
+    const length = lengths[symbol] ?? 0;
+    if (length === 0) continue;
+
+    const canonicalCode = nextCode[length] ?? 0;
+    nextCode[length] = canonicalCode + 1;
+    insertHuffmanCode(root, reverseBits(canonicalCode, length), length, symbol);
+  }
+
+  return { root };
+}
+
+function insertHuffmanCode(
+  root: HuffmanNode,
+  code: number,
+  length: number,
+  symbol: number,
+): void {
+  let node = root;
+  for (let i = 0; i < length; i += 1) {
+    const bit = (code >> i) & 1;
+    if (bit === 0) {
+      node.zero ??= {};
+      node = node.zero;
+    } else {
+      node.one ??= {};
+      node = node.one;
+    }
+  }
+  node.symbol = symbol;
+}
+
+function readHuffmanSymbol(bits: BitReader, tree: HuffmanTree): number {
+  let node: HuffmanNode | undefined = tree.root;
+  while (node) {
+    if (node.symbol !== undefined) return node.symbol;
+    node = bits.readBits(1) === 0 ? node.zero : node.one;
+  }
+  throw new Error('Invalid deflate Huffman code.');
+}
+
+function reverseBits(value: number, length: number): number {
+  let reversed = 0;
+  for (let i = 0; i < length; i += 1) {
+    reversed = (reversed << 1) | ((value >> i) & 1);
+  }
+  return reversed;
+}
+
+function readUint32Le(bytes: Uint8Array, offset: number): number {
+  return (
+    ((bytes[offset] ?? 0) |
+      ((bytes[offset + 1] ?? 0) << 8) |
+      ((bytes[offset + 2] ?? 0) << 16) |
+      ((bytes[offset + 3] ?? 0) << 24)) >>>
+    0
+  );
+}
+
+const LENGTH_BASE = [
+  3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67,
+  83, 99, 115, 131, 163, 195, 227, 258,
+] as const;
+const LENGTH_EXTRA = [
+  0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5,
+  5, 5, 0,
+] as const;
+const DISTANCE_BASE = [
+  1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769,
+  1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
+] as const;
+const DISTANCE_EXTRA = [
+  0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11,
+  11, 12, 12, 13, 13,
+] as const;
+const CODE_LENGTH_ORDER = [
+  16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
+] as const;
+const FIXED_LITERAL_LENGTH_TREE = buildHuffmanTree([
+  ...new Array<number>(144).fill(8),
+  ...new Array<number>(112).fill(9),
+  ...new Array<number>(24).fill(7),
+  ...new Array<number>(8).fill(8),
+]);
+const FIXED_DISTANCE_TREE = buildHuffmanTree(new Array<number>(32).fill(5));
 
 function extractTarFiles(bytes: Uint8Array): Map<string, Uint8Array> {
   const files = new Map<string, Uint8Array>();
@@ -246,6 +750,25 @@ function readBundleManifest(
     throw new Error('Bundle archive manifest is missing bundleFile.');
   }
 
+  if (
+    archiveManifest.entryModuleId !== undefined &&
+    typeof archiveManifest.entryModuleId !== 'string' &&
+    typeof archiveManifest.entryModuleId !== 'number'
+  ) {
+    throw new Error(
+      'Bundle archive manifest entryModuleId must be a string or number.',
+    );
+  }
+
+  if (
+    archiveManifest.moduleGlobalName !== undefined &&
+    typeof archiveManifest.moduleGlobalName !== 'string'
+  ) {
+    throw new Error(
+      'Bundle archive manifest moduleGlobalName must be a string.',
+    );
+  }
+
   return archiveManifest;
 }
 
@@ -262,7 +785,10 @@ function evaluateCommonJsBundle<TModule>(input: {
   const runtimeGlobal: Record<string, unknown> = {
     ...(input.globalObject ?? {}),
   };
-  const moduleGlobalName = input.moduleGlobalName ?? '__rnm_mfe_module__';
+  const moduleGlobalName =
+    input.moduleGlobalName ??
+    input.archiveManifest.moduleGlobalName ??
+    '__rnm_mfe_module__';
   const requireFn =
     input.require ??
     ((specifier: string) => {
@@ -291,7 +817,9 @@ function evaluateCommonJsBundle<TModule>(input: {
     'self',
     'window',
     '__DEV__',
-    `${input.bundleCode}\n//# sourceURL=rnm://${input.manifest.name}/${input.archiveManifest.bundleFile}`,
+    '__rnmEntryModuleId',
+    '__rnmModuleGlobalName',
+    `${input.bundleCode}\n${createMetroEntryExportFooter()}\n//# sourceURL=rnm://${input.manifest.name}/${input.archiveManifest.bundleFile}`,
   );
 
   evaluate(
@@ -303,6 +831,8 @@ function evaluateCommonJsBundle<TModule>(input: {
     runtimeGlobal,
     runtimeGlobal,
     input.archiveManifest.dev,
+    input.archiveManifest.entryModuleId,
+    moduleGlobalName,
   );
 
   const exported = hasExports(module.exports)
@@ -320,6 +850,45 @@ function evaluateCommonJsBundle<TModule>(input: {
   throw new Error(
     `Bundle ${input.archiveManifest.name} did not export a React component module.`,
   );
+}
+
+function isReactNativeRuntime(
+  runtime: MicroFrontendBundleArchiveRuntime | undefined,
+): boolean {
+  if (runtime === 'react-native') return true;
+  if (runtime === 'node') return false;
+
+  const global = globalThis as typeof globalThis & {
+    readonly navigator?: { readonly product?: string };
+    readonly nativeCallSyncHook?: unknown;
+    readonly __fbBatchedBridge?: unknown;
+  };
+
+  return (
+    global.navigator?.product === 'ReactNative' ||
+    typeof global.nativeCallSyncHook === 'function' ||
+    global.__fbBatchedBridge !== undefined
+  );
+}
+
+function isNodeRuntime(): boolean {
+  return typeof process !== 'undefined' && Boolean(process.versions?.node);
+}
+
+function createMetroEntryExportFooter(): string {
+  return `;(() => {
+  const metroRequire = typeof __r === 'function'
+    ? __r
+    : (globalThis && typeof globalThis.__r === 'function' ? globalThis.__r : undefined);
+  if (
+    globalThis &&
+    __rnmEntryModuleId !== undefined &&
+    globalThis[__rnmModuleGlobalName] === undefined &&
+    typeof metroRequire === 'function'
+  ) {
+    globalThis[__rnmModuleGlobalName] = metroRequire(__rnmEntryModuleId);
+  }
+})();`;
 }
 
 function hasExports(value: unknown): boolean {
@@ -398,6 +967,23 @@ function fileUrlToPath(url: string): string {
   }
 
   return decodeURIComponent(parsed.pathname);
+}
+
+async function importNodeBuiltin<TModule>(name: string): Promise<TModule> {
+  if (!isNodeRuntime()) {
+    throw new Error(
+      `Node builtin fallback "node:${name}" is only available in Node.js.`,
+    );
+  }
+
+  // Keep Node-only fallbacks invisible to Metro; it resolves static `node:*`
+  // imports even when React Native hosts provide their own archive bridges.
+  const importBody = ['return', 'import(specifier)'].join(' ');
+  const dynamicImport = Function('specifier', importBody) as (
+    specifier: string,
+  ) => Promise<TModule>;
+
+  return await dynamicImport(`node:${name}`);
 }
 
 function getBunRuntime():

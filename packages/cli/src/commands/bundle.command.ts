@@ -1,13 +1,17 @@
+import { Buffer } from 'node:buffer';
 import { spawnSync } from 'node:child_process';
 import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  readSync,
   rmSync,
   writeFileSync,
+  writeSync,
 } from 'node:fs';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import type {
   MfeManifest,
   MfeRegistry,
@@ -32,6 +36,8 @@ interface BundleTarget {
   readonly archiveOutput: string;
 }
 
+const DEFAULT_BUNDLE_MODULE_GLOBAL_NAME = '__rnm_mfe_module__';
+
 interface BundleManifest {
   readonly schemaVersion: 1;
   readonly artifactType: 'react-native-micro-frontend-bundle';
@@ -43,6 +49,13 @@ interface BundleManifest {
   readonly bundleFile: string;
   readonly assetsDir: string;
   readonly createdAt: string;
+  readonly entryModuleId?: string | number;
+  readonly moduleGlobalName?: string;
+}
+
+interface BundleExportMetadata {
+  readonly entryModuleId?: string | number;
+  readonly moduleGlobalName: string;
 }
 
 /**
@@ -112,7 +125,7 @@ export function runBundleCommand(
     }
 
     if (hostRoot) {
-      copyBundleToHost(root, target, hostRoot, updateRegistry, printer);
+      copyBundleToHost(root, target, hostRoot, updateRegistry, flags, printer);
     }
   }
 
@@ -204,7 +217,8 @@ function bundleTarget(
   }
 
   mkdirSync(target.assetsDest, { recursive: true });
-  writeBundleManifest(target);
+  const exportMetadata = appendBundleEntryExport(target, printer);
+  writeBundleManifest(target, exportMetadata);
 
   const archiveFiles = [
     basename(target.bundleOutput),
@@ -245,7 +259,10 @@ function bundleTarget(
   return 0;
 }
 
-function writeBundleManifest(target: BundleTarget): void {
+function writeBundleManifest(
+  target: BundleTarget,
+  exportMetadata: BundleExportMetadata,
+): void {
   const manifest: BundleManifest = {
     schemaVersion: 1,
     artifactType: 'react-native-micro-frontend-bundle',
@@ -257,6 +274,10 @@ function writeBundleManifest(target: BundleTarget): void {
     bundleFile: basename(target.bundleOutput),
     assetsDir: basename(target.assetsDest),
     createdAt: new Date().toISOString(),
+    moduleGlobalName: exportMetadata.moduleGlobalName,
+    ...(exportMetadata.entryModuleId !== undefined
+      ? { entryModuleId: exportMetadata.entryModuleId }
+      : {}),
   };
 
   writeFileSync(
@@ -265,11 +286,73 @@ function writeBundleManifest(target: BundleTarget): void {
   );
 }
 
+function appendBundleEntryExport(
+  target: BundleTarget,
+  printer: CliPrinter,
+): BundleExportMetadata {
+  const bundleCode = readFileSync(target.bundleOutput, 'utf8');
+  const entryModuleId = findMetroEntryModuleId(bundleCode);
+
+  if (entryModuleId === undefined) {
+    printer.log(
+      `[WARN] Could not detect Metro entry module id for ${target.name}:${target.platform}; default evaluator may require a custom evaluate adapter.`,
+    );
+    return { moduleGlobalName: DEFAULT_BUNDLE_MODULE_GLOBAL_NAME };
+  }
+
+  writeFileSync(
+    target.bundleOutput,
+    `${bundleCode.replace(/\s*$/u, '')}\n${createEntryExportFooter(entryModuleId)}\n`,
+  );
+
+  return {
+    entryModuleId,
+    moduleGlobalName: DEFAULT_BUNDLE_MODULE_GLOBAL_NAME,
+  };
+}
+
+function findMetroEntryModuleId(
+  bundleCode: string,
+): string | number | undefined {
+  const matches = Array.from(
+    bundleCode.matchAll(
+      /(?:^|[;\n])\s*__r\(\s*(?:(\d+)|"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)')\s*\)\s*;?/gu,
+    ),
+  );
+  const match = matches.at(-1);
+
+  if (!match) return undefined;
+
+  const numericId = match[1];
+  if (numericId !== undefined) return Number.parseInt(numericId, 10);
+
+  const stringId = match[2] ?? match[3];
+  return stringId === undefined ? undefined : unescapeModuleId(stringId);
+}
+
+function unescapeModuleId(value: string): string {
+  return value.replace(/\\([\\"'])/gu, '$1');
+}
+
+function createEntryExportFooter(entryModuleId: string | number): string {
+  return `;(() => {
+  const g = globalThis;
+  if (
+    g &&
+    g[${JSON.stringify(DEFAULT_BUNDLE_MODULE_GLOBAL_NAME)}] === undefined &&
+    typeof __r === 'function'
+  ) {
+    g[${JSON.stringify(DEFAULT_BUNDLE_MODULE_GLOBAL_NAME)}] = __r(${JSON.stringify(entryModuleId)});
+  }
+})();`;
+}
+
 function copyBundleToHost(
   root: string,
   target: BundleTarget,
   hostRootFlag: string,
   updateRegistry: boolean,
+  flags: Readonly<Record<string, string | boolean>>,
   printer: CliPrinter,
 ): void {
   const hostRoot = resolve(root, hostRootFlag);
@@ -278,6 +361,8 @@ function copyBundleToHost(
 
   mkdirSync(hostBundleDir, { recursive: true });
   copyFileSync(target.archiveOutput, copiedArchive);
+  writeBundleArchiveAssetRegistry(hostRoot);
+  registerBundleArchiveImport(hostRoot, flags, printer);
 
   printer.log(
     `[OK] Copied archive to host: ${relative(hostRoot, copiedArchive)}`,
@@ -287,6 +372,137 @@ function copyBundleToHost(
     updateHostRegistry(root, hostRoot, target, copiedArchive);
     printer.log('[OK] Updated host rnm.registry.json bundleArchiveUrl');
   }
+}
+
+function registerBundleArchiveImport(
+  hostRoot: string,
+  flags: Readonly<Record<string, string | boolean>>,
+  printer: CliPrinter,
+): void {
+  const entryPath =
+    stringFlag(flags['host-entry']) ?? detectHostEntry(hostRoot);
+
+  if (!entryPath) {
+    printer.log(
+      '[INFO] rnm.bundle-archives.ts generated. Import it from your Host entry file, or pass --host-entry <file> with --yes to patch automatically.',
+    );
+    return;
+  }
+
+  if (!shouldPatchBundleArchiveImport(flags, printer, entryPath)) {
+    return;
+  }
+
+  const absoluteEntryPath = resolve(hostRoot, entryPath);
+
+  if (!existsSync(absoluteEntryPath)) {
+    printer.log(
+      `[INFO] rnm.bundle-archives.ts generated, but Host entry was not found: ${entryPath}`,
+    );
+    return;
+  }
+  const current = readFileSync(absoluteEntryPath, 'utf8');
+
+  if (current.includes('rnm.bundle-archives')) {
+    printer.log(
+      `[OK] Host archive asset registration already imported: ${entryPath}`,
+    );
+    return;
+  }
+
+  const importPath = toImportSpecifier(
+    relative(dirname(absoluteEntryPath), join(hostRoot, 'rnm.bundle-archives')),
+  );
+  writeFileSync(absoluteEntryPath, `import '${importPath}';\n${current}`);
+  printer.log(`[OK] Imported rnm.bundle-archives from ${entryPath}`);
+}
+
+function shouldPatchBundleArchiveImport(
+  flags: Readonly<Record<string, string | boolean>>,
+  printer: CliPrinter,
+  entryPath: string,
+): boolean {
+  if (flags['no-register-archives'] === true) {
+    printer.log('[SKIP] Host archive asset registration import was disabled.');
+    return false;
+  }
+
+  if (flags['register-archives'] === true || flags.yes === true) {
+    return true;
+  }
+
+  if (process.stdin.isTTY && process.stdout.isTTY) {
+    return askYesNo(
+      `Import rnm.bundle-archives from ${entryPath} so React Native can load copied archives? [y/N] `,
+    );
+  }
+
+  printer.log(
+    `[INFO] rnm.bundle-archives.ts generated. Re-run with --yes or --register-archives to import it from ${entryPath} automatically.`,
+  );
+  return false;
+}
+
+function askYesNo(question: string): boolean {
+  writeSync(1, question);
+  const buffer = Buffer.alloc(256);
+  const bytesRead = readSync(0, buffer, 0, buffer.length, null);
+  const answer = buffer.toString('utf8', 0, bytesRead).trim().toLowerCase();
+
+  return answer === 'y' || answer === 'yes';
+}
+
+function detectHostEntry(hostRoot: string): string | undefined {
+  for (const candidate of [
+    'index.ts',
+    'index.tsx',
+    'index.js',
+    'index.jsx',
+    'src/index.ts',
+    'src/index.tsx',
+    'src/index.js',
+    'src/index.jsx',
+    'src/App.tsx',
+    'src/App.ts',
+    'src/App.jsx',
+    'src/App.js',
+  ]) {
+    if (existsSync(join(hostRoot, candidate))) return candidate;
+  }
+
+  return undefined;
+}
+
+function toImportSpecifier(path: string): string {
+  const withoutExtension = path.replace(/\.[cm]?[jt]sx?$/u, '');
+  const posixPath = toPosixPath(withoutExtension);
+
+  return posixPath.startsWith('.') ? posixPath : `./${posixPath}`;
+}
+
+function writeBundleArchiveAssetRegistry(hostRoot: string): void {
+  const bundleDir = join(hostRoot, '.bundle', 'rnm');
+  const archiveFiles = readdirSync(bundleDir)
+    .filter((file) => /\.tar\.gz$/u.test(file))
+    .sort((a, b) => a.localeCompare(b));
+  const entries = archiveFiles.map((file) => {
+    const archiveUrl = `.bundle/rnm/${file}`;
+    return `  ${JSON.stringify(archiveUrl)}: Image.resolveAssetSource(require(${JSON.stringify(`./${archiveUrl}`)}))?.uri,`;
+  });
+  const contents = [
+    '/* Auto-generated by @bunin/react-native-micro-frontend. */',
+    "import { Image } from 'react-native';",
+    "import { registerBundleArchiveAssets } from '@bunin/react-native-micro-frontend/bundle-archive';",
+    '',
+    'export const bundleArchiveAssets = {',
+    ...entries,
+    '} as const;',
+    '',
+    'registerBundleArchiveAssets(bundleArchiveAssets);',
+    '',
+  ].join('\n');
+
+  writeFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), contents);
 }
 
 function updateHostRegistry(

@@ -240,6 +240,11 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
       { flags: '--out-dir <dir>', description: 'Output directory.' },
       { flags: '--dev', description: 'Create a development bundle.' },
       {
+        flags: '--yes, -y',
+        description:
+          'Apply detected Host archive registration imports without prompting.',
+      },
+      {
         flags: '--host <path>',
         description: 'Copy the archive into a host .bundle/rnm directory.',
       },
@@ -247,11 +252,27 @@ const commandHelp: Readonly<Record<string, CommandHelp>> = {
         flags: '--update-registry',
         description: 'Update the host registry bundleArchiveUrl after copying.',
       },
+      {
+        flags: '--register-archives',
+        description:
+          'Import generated rnm.bundle-archives from the detected Host entry file.',
+      },
+      {
+        flags: '--no-register-archives',
+        description:
+          'Generate rnm.bundle-archives.ts but do not patch Host entry.',
+      },
+      {
+        flags: '--host-entry <file>',
+        description:
+          'Host entry file to patch when auto-registering archive assets.',
+      },
       watcherOption,
     ],
     configs: [
       'MFE defaults: mfe.config.ts, mfe.config.mjs, mfe.config.cjs, or mfe.config.json',
       'Optional Host registry update: rnm.registry.json bundleArchiveUrl',
+      'Optional Host entry import: rnm.bundle-archives.ts registers copied .tar.gz assets for React Native',
     ],
   },
   build: {

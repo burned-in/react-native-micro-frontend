@@ -83,6 +83,7 @@ describe('withReactNativeMicroFrontendMetroConfig', () => {
       join(hostRoot, 'node_modules'),
     );
     expect(config.resolver?.unstable_enablePackageExports).toBe(true);
+    expect(config.resolver?.assetExts).toEqual(['gz', 'tgz', 'tar']);
     expect(config.resolver?.extraNodeModules?.react).toBe('/custom/react');
     expect(config.resolver?.extraNodeModules?.['react-native']).toBe(
       join(hostRoot, 'node_modules', 'react-native'),

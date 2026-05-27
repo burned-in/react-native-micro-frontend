@@ -23,7 +23,7 @@ module.exports = (async () => {
 })();
 ```
 
-已有的 `resolver.extraNodeModules` 会被保留，并优先于自动 alias。
+已有的 `resolver.extraNodeModules` 会被保留，并优先于自动 alias。`withMfe` 也会把 `gz`、`tgz`、`tar` 加到 Metro asset 扩展名中，让 React Native 能打包复制过来的 archive asset。
 
 ## 无 OTA publish 的 Bundle archive
 
@@ -34,11 +34,11 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 rnm bundle mfe-feature --platform android --host ../host-app
 ```
 
-只有明确要把 `bundleArchiveUrl` 写入 Host `rnm.registry.json` 时才添加 `--update-registry`。
+如果要把 `bundleArchiveUrl` 写入 Host `rnm.registry.json`，请添加 `--update-registry`。使用 `--host` 时，CLI 还会生成 `rnm.bundle-archives.ts`，并询问是否从检测到的 Host entry file 导入它。用 `--yes` 或 `--register-archives` 可自动应用导入；用 `--no-register-archives` 只生成文件。
 
 ## Host loader boundary
 
-`bundleArchiveUrl` 会选择 custom loader，但 runtime 不会自行执行压缩后的 JavaScript。
+`bundleArchiveUrl` 会选择 Host loader。`createBundleArchiveLoader()` 可以读取已注册的 React Native archive asset，执行 gunzip/untar，并在不导入 MFE source 的情况下返回 Metro entry module。
 
 ```tsx
 const loadMfeModule = createMicroFrontendLoader({
@@ -46,4 +46,16 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-production `loadBundleArchive` 应负责读取/下载 archive、校验 integrity、解压 `index.bundle` / `assets` / `manifest.json`，并通过 Host runtime 或 OTA engine evaluate。不要在这个 bundle path 中退回到 import MFE source。
+如果 CLI 没有自动 patch，请在 Host entry file 中导入生成的注册文件一次：
+
+```ts
+import './rnm.bundle-archives';
+```
+
+然后正常连接 loader：
+
+```ts
+const loadBundleArchive = createBundleArchiveLoader();
+```
+
+不要在这个 bundle path 中改为 import MFE source。

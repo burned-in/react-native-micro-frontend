@@ -27,7 +27,7 @@ mfe-feature/
 | `rnm.registry.json` | 由 `rnm add` 生成的 runtime registry；告诉 Host 哪些 MFE 存在以及 entry file 在哪里。 |
 | runtime hooks | 在 Host loader 渲染前，阻止 missing、blocked 或 native-incompatible MFE。 |
 
-注意：本库是 native-safety 与 registry layer。它不会自动执行 remote JavaScript。Host App 仍然需要接入 Hot Updater、embedded bundle 或 custom loader。
+注意：本库是 native-safety 与 registry layer。复制进 Host 的 bundle archive 可通过 `createBundleArchiveLoader()` 运行；remote JavaScript delivery 仍需要 Hot Updater、embedded bundle 或 Host-owned loader。
 
 ## 1. 安装
 
@@ -134,7 +134,7 @@ export default function MfeFeature() {
 
 ## 5. 在 Host App 中挂载
 
-runtime package 负责 registry safety gate：missing module、blocked module、native hash mismatch。它不会自己下载或执行 JavaScript bundle。实际 loader 由 Host App 选择，可以是 Hot Updater、embedded bundle 或 custom loader。
+runtime package 负责 registry safety gate：missing module、blocked module、native hash mismatch。复制进 Host 的 archive 由 `createBundleArchiveLoader()` 读取；remote download/evaluation 仍由 Host App 在 Hot Updater、embedded bundle 或 Host-owned loader 中选择。
 
 使用 `createMicroFrontendLoader()` 创建 loader，并把它传给 `MicroFrontendComponent`。loader 会优先读取 `rnm.registry.json` 中的 config 值（`ota.provider`、`embeddedBundlePath`、`otaBundleUrl`、`bundleArchiveUrl`）。如果某个值不适合写入 registry，可以通过 `loadOptions` 或创建出的 loader 的第二个参数直接传入。
 
@@ -241,9 +241,9 @@ module.exports = (async () => {
 rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 ```
 
-该命令执行本地 React Native `bundle`，只生成 `index.bundle`、`assets/` 和 `manifest.json`，然后压缩为 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`。提供 `--host` 时复制到 `<host>/.bundle/rnm/`，同时提供 `--update-registry` 时更新 `rnm.registry.json` 的 `bundleArchiveUrl`。
+该命令执行本地 React Native `bundle`，只生成 `index.bundle`、`assets/` 和 `manifest.json`，然后压缩为 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`。提供 `--host` 时复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；同时提供 `--update-registry` 时更新 `rnm.registry.json` 的 `bundleArchiveUrl`。在交互式终端中，它会询问是否从检测到的 Host entry file 导入 `rnm.bundle-archives`；传 `--yes` 或 `--register-archives` 可自动应用。
 
-`bundleArchiveUrl` 应与负责 download/verify/unpack/evaluate archive 的 custom loader 配合使用。runtime 会选择 custom loader，但不会自行执行 remote JavaScript。
+将 `bundleArchiveUrl` 配合 `createBundleArchiveLoader()` 使用。生成的注册文件让 React Native 能把复制的 `.tar.gz` resolve 为 asset；loader 会读取它、gunzip/untar，并在不导入 MFE source 的情况下返回 Metro entry module。
 
 
 ## 8. Easy Way：generic、bundle、OTA 菜单
@@ -300,7 +300,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；不传 `--update-registry` 时就是 bundle-only/no-OTA 流程。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。只有想把 `bundleArchiveUrl` 写入 `rnm.registry.json` 时才添加 `--update-registry`。
+`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/` 并生成 `rnm.bundle-archives.ts`；用 `--yes` 自动导入 Host entry，或手动导入一次。想把 `bundleArchiveUrl` 写入 `rnm.registry.json` 时添加 `--update-registry`。
 
 ### 菜单 3. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 

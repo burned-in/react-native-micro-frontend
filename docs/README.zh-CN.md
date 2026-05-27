@@ -118,7 +118,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`；不传 `--update-registry` 时它保持 bundle-only/no-OTA 流程。custom loader 负责下载/读取 archive、校验、解压，并通过你的 runtime engine evaluate。只有明确要把 `bundleArchiveUrl` 写入 registry 时才添加 `--update-registry`。
+`rnm bundle` 只生成 `index.bundle`、`assets/`、`manifest.json` 和 `.tar.gz` archive。`--host` 会复制到 `<host>/.bundle/rnm/`，生成 `rnm.bundle-archives.ts`，并在交互式终端询问是否导入 Host entry。传 `--yes` 或 `--register-archives` 可自动注册；要把 `bundleArchiveUrl` 写入 registry 时添加 `--update-registry`。Host 侧的 `createBundleArchiveLoader()` 会读取已注册的 archive asset，gunzip/untar 后返回 Metro entry module。
 
 ### 菜单 3. OTA — 通过 Hot Updater 或 custom OTA pipeline 发布
 

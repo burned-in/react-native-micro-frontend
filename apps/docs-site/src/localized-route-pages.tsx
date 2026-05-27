@@ -42,7 +42,7 @@ const localeConfig = {
       '기존 OTA engine을 바꾸지 않고 Hot Updater 앞단에 native-safety check를 추가하는 route입니다.',
     metroBundleTitle: 'Metro / Bundle archive',
     metroBundleSubtitle:
-      'withMfe로 Metro를 merge하고, rnm bundle archive를 Host custom loader에 연결하는 방법입니다.',
+      'withMfe로 Metro를 merge하고, rnm bundle archive를 createBundleArchiveLoader에 연결하는 방법입니다.',
     packageTitle: '패키지 매니저 표',
     packageSubtitle:
       'Repository는 Bun 우선이지만 consumer project는 Bun, npm, pnpm, Yarn, Deno로 설치, 통합, 검증, bundle, publish를 실행할 수 있습니다.',
@@ -84,7 +84,7 @@ const localeConfig = {
       '不替换现有 OTA engine，而是在 Hot Updater 前面加入 native-safety check。',
     metroBundleTitle: 'Metro / Bundle archive',
     metroBundleSubtitle:
-      '使用 withMfe merge Metro，并把 rnm bundle archive 接入 Host custom loader。',
+      '使用 withMfe merge Metro，并把 rnm bundle archive 接入 createBundleArchiveLoader。',
     packageTitle: '包管理器矩阵',
     packageSubtitle:
       'Repository 优先使用 Bun，但 consumer project 可用 Bun、npm、pnpm、Yarn、Deno 执行安装、集成、校验、bundle 与 publish。',
@@ -126,7 +126,7 @@ const localeConfig = {
       '既存の OTA engine を置き換えず、Hot Updater の前段に native-safety check を追加する route です。',
     metroBundleTitle: 'Metro / Bundle archive',
     metroBundleSubtitle:
-      'withMfe で Metro を merge し、rnm bundle archive を Host custom loader に接続する方法です。',
+      'withMfe で Metro を merge し、rnm bundle archive を createBundleArchiveLoader に接続する方法です。',
     packageTitle: 'Package manager 一覧',
     packageSubtitle:
       'Repository は Bun 優先ですが、consumer project は Bun、npm、pnpm、Yarn、Deno で install、integration、verify、bundle、publish を実行できます。',

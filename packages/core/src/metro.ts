@@ -6,6 +6,7 @@ import type { MfeRegistry } from './domain/mfe-manifest.type.js';
 export interface ReactNativeMicroFrontendMetroConfig {
   readonly watchFolders?: readonly string[];
   readonly resolver?: {
+    readonly assetExts?: readonly string[];
     readonly extraNodeModules?: Readonly<Record<string, string>>;
     readonly nodeModulesPaths?: readonly string[];
     readonly unstable_enablePackageExports?: boolean;
@@ -77,6 +78,12 @@ export function withReactNativeMicroFrontendMetroConfig<
       ...config.resolver,
       unstable_enablePackageExports:
         config.resolver?.unstable_enablePackageExports ?? true,
+      assetExts: uniqueValues([
+        ...(config.resolver?.assetExts ?? []),
+        'gz',
+        'tgz',
+        'tar',
+      ]),
       extraNodeModules: {
         ...autoExtraNodeModules,
         ...(config.resolver?.extraNodeModules ?? {}),
@@ -196,4 +203,8 @@ function readPackageDependencies(root: string): Set<string> {
 
 function uniquePaths(paths: readonly string[]): string[] {
   return [...new Set(paths.map((path) => resolve(path)))];
+}
+
+function uniqueValues<TValue>(values: readonly TValue[]): TValue[] {
+  return [...new Set(values)];
 }

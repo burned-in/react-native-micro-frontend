@@ -1,7 +1,12 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { Buffer } from 'node:buffer';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   createBundleArchiveLoader,
   loadBundleArchiveModule,
+  registerBundleArchiveAsset,
 } from './bundle-archive.js';
 import type { MfeManifest } from './domain/mfe-manifest.type.js';
 import type { MicroFrontendModule } from './runtime.js';
@@ -9,6 +14,14 @@ import type { MicroFrontendModule } from './runtime.js';
 interface TestProps {
   readonly title?: string;
 }
+
+const tempRoots: string[] = [];
+
+afterEach(() => {
+  for (const root of tempRoots.splice(0)) {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
 
 describe('bundle archive loader', () => {
   const manifest: MfeManifest = {
@@ -69,6 +82,172 @@ describe('bundle archive loader', () => {
     });
   });
 
+  test('keeps Node/Bun local archive loading working without injected readers', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      bundleCode: `module.exports.default = function LocalArchiveMfe() { return 'local'; };`,
+    });
+    const root = mkdtempSync(join(tmpdir(), 'rnm-local-archive-'));
+    tempRoots.push(root);
+    const archiveDir = join(root, '.bundle', 'rnm');
+    mkdirSync(archiveDir, { recursive: true });
+    writeFileSync(join(archiveDir, 'mfe-feature.ios.ota.tar.gz'), archive);
+
+    await expect(
+      loadBundleArchiveModule<MicroFrontendModule>(manifest, {
+        hostRoot: root,
+      }),
+    ).resolves.toMatchObject({ default: expect.any(Function) });
+  });
+
+  test('reports unreadable React Native archive URLs without Node/Bun fallbacks', async () => {
+    const originalFunction = globalThis.Function;
+    let dynamicImportFallbackCalled = false;
+
+    Object.defineProperty(globalThis, 'Function', {
+      configurable: true,
+      value: ((...args: unknown[]) => {
+        if (args.some((arg) => String(arg).includes('return import'))) {
+          dynamicImportFallbackCalled = true;
+        }
+        return originalFunction(
+          ...(args as ConstructorParameters<FunctionConstructor>),
+        );
+      }) as FunctionConstructor,
+    });
+
+    try {
+      await expect(
+        loadBundleArchiveModule(manifest, { runtime: 'react-native' }),
+      ).rejects.toThrow('React Native could not read bundleArchiveUrl');
+      expect(dynamicImportFallbackCalled).toBe(false);
+    } finally {
+      Object.defineProperty(globalThis, 'Function', {
+        configurable: true,
+        value: originalFunction,
+      });
+    }
+  });
+
+  test('loads a React Native archive with built-in JS gunzip and evaluator', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        var __r = function (id) {
+          if (id !== 0) throw new Error('missing module ' + id);
+          return { default: function ReactNativeArchiveMfe(props) {
+            return 'rn:' + (props.title || 'archive');
+          } };
+        };
+        __r(0);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, {
+      runtime: 'react-native',
+      readArchive: () => archive,
+    });
+
+    expect(module.default({ title: 'loaded' })).toBe('rn:loaded');
+  });
+
+  test('loads a React Native registered archive asset without a custom reader', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        var __r = function (id) {
+          if (id !== 0) throw new Error('missing module ' + id);
+          return { default: function RegisteredAssetMfe(props) {
+            return 'asset:' + (props.title || 'archive');
+          } };
+        };
+        __r(0);
+      `,
+    });
+    const assetUri = `data:application/gzip;base64,${Buffer.from(archive).toString('base64')}`;
+
+    registerBundleArchiveAsset(manifest.bundleArchiveUrl ?? '', assetUri);
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, { runtime: 'react-native' });
+
+    expect(module.default({ title: 'registered' })).toBe('asset:registered');
+  });
+
+  test('still allows explicit React Native evaluate adapters', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      bundleCode: `throw new Error('default evaluator must not run');`,
+    });
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, {
+      runtime: 'react-native',
+      readArchive: () => archive,
+      evaluate: ({ archiveManifest }) => ({
+        default: function ReactNativeAdapterMfe(props: TestProps) {
+          return `${archiveManifest.name}:${props.title ?? 'adapter'}`;
+        },
+      }),
+    });
+
+    expect(module.default({ title: 'loaded' })).toBe('mfe-feature:loaded');
+  });
+
+  test('evaluates a Metro entry module as a default component module', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      bundleCode: `
+        var __r;
+        var __d;
+        (function () {
+          const modules = new Map();
+          __d = function (factory, id) {
+            modules.set(id, { factory, exports: {}, initialized: false });
+          };
+          __r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(globalThis, __r, undefined, undefined, module, module.exports);
+            }
+            return module.exports;
+          };
+        })();
+        __d(function (global, require, importDefault, importAll, module, exports) {
+          exports.default = function MetroArchiveMfe(props) {
+            return 'metro:' + (props.title || 'entry');
+          };
+        }, 0);
+        __r(0);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<
+      MicroFrontendModule<TestProps>
+    >(manifest, { readArchive: () => archive });
+
+    expect(module.default({ title: 'component' })).toBe('metro:component');
+  });
+
+  test('does not ship the Hermes-invalid dynamic import Function body literally', () => {
+    const source = Bun.file(new URL('./bundle-archive.ts', import.meta.url));
+    return expect(source.text()).resolves.not.toContain(
+      'return import(specifier)',
+    );
+  });
+
   test('rejects archives for the wrong MFE name', async () => {
     const archive = createFixtureArchive({
       name: 'other-feature',
@@ -86,6 +265,8 @@ describe('bundle archive loader', () => {
 function createFixtureArchive(input: {
   readonly name: string;
   readonly bundleCode: string;
+  readonly entryModuleId?: string | number;
+  readonly moduleGlobalName?: string;
 }): Uint8Array {
   const manifest = JSON.stringify(
     {
@@ -99,6 +280,12 @@ function createFixtureArchive(input: {
       bundleFile: 'index.bundle',
       assetsDir: 'assets',
       createdAt: '2026-05-27T00:00:00.000Z',
+      ...(input.entryModuleId !== undefined
+        ? { entryModuleId: input.entryModuleId }
+        : {}),
+      ...(input.moduleGlobalName !== undefined
+        ? { moduleGlobalName: input.moduleGlobalName }
+        : {}),
     },
     null,
     2,

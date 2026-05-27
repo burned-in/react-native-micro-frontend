@@ -124,7 +124,7 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-`rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고, `--update-registry`를 빼면 bundle-only/no-OTA 흐름으로 유지됩니다. custom loader는 archive 다운로드/읽기, 검증, 압축 해제, runtime engine을 통한 evaluation을 담당합니다. `bundleArchiveUrl`을 registry에 쓰고 싶을 때만 `--update-registry`를 추가하세요.
+`rnm bundle`은 `index.bundle`, `assets/`, `manifest.json`, `.tar.gz` archive만 만듭니다. `--host`는 `<host>/.bundle/rnm/`에 복사하고 `rnm.bundle-archives.ts`를 생성한 뒤, 대화형 터미널에서는 Host entry import 여부를 묻습니다. `--yes` 또는 `--register-archives`를 주면 자동 등록하고, `bundleArchiveUrl`을 registry에 쓰려면 `--update-registry`를 추가하세요. Host에서는 `createBundleArchiveLoader()`가 등록된 archive asset을 읽어 gunzip/untar 후 Metro entry module을 반환합니다.
 
 ### 메뉴 3. OTA — Hot Updater 또는 custom OTA pipeline으로 배포
 
@@ -556,7 +556,8 @@ rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
 - 명령 출력만 하지 않고 local React Native `bundle`을 실행합니다.
 - `index.bundle`, Metro `assets/`, `manifest.json`만 산출합니다.
 - 해당 파일만 `dist/rnm-bundles/<mfe>/<platform>/<mfe>.<platform>.ota.tar.gz`로 압축합니다.
-- `--host`를 주면 archive를 `<host>/.bundle/rnm/`로 복사합니다.
+- `--host`를 주면 archive를 `<host>/.bundle/rnm/`로 복사하고 `rnm.bundle-archives.ts`를 생성합니다.
+- 대화형 터미널에서는 Host entry import 여부를 묻고, `--yes` 또는 `--register-archives`를 주면 자동으로 `import './rnm.bundle-archives';`를 추가합니다.
 - `--update-registry`까지 주면 Host `rnm.registry.json`의 `bundleArchiveUrl`을 업데이트합니다.
 
 CI에서 command만 검토하려면 `rnm build <mfe> --archive`를 계속 사용하세요.

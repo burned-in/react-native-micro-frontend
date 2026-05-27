@@ -24,7 +24,7 @@ module.exports = (async () => {
 })();
 ```
 
-Existing `resolver.extraNodeModules` entries are preserved and override automatic aliases.
+Existing `resolver.extraNodeModules` entries are preserved and override automatic aliases. `withMfe` also adds `gz`, `tgz`, and `tar` to Metro asset extensions so copied archive assets can be bundled by React Native.
 
 ## Bundle archive without OTA publish
 
@@ -35,11 +35,11 @@ rnm bundle mfe-feature --platform ios --host ../host-app
 rnm bundle mfe-feature --platform android --host ../host-app
 ```
 
-Use `--update-registry` only when you intentionally want to write `bundleArchiveUrl` into the Host `rnm.registry.json`.
+Use `--update-registry` when you want to write `bundleArchiveUrl` into the Host `rnm.registry.json`. When `--host` is used, the CLI also generates `rnm.bundle-archives.ts` and asks whether to import it from the detected Host entry file. Pass `--yes` or `--register-archives` to apply that import automatically, or `--no-register-archives` to only generate the file.
 
 ## Host loader boundary
 
-`bundleArchiveUrl` selects your custom loader, but the runtime does not execute compressed JavaScript by itself.
+`bundleArchiveUrl` selects the Host loader. `createBundleArchiveLoader()` can now read the registered React Native archive asset, gunzip/untar it, and return the Metro entry module without importing MFE source.
 
 ```tsx
 const loadMfeModule = createMicroFrontendLoader({
@@ -47,4 +47,16 @@ const loadMfeModule = createMicroFrontendLoader({
 });
 ```
 
-A production `loadBundleArchive` should read or download the archive, verify integrity, unpack `index.bundle` / `assets` / `manifest.json`, and evaluate the bundle through the Host runtime or OTA engine. Do not import MFE source from this bundle path.
+Import the generated registration once from the Host entry file if the CLI did not patch it for you:
+
+```ts
+import './rnm.bundle-archives';
+```
+
+Then wire the loader normally:
+
+```ts
+const loadBundleArchive = createBundleArchiveLoader();
+```
+
+Do not import MFE source from this bundle path.

@@ -64,10 +64,10 @@ EAS workflow に必要な場合は `--branch`、`--auto`、`--environment`、`--
 CLI を install したあと MFE project で実行します。React Native bundling を実行し、`index.bundle`, `assets/`, `manifest.json` だけを archive にします。
 
 ```bash
-rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
 
-各 runner でも同じ形で実行できます: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, `deno run -A ... bundle`.
+各 runner でも同じ形で実行できます: `bunx ... bundle`, `npx ... bundle`, `pnpm dlx ... bundle`, `yarn dlx ... bundle`, `deno run -A ... bundle`. `--host` 使用時は CLI が `rnm.bundle-archives.ts` を生成し、Host entry import を確認します。`--yes` または `--register-archives` で自動適用できます。
 
 ## RNM CLI command reference
 

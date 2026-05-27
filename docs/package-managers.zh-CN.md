@@ -64,10 +64,10 @@ Expo EAS Update 可以通过 `rnm expo` 或 `rnm publish --provider expo` 使用
 安装 CLI 后在 MFE project 中运行。它会执行 React Native bundling，并只把 `index.bundle`、`assets/` 和 `manifest.json` 打进 archive。
 
 ```bash
-rnm bundle mfe-feature --platform ios --host ../host-app --update-registry
+rnm bundle mfe-feature --platform ios --host ../host-app --update-registry --yes
 ```
 
-也可以通过各 runner 运行同一命令：`bunx ... bundle`、`npx ... bundle`、`pnpm dlx ... bundle`、`yarn dlx ... bundle`、`deno run -A ... bundle`。
+也可以通过各 runner 运行同一命令：`bunx ... bundle`、`npx ... bundle`、`pnpm dlx ... bundle`、`yarn dlx ... bundle`、`deno run -A ... bundle`。使用 `--host` 时 CLI 会生成 `rnm.bundle-archives.ts`，并询问是否导入 Host entry；传 `--yes` 或 `--register-archives` 可自动应用。
 
 ## RNM CLI 命令参考
 
