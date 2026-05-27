@@ -131,6 +131,11 @@ export interface MicroFrontendBundleArchiveLoaderOptions<TModule> {
 
 const registeredReactNativeArchiveAssets = new Map<string, string>();
 const registeredBundleArchiveExternalModules: Record<string, unknown> = {};
+let registeredBundleArchiveAssetFileSystem:
+  | MicroFrontendBundleArchiveAssetFileSystem
+  | undefined;
+const REACT_NATIVE_ASSET_REGISTRY_MODULE =
+  'react-native/Libraries/Image/AssetRegistry';
 const METRO_GLOBAL_KEYS = [
   '__r',
   '__d',
@@ -167,6 +172,13 @@ export function registerBundleArchiveExternalModules(
   modules: Readonly<Record<string, unknown>>,
 ): void {
   Object.assign(registeredBundleArchiveExternalModules, modules);
+}
+
+/** Registers a Host file-system adapter used by bundle archive loaders by default. */
+export function registerBundleArchiveAssetFileSystem(
+  fileSystem: MicroFrontendBundleArchiveAssetFileSystem | undefined,
+): void {
+  registeredBundleArchiveAssetFileSystem = fileSystem;
 }
 
 /**
@@ -213,15 +225,17 @@ export async function loadBundleArchiveModule<
   }
 
   const bundleCode = decodeUtf8(bundleBytes);
-  const preparedAssets = options.assetFileSystem
+  const assetFileSystem =
+    options.assetFileSystem ?? registeredBundleArchiveAssetFileSystem;
+  const preparedAssets = assetFileSystem
     ? await prepareBundleArchiveAssets({
         manifest,
         archiveManifest,
         archiveBytes,
         files,
-        fileSystem: options.assetFileSystem,
+        fileSystem: assetFileSystem,
       })
-    : undefined;
+    : prepareInlineBundleArchiveAssets(archiveManifest, files);
 
   if (options.evaluate) {
     return await options.evaluate({
@@ -309,6 +323,74 @@ export function createDefaultRnmAssetFileSystem(
           'fs/promises',
         );
       await rm(path, { force: true, recursive: true });
+    },
+  };
+}
+
+/** Creates a React Native file-system adapter backed by `react-native-blob-util`. */
+export function createReactNativeBlobUtilAssetFileSystem(
+  blobUtilModule: unknown,
+  cacheRoot?: string,
+): MicroFrontendBundleArchiveAssetFileSystem {
+  const blobUtil = resolveReactNativeBlobUtilModule(blobUtilModule);
+  const blobFs = resolveReactNativeBlobUtilFs(blobUtil);
+  const resolvedCacheRoot =
+    cacheRoot ??
+    readNestedString(blobFs, ['dirs', 'CacheDir']) ??
+    readNestedString(blobFs, ['dirs', 'DocumentDir']);
+
+  if (!resolvedCacheRoot) {
+    throw new Error(
+      'react-native-blob-util did not expose fs.dirs.CacheDir or fs.dirs.DocumentDir.',
+    );
+  }
+
+  const exists = async (path: string): Promise<boolean> =>
+    Boolean(await callBlobUtilFsMethod(blobFs, 'exists', path));
+  const mkdir = async (path: string): Promise<void> => {
+    if (await exists(path)) return;
+    try {
+      await callBlobUtilFsMethod(blobFs, 'mkdir', path);
+    } catch (error) {
+      if (!(await exists(path))) throw error;
+    }
+  };
+
+  return {
+    cacheRoot: resolvedCacheRoot,
+    exists,
+    mkdir,
+    async writeFile(path, bytes) {
+      const parent = runtimeDirname(path);
+      if (parent && parent !== path) await mkdir(parent);
+      await callBlobUtilFsMethod(
+        blobFs,
+        'writeFile',
+        path,
+        base64Encode(bytes),
+        'base64',
+      );
+    },
+    async readFile(path) {
+      const encoded = await callBlobUtilFsMethod(
+        blobFs,
+        'readFile',
+        path,
+        'base64',
+      );
+      if (typeof encoded !== 'string') {
+        throw new Error(
+          `react-native-blob-util readFile(${path}) did not return a base64 string.`,
+        );
+      }
+      return base64Decode(encoded);
+    },
+    async remove(path) {
+      try {
+        await callBlobUtilFsMethod(blobFs, 'unlink', path);
+      } catch {
+        // Removing a cache path is best-effort because old extractions may not exist.
+      }
     },
   };
 }
@@ -423,27 +505,79 @@ function createPreparedAssetMap(
   };
 }
 
+function prepareInlineBundleArchiveAssets(
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+  files: MicroFrontendBundleArchiveFiles,
+): PreparedMicroFrontendBundleAssets | undefined {
+  const assets = archiveManifest.assets ?? [];
+  if (assets.length === 0) return undefined;
+
+  const assetsByKey = new Map<string, string>();
+  for (const asset of assets) {
+    const primary = asset.files[0];
+    if (!primary) continue;
+    const primaryBytes = files.get(normalizeArchivePath(primary.archivePath));
+    if (!primaryBytes) continue;
+    const primaryUri = bytesToDataUri(primaryBytes, mimeTypeForAsset(asset));
+
+    for (const key of assetLookupKeys(asset)) {
+      assetsByKey.set(key, primaryUri);
+    }
+
+    for (const file of asset.files) {
+      const bytes = files.get(normalizeArchivePath(file.archivePath));
+      if (!bytes) continue;
+      assetsByKey.set(
+        normalizeArchivePath(file.archivePath),
+        bytesToDataUri(bytes, mimeTypeForArchivePath(file.archivePath)),
+      );
+    }
+  }
+
+  return assetsByKey.size > 0
+    ? {
+        rootPath: 'inline',
+        rootUri: 'data:',
+        markerPath: 'inline',
+        assetsByKey,
+      }
+    : undefined;
+}
+
 function patchReactNativeAssetResolver(
   externalModules: Readonly<Record<string, unknown>> | undefined,
   archiveManifest: MicroFrontendBundleArchiveManifest,
   preparedAssets: PreparedMicroFrontendBundleAssets | undefined,
 ): Readonly<Record<string, unknown>> | undefined {
-  if (
-    !preparedAssets ||
-    !externalModules ||
-    !isRecord(externalModules['react-native'])
-  ) {
+  if (!preparedAssets || !externalModules) {
     return externalModules;
   }
 
-  const reactNative = externalModules['react-native'];
-  const image = isRecord(reactNative.Image) ? reactNative.Image : {};
-  const assetRegistry = isRecord(reactNative.AssetRegistry)
-    ? reactNative.AssetRegistry
-    : {};
+  const reactNative = isRecord(externalModules['react-native'])
+    ? externalModules['react-native']
+    : undefined;
+  const image = isObjectLike(reactNative?.Image) ? reactNative.Image : {};
+  const assetRegistryModule =
+    externalModules[REACT_NATIVE_ASSET_REGISTRY_MODULE];
+  const assetRegistry =
+    resolveAssetRegistryObject(assetRegistryModule) ??
+    (isRecord(reactNative?.AssetRegistry) ? reactNative.AssetRegistry : {});
+  const runtimeRegisteredAssetUris = new Map<string, string>();
   const originalResolve = image.resolveAssetSource;
-  const originalGetAssetByID = assetRegistry.getAssetByID;
+  const patchedAssetRegistry = patchAssetRegistryForPreparedAssets(
+    assetRegistry,
+    archiveManifest,
+    preparedAssets,
+    runtimeRegisteredAssetUris,
+  );
   const resolveFromPrepared = (source: unknown): unknown => {
+    if (
+      (typeof source === 'number' || typeof source === 'string') &&
+      runtimeRegisteredAssetUris.has(String(source))
+    ) {
+      return { uri: runtimeRegisteredAssetUris.get(String(source)) };
+    }
+
     const uri = resolvePreparedAssetUri(
       source,
       archiveManifest,
@@ -457,7 +591,99 @@ function patchReactNativeAssetResolver(
       ? originalResolve.call(image, source)
       : source;
   };
+
+  return {
+    ...externalModules,
+    ...(reactNative
+      ? {
+          'react-native': {
+            ...reactNative,
+            Image: patchImageModuleExport(image, resolveFromPrepared),
+            AssetRegistry: patchedAssetRegistry,
+          },
+        }
+      : {}),
+    ...(assetRegistryModule !== undefined
+      ? {
+          [REACT_NATIVE_ASSET_REGISTRY_MODULE]: patchAssetRegistryModuleExport(
+            assetRegistryModule,
+            patchedAssetRegistry,
+          ),
+        }
+      : {}),
+  };
+}
+
+function patchImageModuleExport(
+  image: unknown,
+  resolveAssetSource: (source: unknown) => unknown,
+): unknown {
+  if (typeof image === 'function') {
+    const patchedImage = function patchedReactNativeImage(
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      return image.apply(this, args);
+    };
+    Object.assign(patchedImage, image, { resolveAssetSource });
+    return patchedImage;
+  }
+
+  return isRecord(image)
+    ? { ...image, resolveAssetSource }
+    : { resolveAssetSource };
+}
+
+function patchAssetRegistryForPreparedAssets(
+  assetRegistry: Readonly<Record<string, unknown>>,
+  archiveManifest: MicroFrontendBundleArchiveManifest,
+  preparedAssets: PreparedMicroFrontendBundleAssets,
+  runtimeRegisteredAssetUris: Map<string, string>,
+): Readonly<Record<string, unknown>> {
+  const originalRegisterAsset = assetRegistry.registerAsset;
+  const originalGetAssetByID = assetRegistry.getAssetByID;
+  let fallbackAssetId = 1;
+
+  const registerAsset = (assetData: unknown): unknown => {
+    const uri = resolvePreparedAssetUri(
+      assetData,
+      archiveManifest,
+      preparedAssets,
+    );
+    const assetDataWithUri =
+      uri && isRecord(assetData) ? { ...assetData, uri } : assetData;
+    const id =
+      typeof originalRegisterAsset === 'function'
+        ? originalRegisterAsset.call(assetRegistry, assetDataWithUri)
+        : fallbackAssetId++;
+
+    if (
+      uri &&
+      (typeof id === 'string' ||
+        typeof id === 'number' ||
+        typeof id === 'boolean')
+    ) {
+      runtimeRegisteredAssetUris.set(String(id), uri);
+    }
+
+    return id;
+  };
+
   const getAssetByID = (id: unknown): unknown => {
+    const originalAsset =
+      typeof originalGetAssetByID === 'function'
+        ? originalGetAssetByID.call(assetRegistry, id)
+        : undefined;
+    const registeredUri =
+      typeof id === 'number' || typeof id === 'string'
+        ? runtimeRegisteredAssetUris.get(String(id))
+        : undefined;
+    if (registeredUri) {
+      return isRecord(originalAsset)
+        ? { ...originalAsset, uri: registeredUri }
+        : { uri: registeredUri };
+    }
+
     const asset = findManifestAssetById(archiveManifest, id);
     if (asset) {
       const uri = resolvePreparedAssetUri(
@@ -467,25 +693,43 @@ function patchReactNativeAssetResolver(
       );
       return uri ? { ...asset, uri } : asset;
     }
-    return typeof originalGetAssetByID === 'function'
-      ? originalGetAssetByID.call(assetRegistry, id)
-      : undefined;
+
+    return originalAsset;
   };
 
   return {
-    ...externalModules,
-    'react-native': {
-      ...reactNative,
-      Image: {
-        ...image,
-        resolveAssetSource: resolveFromPrepared,
-      },
-      AssetRegistry: {
-        ...assetRegistry,
-        getAssetByID,
-      },
-    },
+    ...assetRegistry,
+    registerAsset,
+    getAssetByID,
   };
+}
+
+function resolveAssetRegistryObject(
+  moduleValue: unknown,
+): Readonly<Record<string, unknown>> | undefined {
+  if (!isRecord(moduleValue)) return undefined;
+  if (
+    typeof moduleValue.registerAsset === 'function' ||
+    typeof moduleValue.getAssetByID === 'function'
+  ) {
+    return moduleValue;
+  }
+  return isRecord(moduleValue.default) ? moduleValue.default : undefined;
+}
+
+function patchAssetRegistryModuleExport(
+  moduleValue: unknown,
+  patchedAssetRegistry: Readonly<Record<string, unknown>>,
+): unknown {
+  if (!isRecord(moduleValue)) return patchedAssetRegistry;
+  if ('default' in moduleValue) {
+    return {
+      ...moduleValue,
+      ...patchedAssetRegistry,
+      default: patchedAssetRegistry,
+    };
+  }
+  return patchedAssetRegistry;
 }
 
 function resolvePreparedAssetUri(
@@ -604,6 +848,166 @@ function joinRuntimePath(...parts: readonly string[]): string {
 function pathToFileUri(path: string): string {
   if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) return path;
   return `file://${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+function runtimeDirname(path: string): string {
+  const normalized = path.replace(/\/+$/u, '');
+  const index = normalized.lastIndexOf('/');
+  if (index <= 0) return index === 0 ? '/' : '';
+  return normalized.slice(0, index);
+}
+
+function resolveReactNativeBlobUtilModule(
+  moduleValue: unknown,
+): Readonly<Record<string, unknown>> {
+  const candidates = [
+    moduleValue,
+    isRecord(moduleValue) ? moduleValue.default : undefined,
+  ];
+  for (const candidate of candidates) {
+    if (isRecord(candidate)) return candidate;
+  }
+  throw new Error('Expected a react-native-blob-util module object.');
+}
+
+function resolveReactNativeBlobUtilFs(
+  blobUtil: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> {
+  const fs = blobUtil.fs;
+  if (!isRecord(fs)) {
+    throw new Error('react-native-blob-util did not expose fs.');
+  }
+  return fs;
+}
+
+async function callBlobUtilFsMethod(
+  blobFs: Readonly<Record<string, unknown>>,
+  method: string,
+  ...args: readonly unknown[]
+): Promise<unknown> {
+  const fn = blobFs[method];
+  if (typeof fn !== 'function') {
+    throw new Error(`react-native-blob-util fs.${method} is not available.`);
+  }
+  return await fn.apply(blobFs, args);
+}
+
+function readNestedString(
+  object: Readonly<Record<string, unknown>>,
+  path: readonly string[],
+): string | undefined {
+  let current: unknown = object;
+  for (const segment of path) {
+    if (!isRecord(current)) return undefined;
+    current = current[segment];
+  }
+  return typeof current === 'string' ? current : undefined;
+}
+
+function bytesToDataUri(bytes: Uint8Array, mimeType: string): string {
+  return `data:${mimeType};base64,${base64Encode(bytes)}`;
+}
+
+function mimeTypeForAsset(asset: MicroFrontendBundleAsset): string {
+  return mimeTypeForExtension(asset.type);
+}
+
+function mimeTypeForArchivePath(path: string): string {
+  const match = path.match(/\.([A-Za-z0-9]+)$/u);
+  return mimeTypeForExtension(match?.[1] ?? '');
+}
+
+function mimeTypeForExtension(extension: string): string {
+  switch (extension.toLowerCase().replace(/^\./u, '')) {
+    case 'png':
+      return 'image/png';
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'webp':
+      return 'image/webp';
+    case 'gif':
+      return 'image/gif';
+    case 'svg':
+      return 'image/svg+xml';
+    case 'json':
+      return 'application/json';
+    case 'lottie':
+      return 'application/zip';
+    case 'pdf':
+      return 'application/pdf';
+    case 'ttf':
+      return 'font/ttf';
+    case 'otf':
+      return 'font/otf';
+    case 'woff':
+      return 'font/woff';
+    case 'woff2':
+      return 'font/woff2';
+    case 'mp4':
+      return 'video/mp4';
+    case 'mov':
+      return 'video/quicktime';
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'wav':
+      return 'audio/wav';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+function base64Encode(bytes: Uint8Array): string {
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let output = '';
+
+  for (let index = 0; index < bytes.length; index += 3) {
+    const byte1 = bytes[index] ?? 0;
+    const byte2 = bytes[index + 1] ?? 0;
+    const byte3 = bytes[index + 2] ?? 0;
+    const hasByte2 = index + 1 < bytes.length;
+    const hasByte3 = index + 2 < bytes.length;
+    const value = (byte1 << 16) | (byte2 << 8) | byte3;
+
+    output += alphabet[(value >> 18) & 63] ?? '';
+    output += alphabet[(value >> 12) & 63] ?? '';
+    output += hasByte2 ? (alphabet[(value >> 6) & 63] ?? '') : '=';
+    output += hasByte3 ? (alphabet[value & 63] ?? '') : '=';
+  }
+
+  return output;
+}
+
+function base64Decode(value: string): Uint8Array {
+  const clean = value.replace(/[\t\n\f\r ]/gu, '');
+  if (clean.length === 0) return new Uint8Array();
+
+  const lookup = new Map<string, number>();
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  for (let index = 0; index < alphabet.length; index += 1) {
+    lookup.set(alphabet[index] ?? '', index);
+  }
+
+  const output: number[] = [];
+  for (let index = 0; index < clean.length; index += 4) {
+    const c1 = clean[index] ?? 'A';
+    const c2 = clean[index + 1] ?? 'A';
+    const c3 = clean[index + 2] ?? '=';
+    const c4 = clean[index + 3] ?? '=';
+    const value1 = lookup.get(c1) ?? 0;
+    const value2 = lookup.get(c2) ?? 0;
+    const value3 = c3 === '=' ? 0 : (lookup.get(c3) ?? 0);
+    const value4 = c4 === '=' ? 0 : (lookup.get(c4) ?? 0);
+    const triplet = (value1 << 18) | (value2 << 12) | (value3 << 6) | value4;
+
+    output.push((triplet >> 16) & 0xff);
+    if (c3 !== '=') output.push((triplet >> 8) & 0xff);
+    if (c4 !== '=') output.push(triplet & 0xff);
+  }
+
+  return Uint8Array.from(output);
 }
 
 function encodeUtf8(value: string): Uint8Array {
@@ -1831,6 +2235,12 @@ function toUint8Array(value: ArrayBuffer | ArrayBufferView): Uint8Array {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  return (
+    (typeof value === 'object' && value !== null) || typeof value === 'function'
+  );
 }
 
 function resolveArchivePath(

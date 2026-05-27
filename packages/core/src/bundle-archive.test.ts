@@ -6,8 +6,10 @@ import { join } from 'node:path';
 import {
   createBundleArchiveLoader,
   createDefaultRnmAssetFileSystem,
+  createReactNativeBlobUtilAssetFileSystem,
   loadBundleArchiveModule,
   registerBundleArchiveAsset,
+  registerBundleArchiveAssetFileSystem,
   registerBundleArchiveExternalModules,
 } from './bundle-archive.js';
 import type { MfeManifest } from './domain/mfe-manifest.type.js';
@@ -49,6 +51,8 @@ afterEach(() => {
       delete (globalThis as Record<string, unknown>)[key];
     }
   }
+
+  registerBundleArchiveAssetFileSystem(undefined);
 });
 
 describe('bundle archive loader', () => {
@@ -703,6 +707,198 @@ describe('bundle archive loader', () => {
     const uri = module.default();
     expect(uri).toContain('/rnm-assets/mfe-feature/1.0.0/ios/');
     expect(uri).toEndWith('/assets/assets/src/test.jpg');
+  });
+
+  test('resolves Metro registerAsset ids through inline archive assets without a file-system adapter', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      assets: [
+        {
+          sourcePath: 'src/test.jpg',
+          name: 'test',
+          type: 'jpg',
+          httpServerLocation: '/assets/src',
+          scales: [1],
+          files: [
+            {
+              scale: 1,
+              archivePath: 'assets/assets/src/test.jpg',
+              originalPath: 'src/test.jpg',
+            },
+          ],
+        },
+      ],
+      assetFiles: [{ path: 'assets/assets/src/test.jpg', contents: 'jpg' }],
+      bundleCode: `
+        const ReactNative = require('react-native');
+        const AssetRegistry = require('react-native/Libraries/Image/AssetRegistry');
+        const assetId = AssetRegistry.registerAsset({
+          __packager_asset: true,
+          httpServerLocation: '/assets/src',
+          name: 'test',
+          type: 'jpg',
+          scales: [1],
+          hash: '074e25',
+          width: 550,
+          height: 366
+        });
+        module.exports.default = function InlineAssetUriMfe() {
+          return ReactNative.Image.resolveAssetSource(assetId).uri;
+        };
+      `,
+    });
+    const assetRegistry = {
+      registerAsset: () => 9,
+      getAssetByID: () => undefined,
+    };
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      {
+        readArchive: () => archive,
+        externalModules: {
+          'react-native': {
+            Image: { resolveAssetSource: () => ({ uri: 'host://fallback' }) },
+          },
+          'react-native/Libraries/Image/AssetRegistry': assetRegistry,
+        },
+      },
+    );
+
+    expect(module.default()).toBe('data:image/jpeg;base64,anBn');
+  });
+
+  test('uses a registered blob-util file-system adapter before inline data URI fallback', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      assets: [
+        {
+          sourcePath: 'src/test.jpg',
+          name: 'test',
+          type: 'jpg',
+          httpServerLocation: '/assets/src',
+          scales: [1],
+          files: [
+            {
+              scale: 1,
+              archivePath: 'assets/assets/src/test.jpg',
+              originalPath: 'src/test.jpg',
+            },
+          ],
+        },
+      ],
+      assetFiles: [{ path: 'assets/assets/src/test.jpg', contents: 'jpg' }],
+      bundleCode: `
+        const ReactNative = require('react-native');
+        const AssetRegistry = require('react-native/Libraries/Image/AssetRegistry');
+        const assetId = AssetRegistry.registerAsset({
+          httpServerLocation: '/assets/src',
+          name: 'test',
+          type: 'jpg',
+          scales: [1]
+        });
+        module.exports.default = function RegisteredFsAssetUriMfe() {
+          return ReactNative.Image.resolveAssetSource(assetId).uri;
+        };
+      `,
+    });
+    const files = new Map<string, string>();
+    const directories = new Set<string>();
+    registerBundleArchiveAssetFileSystem(
+      createReactNativeBlobUtilAssetFileSystem({
+        fs: {
+          dirs: { CacheDir: '/cache' },
+          exists: (path: string) => files.has(path) || directories.has(path),
+          mkdir: (path: string) => directories.add(path),
+          writeFile: (path: string, contents: string) =>
+            files.set(path, contents),
+          unlink: (path: string) => {
+            files.delete(path);
+            directories.delete(path);
+          },
+        },
+      }),
+    );
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      {
+        readArchive: () => archive,
+        externalModules: {
+          'react-native': {
+            Image: { resolveAssetSource: () => ({ uri: 'host://fallback' }) },
+          },
+          'react-native/Libraries/Image/AssetRegistry': {
+            registerAsset: () => 11,
+          },
+        },
+      },
+    );
+
+    const uri = module.default();
+    expect(uri).toStartWith('file:///cache/rnm-assets/mfe-feature/1.0.0/ios/');
+    expect(uri).toEndWith('/assets/assets/src/test.jpg');
+    expect([...files.keys()].some((path) => path.endsWith('test.jpg'))).toBe(
+      true,
+    );
+  });
+
+  test('preserves callable React Native Image exports while patching asset registration', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      assets: [
+        {
+          sourcePath: 'src/test.jpg',
+          name: 'test',
+          type: 'jpg',
+          httpServerLocation: '/assets/src',
+          scales: [1],
+          files: [
+            {
+              scale: 1,
+              archivePath: 'assets/assets/src/test.jpg',
+              originalPath: 'src/test.jpg',
+            },
+          ],
+        },
+      ],
+      assetFiles: [{ path: 'assets/assets/src/test.jpg', contents: 'jpg' }],
+      bundleCode: `
+        const ReactNative = require('react-native');
+        const AssetRegistry = require('react-native/Libraries/Image/AssetRegistry');
+        const assetId = AssetRegistry.registerAsset({
+          httpServerLocation: '/assets/src',
+          name: 'test',
+          type: 'jpg',
+          scales: [1]
+        });
+        module.exports.default = function CallableImageMfe() {
+          return ReactNative.Image({ source: assetId });
+        };
+      `,
+    });
+    const hostImage = Object.assign(
+      (props: unknown) => ({ type: 'Image', props }),
+      { resolveAssetSource: () => ({ uri: 'host://fallback' }) },
+    );
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      {
+        readArchive: () => archive,
+        externalModules: {
+          'react-native': { Image: hostImage },
+          'react-native/Libraries/Image/AssetRegistry': {
+            registerAsset: () => 3,
+          },
+        },
+      },
+    );
+
+    expect(module.default()).toEqual({
+      type: 'Image',
+      props: { source: 3 },
+    });
   });
 
   test('rejects archives for the wrong MFE name', async () => {

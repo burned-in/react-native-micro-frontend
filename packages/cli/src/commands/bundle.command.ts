@@ -77,6 +77,7 @@ const DEFAULT_SHARED_MODULES = [
   'react',
   'react/jsx-runtime',
   'react-native',
+  'react-native/Libraries/Image/AssetRegistry',
   '@bunin/react-native-micro-frontend',
   '@bunin/react-native-micro-frontend/runtime',
 ] as const;
@@ -840,6 +841,10 @@ function toImportSpecifier(path: string): string {
 
 function writeBundleArchiveAssetRegistry(hostRoot: string): void {
   const bundleDir = join(hostRoot, '.bundle', 'rnm');
+  const hasBlobUtilAssetFileSystem = packageJsonHasDependency(
+    hostRoot,
+    'react-native-blob-util',
+  );
   const archiveFiles = readdirSync(bundleDir)
     .filter((file) => /\.tar\.gz$/u.test(file))
     .sort((a, b) => a.localeCompare(b));
@@ -852,10 +857,17 @@ function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     "import * as React from 'react';",
     "import * as ReactJsxRuntime from 'react/jsx-runtime';",
     "import * as ReactNative from 'react-native';",
+    '// @ts-ignore React Native exposes this Metro asset registry subpath at runtime.',
+    "import * as ReactNativeAssetRegistry from 'react-native/Libraries/Image/AssetRegistry';",
+    ...(hasBlobUtilAssetFileSystem
+      ? ["import ReactNativeBlobUtil from 'react-native-blob-util';"]
+      : []),
     "import * as ReactNativeMicroFrontend from '@bunin/react-native-micro-frontend';",
     "import * as ReactNativeMicroFrontendRuntime from '@bunin/react-native-micro-frontend/runtime';",
     "import { Image } from 'react-native';",
-    "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
+    hasBlobUtilAssetFileSystem
+      ? "import { createReactNativeBlobUtilAssetFileSystem, registerBundleArchiveAssetFileSystem, registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';"
+      : "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
     '',
     'export const bundleArchiveAssets = {',
     ...entries,
@@ -865,16 +877,39 @@ function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     "  'react': React,",
     "  'react/jsx-runtime': ReactJsxRuntime,",
     "  'react-native': ReactNative,",
+    "  'react-native/Libraries/Image/AssetRegistry': ReactNativeAssetRegistry,",
     "  '@bunin/react-native-micro-frontend': ReactNativeMicroFrontend,",
     "  '@bunin/react-native-micro-frontend/runtime': ReactNativeMicroFrontendRuntime,",
     '} as const;',
     '',
     'registerBundleArchiveAssets(bundleArchiveAssets);',
     'registerBundleArchiveExternalModules(bundleArchiveExternalModules);',
+    ...(hasBlobUtilAssetFileSystem
+      ? [
+          'registerBundleArchiveAssetFileSystem(createReactNativeBlobUtilAssetFileSystem(ReactNativeBlobUtil));',
+        ]
+      : []),
     '',
   ].join('\n');
 
   writeFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), contents);
+}
+
+function packageJsonHasDependency(root: string, packageName: string): boolean {
+  const packageJsonPath = join(root, 'package.json');
+  if (!existsSync(packageJsonPath)) return false;
+
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+    readonly dependencies?: Readonly<Record<string, unknown>>;
+    readonly devDependencies?: Readonly<Record<string, unknown>>;
+    readonly optionalDependencies?: Readonly<Record<string, unknown>>;
+  };
+
+  return [
+    packageJson.dependencies,
+    packageJson.devDependencies,
+    packageJson.optionalDependencies,
+  ].some((dependencies) => dependencies?.[packageName] !== undefined);
 }
 
 function updateHostRegistry(

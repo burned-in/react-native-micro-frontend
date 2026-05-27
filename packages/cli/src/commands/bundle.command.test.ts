@@ -86,6 +86,7 @@ test('records Metro entry module metadata and appends an archive export footer',
       'react',
       'react/jsx-runtime',
       'react-native',
+      'react-native/Libraries/Image/AssetRegistry',
       '@bunin/react-native-micro-frontend',
       '@bunin/react-native-micro-frontend/runtime',
     ],
@@ -120,6 +121,10 @@ test('copies host archive and generates React Native archive asset registration'
   );
   const hostRoot = mkdtempSync(join(tmpdir(), 'rnm-host-app-'));
   tempRoots.push(hostRoot);
+  writeFileSync(
+    join(hostRoot, 'package.json'),
+    '{"dependencies":{"react-native-blob-util":"^0.24.6"}}\n',
+  );
 
   const result = runBundleCommand(
     root,
@@ -138,6 +143,15 @@ test('copies host archive and generates React Native archive asset registration'
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).toContain('registerBundleArchiveExternalModules');
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).toContain('react-native/Libraries/Image/AssetRegistry');
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).toContain('registerBundleArchiveAssetFileSystem');
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).toContain('require("./.bundle/rnm/host-asset-feature.ios.ota.tar.gz")');
