@@ -113,6 +113,47 @@ test('records Metro entry module metadata and appends an archive export footer',
   ).toContain('__rnm_mfe_module__');
 });
 
+test('strips bundled React Native internals from archive runtime to avoid Host module collisions', () => {
+  const root = createBundleFixture(
+    'mfe.config.mjs',
+    `export default { name: 'native-emitter-regression', version: '2.1.0', entry: './src/index.tsx' };
+`,
+  );
+
+  const result = runBundleCommand(
+    root,
+    undefined,
+    { platform: 'ios' },
+    printer(),
+  );
+
+  expect(result).toBe(0);
+  const bundleCode = readFileSync(
+    join(
+      root,
+      'dist',
+      'rnm-bundles',
+      'native-emitter-regression',
+      'ios',
+      'index.bundle',
+    ),
+    'utf8',
+  );
+
+  expect(bundleCode).not.toContain('NativeEventEmitter');
+  expect(bundleCode).not.toContain(
+    'node_modules/react-native/Libraries/EventEmitter/NativeEventEmitter.js',
+  );
+  expect(bundleCode).toContain('__rnm_mfe_module__');
+  expect(bundleCode).toContain('registerAsset');
+  expect(readManifest(root, 'native-emitter-regression', 'ios')).toMatchObject({
+    metroModuleId: {
+      'react-native': 3,
+      'react-native/Libraries/Image/AssetRegistry': 6,
+    },
+  });
+});
+
 test('copies host archive and generates React Native archive asset registration', () => {
   const root = createBundleFixture(
     'mfe.config.mjs',
@@ -462,6 +503,8 @@ const sourceMapOutput = value('--sourcemap-output');\nfs.mkdirSync(path.dirname(
   '__d(function(){}, 3, [], "node_modules/react-native/index.js");',
   '__d(function(){}, 4, [], "node_modules/@bunin/react-native-micro-frontend/dist/mjs/index.mjs");',
   '__d(function(){}, 5, [], "node_modules/@bunin/react-native-micro-frontend/dist/mjs/runtime.mjs");',
+  '__d(function(){throw new Error("\`new NativeEventEmitter()\` requires a non-null argument.");}, 6, [], "node_modules/react-native/Libraries/Image/AssetRegistry.js");',
+  '__d(function(){throw new Error("\`new NativeEventEmitter()\` requires a non-null argument.");}, 7, [], "node_modules/react-native/Libraries/EventEmitter/NativeEventEmitter.js");',
   'require("react-native/Libraries/Image/AssetRegistry").registerAsset({__packager_asset:true,httpServerLocation:"/assets/src",name:"test",type:"jpg",scales:[1],hash:"074e25",width:550,height:366});',
   '__r(0);',
   '',
@@ -478,6 +521,8 @@ if (sourceMapOutput) {
       'node_modules/react-native/index.js',
       'node_modules/@bunin/react-native-micro-frontend/dist/mjs/index.mjs',
       'node_modules/@bunin/react-native-micro-frontend/dist/mjs/runtime.mjs',
+      'node_modules/react-native/Libraries/Image/AssetRegistry.js',
+      'node_modules/react-native/Libraries/EventEmitter/NativeEventEmitter.js',
     ],
     mappings: '',
   }));

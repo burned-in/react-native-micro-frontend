@@ -646,6 +646,107 @@ describe('bundle archive loader', () => {
     });
   });
 
+  test('does not initialize bundled React Native internals while resolving archive assets', async () => {
+    const archive = createFixtureArchive({
+      name: manifest.name,
+      entryModuleId: 0,
+      moduleGlobalName: '__rnm_mfe_module__',
+      sharedModules: [
+        { name: 'react-native', moduleId: 1 },
+        {
+          name: 'react-native/Libraries/Image/AssetRegistry',
+          moduleId: 3,
+        },
+      ],
+      metroModuleId: {
+        'react-native': 1,
+        'react-native/Libraries/Image/AssetRegistry': 3,
+      },
+      externalModules: [
+        'react-native',
+        'react-native/Libraries/Image/AssetRegistry',
+      ],
+      assets: [
+        {
+          sourcePath: 'src/test.jpg',
+          name: 'test',
+          type: 'jpg',
+          httpServerLocation: '/assets/src',
+          scales: [1],
+          files: [
+            {
+              scale: 1,
+              archivePath: 'assets/assets/src/test.jpg',
+              originalPath: 'src/test.jpg',
+            },
+          ],
+        },
+      ],
+      assetFiles: [{ path: 'assets/assets/src/test.jpg', contents: 'jpg' }],
+      bundleCode: `
+        (function (global) {
+          const modules = new Map();
+          global.__d = function (factory, id, dependencyMap) {
+            modules.set(id, { factory, dependencyMap, exports: {}, initialized: false });
+          };
+          global.__r = function (id) {
+            const module = modules.get(id);
+            if (!module) throw new Error('missing module ' + id);
+            if (!module.initialized) {
+              module.initialized = true;
+              module.factory(global, global.__r, undefined, undefined, module, module.exports, module.dependencyMap);
+            }
+            return module.exports;
+          };
+        })(globalThis);
+        __d(function () {
+          throw new Error('bundled react-native initialized');
+        }, 1, []);
+        __d(function () {
+          throw new Error('\`new NativeEventEmitter()\` requires a non-null argument.');
+        }, 2, []);
+        __d(function (global, require, importDefault, importAll, module, exports, dependencyMap) {
+          require(dependencyMap[0]);
+          throw new Error('bundled AssetRegistry initialized');
+        }, 3, [2]);
+        __d(function (global, require, importDefault, importAll, module, exports, dependencyMap) {
+          const ReactNative = require(dependencyMap[0]);
+          const AssetRegistry = require(dependencyMap[1]);
+          const assetId = AssetRegistry.registerAsset({
+            __packager_asset: true,
+            httpServerLocation: '/assets/src',
+            name: 'test',
+            type: 'jpg',
+            scales: [1],
+            hash: '074e25',
+            width: 550,
+            height: 366
+          });
+          module.exports.default = function NativeAssetMfe() {
+            return ReactNative.Image.resolveAssetSource(assetId).uri;
+          };
+        }, 0, [1, 3]);
+      `,
+    });
+
+    const module = await loadBundleArchiveModule<MicroFrontendModule>(
+      manifest,
+      {
+        readArchive: () => archive,
+        externalModules: {
+          'react-native': {
+            Image: { resolveAssetSource: () => ({ uri: 'host://fallback' }) },
+          },
+          'react-native/Libraries/Image/AssetRegistry': {
+            registerAsset: () => 17,
+          },
+        },
+      },
+    );
+
+    expect(module.default()).toBe('data:image/jpeg;base64,anBn');
+  });
+
   test('does not ship the Hermes-invalid dynamic import Function body literally', () => {
     const source = Bun.file(new URL('./bundle-archive.ts', import.meta.url));
     return expect(source.text()).resolves.not.toContain(

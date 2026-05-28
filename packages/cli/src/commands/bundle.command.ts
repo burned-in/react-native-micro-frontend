@@ -349,8 +349,20 @@ function appendBundleEntryExport(
     target.sourceMapOutput,
     target.entryFile,
   );
+  const runtimeBundleCode = stripBundledSharedDependencyModules(
+    bundleCode,
+    target.sourceMapOutput,
+    target.entryFile,
+    printer,
+  );
 
   if (entryModuleId === undefined) {
+    if (runtimeBundleCode !== bundleCode) {
+      writeFileSync(
+        target.bundleOutput,
+        `${runtimeBundleCode.replace(/\s*$/u, '')}\n`,
+      );
+    }
     printer.log(
       `[WARN] Could not detect Metro entry module id for ${target.name}:${target.platform}; default evaluator may require a custom evaluate adapter.`,
     );
@@ -362,7 +374,7 @@ function appendBundleEntryExport(
 
   writeFileSync(
     target.bundleOutput,
-    `${bundleCode.replace(/\s*$/u, '')}\n${createEntryExportFooter(entryModuleId)}\n`,
+    `${runtimeBundleCode.replace(/\s*$/u, '')}\n${createEntryExportFooter(entryModuleId)}\n`,
   );
 
   return {
@@ -461,6 +473,129 @@ function findSharedMetroModuleIdsFromSourceMap(
   return idsByName;
 }
 
+function stripBundledSharedDependencyModules(
+  bundleCode: string,
+  sourceMapOutput: string,
+  entryFile: string,
+  printer: CliPrinter,
+): string {
+  const moduleSources = createSourceMapModuleSourceMap(
+    bundleCode,
+    sourceMapOutput,
+    entryFile,
+  );
+
+  if (moduleSources.size === 0) return bundleCode;
+
+  const calls = parseMetroDefineCalls(bundleCode);
+  const replacements: {
+    readonly start: number;
+    readonly end: number;
+    readonly code: string;
+  }[] = [];
+
+  for (const call of calls) {
+    const moduleId = parseLiteralModuleId(call.args[1]);
+    if (moduleId === undefined) continue;
+
+    const source = moduleSources.get(moduleId);
+    if (!source || !isBundledSharedDependencySource(source)) continue;
+
+    replacements.push({
+      start: call.start,
+      end: findStatementEnd(bundleCode, call.end),
+      code: createExternalizedMetroDefine(moduleId),
+    });
+  }
+
+  if (replacements.length === 0) return bundleCode;
+
+  let stripped = '';
+  let cursor = 0;
+  for (const replacement of replacements) {
+    stripped += bundleCode.slice(cursor, replacement.start);
+    stripped += replacement.code;
+    if (!replacement.code.endsWith('\n')) stripped += '\n';
+    cursor = replacement.end;
+  }
+  stripped += bundleCode.slice(cursor);
+
+  printer.log(
+    `[OK] Externalized ${replacements.length} bundled shared dependency module(s) from runtime archive`,
+  );
+
+  return stripped;
+}
+
+function createExternalizedMetroDefine(moduleId: string | number): string {
+  const message =
+    'RNM externalized a bundled shared dependency module, but no Host external module was registered for Metro module id ' +
+    String(moduleId) +
+    '.';
+  return `__d(function(){throw new Error(${JSON.stringify(message)});},${JSON.stringify(moduleId)},[]);`;
+}
+
+function createSourceMapModuleSourceMap(
+  bundleCode: string,
+  sourceMapOutput: string,
+  entryFile: string,
+): ReadonlyMap<string | number, string> {
+  if (!existsSync(sourceMapOutput)) return new Map();
+
+  const sourceMap = JSON.parse(readFileSync(sourceMapOutput, 'utf8')) as {
+    readonly sources?: readonly string[];
+  };
+  const sources = sourceMap.sources ?? [];
+  const moduleIds = parseMetroDefineArguments(bundleCode)
+    .map((args) => parseLiteralModuleId(args[1]))
+    .filter((moduleId) => moduleId !== undefined);
+  const sourceIndexToModuleId = createSourceMapModuleIdResolver(
+    sources,
+    moduleIds,
+    entryFile,
+  );
+  const moduleSources = new Map<string | number, string>();
+
+  sources.forEach((source, sourceIndex) => {
+    const moduleId = sourceIndexToModuleId(sourceIndex);
+    if (moduleId !== undefined) moduleSources.set(moduleId, source);
+  });
+
+  return moduleSources;
+}
+
+function isBundledSharedDependencySource(source: string): boolean {
+  const normalized = toPosixPath(source);
+  return ['react', 'react-native', '@bunin/react-native-micro-frontend'].some(
+    (packageName) => modulePathBelongsToPackage(normalized, packageName),
+  );
+}
+
+function modulePathBelongsToPackage(
+  modulePath: string,
+  packageName: string,
+): boolean {
+  const packagePath = packageName.split('/').join('/');
+  return (
+    modulePath.includes(`/node_modules/${packagePath}/`) ||
+    modulePath.startsWith(`node_modules/${packagePath}/`)
+  );
+}
+
+function findStatementEnd(source: string, endParenIndex: number): number {
+  let index = endParenIndex + 1;
+
+  while (index < source.length && /[ \t]/u.test(source[index] ?? '')) {
+    index += 1;
+  }
+
+  if (source[index] === ';') index += 1;
+  if (source[index] === '\r') index += 1;
+  if (source[index] === '\n') index += 1;
+
+  return index;
+}
+
 function createSourceMapModuleIdResolver(
   sources: readonly string[],
   moduleIds: readonly (string | number)[],
@@ -510,26 +645,44 @@ function hasSequentialNumericIds(
     .every((moduleId, index) => moduleId === index);
 }
 
-function parseMetroDefineArguments(bundleCode: string): string[][] {
-  const calls: string[][] = [];
+interface MetroDefineCall {
+  readonly start: number;
+  readonly end: number;
+  readonly args: readonly string[];
+}
+
+function parseMetroDefineCalls(bundleCode: string): MetroDefineCall[] {
+  const calls: MetroDefineCall[] = [];
   let searchFrom = 0;
 
   while (searchFrom < bundleCode.length) {
     const defineIndex = bundleCode.indexOf('__d(', searchFrom);
     if (defineIndex === -1) break;
 
-    const args = parseCallArguments(bundleCode, defineIndex + '__d'.length);
-    if (args) calls.push(args);
-    searchFrom = defineIndex + '__d('.length;
+    const parsed = parseCallArguments(bundleCode, defineIndex + '__d'.length);
+    if (parsed) {
+      calls.push({
+        start: defineIndex,
+        end: parsed.end,
+        args: parsed.args,
+      });
+      searchFrom = parsed.end + 1;
+    } else {
+      searchFrom = defineIndex + '__d('.length;
+    }
   }
 
   return calls;
 }
 
+function parseMetroDefineArguments(bundleCode: string): string[][] {
+  return parseMetroDefineCalls(bundleCode).map((call) => [...call.args]);
+}
+
 function parseCallArguments(
   source: string,
   openParenIndex: number,
-): string[] | undefined {
+): { readonly args: readonly string[]; readonly end: number } | undefined {
   if (source[openParenIndex] !== '(') return undefined;
 
   const args: string[] = [];
@@ -567,7 +720,7 @@ function parseCallArguments(
     if (char === ')' || char === ']' || char === '}') {
       if (depth === 0 && char === ')') {
         args.push(source.slice(argStart, index).trim());
-        return args;
+        return { args, end: index };
       }
       depth -= 1;
       continue;
