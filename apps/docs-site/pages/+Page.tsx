@@ -1,4 +1,4 @@
-import { features, homeSections } from '../src/content.js';
+import { guideCards, homeSections } from '../src/content.js';
 import { FeatureGrid, Hero, SectionList, ShellSection } from '../src/ui.js';
 
 export default function Page() {
@@ -13,7 +13,7 @@ export default function Page() {
           href: 'https://github.com/gronxb/hot-updater',
         }}
       />
-      <FeatureGrid features={features} />
+      <FeatureGrid features={guideCards} />
       <SectionList sections={homeSections} />
     </ShellSection>
   );

@@ -260,25 +260,72 @@ function DocTable({
 }
 
 export function CodeBlock({ code }: { readonly code: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   return (
-    <pre
+    <div
       className={css({
-        m: '0',
-        overflowX: 'auto',
-        rounded: '2xl',
-        borderWidth: '1px',
-        borderColor: 'line',
-        bg: { base: 'ink.950', _dark: 'rgba(2,6,23,0.92)' },
-        color: 'ink.50',
-        maxW: '100%',
-        p: { base: '4', md: '5' },
-        fontFamily: 'mono',
-        fontSize: { base: 'xs', md: 'sm' },
-        lineHeight: '1.75',
+        position: 'relative',
+        minW: '0',
       })}
     >
-      <code>{code}</code>
-    </pre>
+      <button
+        type="button"
+        onClick={copyCode}
+        className={css({
+          position: 'absolute',
+          top: '3',
+          right: '3',
+          zIndex: '1',
+          cursor: 'pointer',
+          rounded: 'full',
+          borderWidth: '1px',
+          borderColor: 'rgba(248,250,252,0.2)',
+          bg: copied ? 'rgba(16,185,129,0.22)' : 'rgba(15,23,42,0.72)',
+          color: 'ink.50',
+          px: '3',
+          py: '1.5',
+          fontSize: 'xs',
+          fontWeight: '800',
+          lineHeight: '1',
+          backdropFilter: 'blur(10px)',
+          transition: 'all 160ms ease',
+          _hover: { bg: 'rgba(103,232,249,0.2)' },
+        })}
+        aria-label="Copy code block"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      <pre
+        className={css({
+          m: '0',
+          overflowX: 'auto',
+          rounded: '2xl',
+          borderWidth: '1px',
+          borderColor: 'line',
+          bg: { base: 'ink.950', _dark: 'rgba(2,6,23,0.92)' },
+          color: 'ink.50',
+          maxW: '100%',
+          p: { base: '4', md: '5' },
+          pt: '12',
+          fontFamily: 'mono',
+          fontSize: { base: 'xs', md: 'sm' },
+          lineHeight: '1.75',
+        })}
+      >
+        <code>{code}</code>
+      </pre>
+    </div>
   );
 }
 

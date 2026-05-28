@@ -20,6 +20,17 @@ export type LocaleCode = 'ko' | 'zh' | 'jp';
 const localeConfig = {
   ko: {
     guide: localizedGuides.ko,
+    cards: [
+      { title: 'Getting Started', body: '설치부터 runtime loading까지 복사/붙여넣기로 따라가는 첫 MFE 가이드입니다.' },
+      { title: '쉬운 사용법', body: 'Bundle archive, Hot Updater/custom OTA, Expo EAS Update 중 하나를 먼저 고릅니다.' },
+      { title: 'Hot Updater 설정', body: 'Hot Updater 배포는 유지하고 RNM은 native-unsafe OTA를 publish 전에 막습니다.' },
+      { title: 'Metro / bundle archive', body: 'manifest.json, index.bundle, 참조 asset만 포함한 Metro-first archive를 만듭니다.' },
+      { title: '패키지 매니저 & CLI', body: 'Bun, npm, pnpm, Yarn, Deno에서 같은 RNM command를 실행합니다.' },
+      { title: 'Options reference', body: 'Host config, MFE config, registry, runtime option의 소유 파일을 찾습니다.' },
+      { title: 'Native contract', body: '어떤 변경이 OTA-safe이고 어떤 변경이 Store release인지 판단합니다.' },
+      { title: 'Re.Pack 비교', body: 'RNM의 Metro-first native-safety와 Re.Pack Module Federation architecture를 비교합니다.' },
+      { title: '전역 상태', body: 'Host session, locale, feature flag, tenant context를 MFE에 안전하게 전달합니다.' },
+    ],
     basePath: '/ko',
     homeEyebrow: 'React Native Micro Frontend',
     homeTitle: 'Native-safe 기능 모듈을 멋진 OTA workflow로 배포하세요.',
@@ -65,6 +76,17 @@ const localeConfig = {
   },
   zh: {
     guide: localizedGuides.zh,
+    cards: [
+      { title: 'Getting Started', body: '从安装到 runtime loading，按步骤复制粘贴完成第一个 MFE。' },
+      { title: '简单用法', body: '先在 Bundle archive、Hot Updater/custom OTA、Expo EAS Update 中选择一条路径。' },
+      { title: 'Hot Updater 设置', body: '保留 Hot Updater 交付，由 RNM 在发布前阻止 native-unsafe OTA。' },
+      { title: 'Metro / bundle archive', body: '生成只包含 manifest.json、index.bundle 和已引用 assets 的 Metro-first archive。' },
+      { title: '包管理器 & CLI', body: '用 Bun、npm、pnpm、Yarn、Deno 运行同一组 RNM command。' },
+      { title: 'Options reference', body: '找到 Host config、MFE config、registry、runtime option 分别属于哪个文件。' },
+      { title: 'Native contract', body: '判断哪些变更是 OTA-safe，哪些必须走 Store release。' },
+      { title: 'Re.Pack 对比', body: '比较 RNM 的 Metro-first native-safety 与 Re.Pack Module Federation architecture。' },
+      { title: '全局状态', body: '把 Host session、locale、feature flag、tenant context 安全传给 MFE。' },
+    ],
     basePath: '/zh-cn',
     homeEyebrow: 'React Native Micro Frontend',
     homeTitle: '用精致的 OTA workflow 发布 native-safe 功能模块。',
@@ -109,6 +131,17 @@ const localeConfig = {
   },
   jp: {
     guide: localizedGuides.ja,
+    cards: [
+      { title: 'Getting Started', body: 'install から runtime loading まで copy/paste で最初の MFE を作ります。' },
+      { title: '簡単な使い方', body: 'Bundle archive、Hot Updater/custom OTA、Expo EAS Update から 1 つ選びます。' },
+      { title: 'Hot Updater 設定', body: 'Hot Updater delivery は維持し、RNM が native-unsafe OTA を publish 前に止めます。' },
+      { title: 'Metro / bundle archive', body: 'manifest.json、index.bundle、参照 asset だけを含む Metro-first archive を作ります。' },
+      { title: 'Package managers & CLI', body: 'Bun、npm、pnpm、Yarn、Deno で同じ RNM command を実行します。' },
+      { title: 'Options reference', body: 'Host config、MFE config、registry、runtime option の owner file を確認します。' },
+      { title: 'Native contract', body: 'どの変更が OTA-safe で、どれが Store release か判断します。' },
+      { title: 'Re.Pack 比較', body: 'RNM の Metro-first native-safety と Re.Pack Module Federation architecture を比較します。' },
+      { title: 'Global state', body: 'Host session、locale、feature flag、tenant context を MFE に安全に渡します。' },
+    ],
     basePath: '/jp',
     homeEyebrow: 'React Native Micro Frontend',
     homeTitle:
@@ -157,6 +190,7 @@ const localeConfig = {
   LocaleCode,
   {
     readonly guide: LocalizedGuide;
+    readonly cards: readonly { readonly title: string; readonly body: string }[];
     readonly basePath: string;
     readonly homeEyebrow: string;
     readonly homeTitle: string;
@@ -205,7 +239,7 @@ export function LocalizedHomeRoute({
           href: 'https://github.com/gronxb/hot-updater',
         }}
       />
-      <FeatureGrid features={config.guide.cards} />
+      <FeatureGrid features={config.cards} />
       <SectionList sections={config.guide.sections} />
     </ShellSection>
   );
@@ -227,7 +261,7 @@ export function LocalizedDocsRoute({
       />
       <LocalizedRouteCards
         basePath={config.basePath}
-        cards={config.guide.cards}
+        cards={config.cards}
       />
       <SectionList sections={config.guide.sections} />
     </ShellSection>
@@ -248,7 +282,7 @@ export function LocalizedGettingStartedRoute({
         subtitle={config.gettingStartedSubtitle}
         eyebrow={config.docsEyebrow}
       />
-      <SectionList sections={config.guide.gettingStartedSections} />
+      <SectionList sections={config.guide.gettingStartedSections.slice(0, 8)} />
     </ShellSection>
   );
 }
@@ -416,10 +450,10 @@ function LocalizedRouteCards({
   const hrefs = [
     `${basePath}/docs/getting-started`,
     `${basePath}/docs/easy-way`,
-    `${basePath}/docs/options`,
     `${basePath}/docs/hot-updater`,
     `${basePath}/docs/metro-bundle-archive`,
     `${basePath}/docs/package-managers`,
+    `${basePath}/docs/options`,
     `${basePath}/docs/native-contract`,
     `${basePath}/docs/repack-comparison`,
     `${basePath}/docs/global-state`,

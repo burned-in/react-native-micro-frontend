@@ -1,56 +1,20 @@
-import { docsSections } from '../../src/content.js';
+import { docsSections, guideCards } from '../../src/content.js';
 import { withSiteBase } from '../../src/site-base.js';
 import { PageHeader, SectionList, ShellSection } from '../../src/ui.js';
 import { css } from '../../styled-system/css';
 import { grid, stack } from '../../styled-system/patterns';
 
-const guideCards = [
-  {
-    title: 'Getting started',
-    href: '/docs/getting-started',
-    body: 'Install, configure, register, verify, and load your first MFE.',
-  },
-  {
-    title: 'Easy Way',
-    href: '/docs/easy-way',
-    body: 'Choose Bundle, Hot Updater/OTA, or Expo before wiring your Host and MFE.',
-  },
-  {
-    title: 'Options reference',
-    href: '/docs/options',
-    body: 'See every Host config, MFE config, registry, and runtime option.',
-  },
-  {
-    title: 'Hot Updater setup',
-    href: '/docs/hot-updater',
-    body: 'Configure the adapter, verify OTA eligibility, then deploy safely.',
-  },
-  {
-    title: 'Metro / Bundle archive',
-    href: '/docs/metro-bundle-archive',
-    body: 'Merge Metro with withMfe and load rnm bundle archives through a Host loader.',
-  },
-  {
-    title: 'Package managers & CLI',
-    href: '/docs/package-managers',
-    body: 'Run install, integration, verify, bundle, and publish commands with any supported package manager.',
-  },
-  {
-    title: 'Native contract',
-    href: '/docs/native-contract',
-    body: 'Understand what changes require a store release.',
-  },
-  {
-    title: 'RNM vs Re.Pack',
-    href: '/docs/repack-comparison',
-    body: 'Compare Metro-first native-safety with Re.Pack 5.x Module Federation runtime chunks.',
-  },
-  {
-    title: 'Global state',
-    href: '/docs/global-state',
-    body: 'Provide host sharedState and read it safely inside an MFE.',
-  },
-];
+const guideCardHrefs = [
+  '/docs/getting-started',
+  '/docs/easy-way',
+  '/docs/hot-updater',
+  '/docs/metro-bundle-archive',
+  '/docs/package-managers',
+  '/docs/options',
+  '/docs/native-contract',
+  '/docs/repack-comparison',
+  '/docs/global-state',
+] as const;
 
 export default function Page() {
   return (
@@ -62,10 +26,10 @@ export default function Page() {
       <section
         className={grid({ columns: { base: 1, md: 2, xl: 3 }, gap: '5' })}
       >
-        {guideCards.map((card) => (
+        {guideCards.map((card, index) => (
           <a
-            key={card.href}
-            href={withSiteBase(card.href)}
+            key={card.title}
+            href={withSiteBase(guideCardHrefs[index] ?? '/docs')}
             className={css({
               display: 'block',
               rounded: '3xl',
