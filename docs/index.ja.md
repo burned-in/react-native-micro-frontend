@@ -4,6 +4,10 @@
 
 `@bunin/react-native-micro-frontend` は、機能を独立して検証可能な module に分割しながら、host app の native binary contract を守ります。
 
+## Acknowledgement
+
+この project は [gronxb](https://github.com/gronxb) の [Hot Updater](https://github.com/gronxb/hot-updater) から大きな inspiration を受けて始まりました。Hot Updater は React Native 向けの優れた self-hostable OTA project であり、RNM はそれを first-class delivery engine として尊重しながら、その周辺に native-contract と microfrontend governance を加えます。gronxb に心から感謝します。
+
 ## クイックスタート
 
 ```bash
@@ -27,6 +31,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [簡体中国語](README.zh-CN.md)                        | 簡体中国語公式ドキュメント。                                             |
 | [Package managers & CLI](package-managers.ja.md)   | Bun、npm、pnpm、Yarn、Deno の実行一覧と RNM CLI command。             |
 | [Native contract](native-contract.md)                | native compatibility notes。                                             |
+| [RNM vs Re.Pack](repack-comparison.ja.md)       | Metro-first native safety と Re.Pack 5.x Module Federation の比較。 |
 | [Global state](/jp/docs/global-state)                | Host から MFE へ sharedState を提供して読み取るガイド。                  |
 | [Hot Updater 設定](/jp/docs/hot-updater)             | Hot Updater route guide.                                                 |
 

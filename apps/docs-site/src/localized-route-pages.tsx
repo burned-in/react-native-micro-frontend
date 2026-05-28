@@ -26,7 +26,7 @@ const localeConfig = {
     homeSubtitle:
       'React Native feature module을 독립적으로 배포하고, native binary compatibility를 검증한 뒤 Host가 안전하게 로드할 수 있을 때만 Hot Updater로 publish합니다.',
     docsCta: '문서 보기',
-    matrixCta: '패키지 매니저 표',
+    matrixCta: 'Hot Updater GitHub',
     docsEyebrow: '한국어 문서',
     gettingStartedTitle: 'Getting Started',
     gettingStartedSubtitle:
@@ -49,6 +49,9 @@ const localeConfig = {
     nativeTitle: 'Native contract',
     nativeSubtitle:
       'native hash가 무엇을 의미하고 왜 안전하지 않은 JavaScript update를 막아야 하는지 설명합니다.',
+    repackTitle: 'RNM vs Re.Pack',
+    repackSubtitle:
+      'RNM의 Metro-first native-safety/Host-owned loader 방식과 Re.Pack 5.x의 Rspack/Webpack Module Federation runtime chunk 방식을 비교합니다.',
     globalStateTitle: '전역 상태 가져오기',
     globalStateSubtitle:
       'Host가 제공한 typed sharedState를 MFE에서 안전하게 읽는 방법입니다.',
@@ -68,7 +71,7 @@ const localeConfig = {
     homeSubtitle:
       '独立发布 React Native feature modules，验证 native binary compatibility，并且只在 Host 可安全加载时通过 Hot Updater 发布。',
     docsCta: '查看文档',
-    matrixCta: '包管理器矩阵',
+    matrixCta: 'Hot Updater GitHub',
     docsEyebrow: '简体中文文档',
     gettingStartedTitle: 'Getting Started',
     gettingStartedSubtitle:
@@ -91,6 +94,9 @@ const localeConfig = {
     nativeTitle: 'Native contract',
     nativeSubtitle:
       '说明 native hash 的含义，以及为什么必须阻止不安全的 JavaScript update。',
+    repackTitle: 'RNM vs Re.Pack',
+    repackSubtitle:
+      '比较 RNM 的 Metro-first native-safety/Host-owned loader 与 Re.Pack 5.x 的 Rspack/Webpack Module Federation runtime chunk。',
     globalStateTitle: '读取全局状态',
     globalStateSubtitle: '在 MFE 中安全读取 Host 提供的 typed sharedState。',
     tableHeaders: [
@@ -110,7 +116,7 @@ const localeConfig = {
     homeSubtitle:
       'React Native feature modules を独立して公開し、native binary compatibility を検証し、Host が安全にロードできる場合だけ Hot Updater で publish します。',
     docsCta: 'ドキュメントを見る',
-    matrixCta: 'Package manager 一覧',
+    matrixCta: 'Hot Updater GitHub',
     docsEyebrow: '日本語ドキュメント',
     gettingStartedTitle: 'Getting Started',
     gettingStartedSubtitle:
@@ -133,6 +139,9 @@ const localeConfig = {
     nativeTitle: 'Native contract',
     nativeSubtitle:
       'native hash の意味と、安全でない JavaScript update を止める理由を説明します。',
+    repackTitle: 'RNM vs Re.Pack',
+    repackSubtitle:
+      'RNM の Metro-first native-safety/Host-owned loader と Re.Pack 5.x の Rspack/Webpack Module Federation runtime chunk を比較します。',
     globalStateTitle: 'Global state を取得する',
     globalStateSubtitle:
       'Host が提供する typed sharedState を MFE 内で安全に読み取る方法です。',
@@ -169,6 +178,8 @@ const localeConfig = {
     readonly packageSubtitle: string;
     readonly nativeTitle: string;
     readonly nativeSubtitle: string;
+    readonly repackTitle: string;
+    readonly repackSubtitle: string;
     readonly globalStateTitle: string;
     readonly globalStateSubtitle: string;
     readonly tableHeaders: readonly [string, string, string, string, string];
@@ -191,7 +202,7 @@ export function LocalizedHomeRoute({
         primaryCta={{ label: config.docsCta, href: `${config.basePath}/docs` }}
         secondaryCta={{
           label: config.matrixCta,
-          href: `${config.basePath}/docs/package-managers`,
+          href: 'https://github.com/gronxb/hot-updater',
         }}
       />
       <FeatureGrid features={config.guide.cards} />
@@ -357,6 +368,25 @@ export function LocalizedNativeContractRoute({
   );
 }
 
+export function LocalizedRepackComparisonRoute({
+  locale,
+}: {
+  readonly locale: LocaleCode;
+}) {
+  const config = localeConfig[locale];
+
+  return (
+    <ShellSection>
+      <PageHeader
+        title={config.repackTitle}
+        subtitle={config.repackSubtitle}
+        eyebrow={config.docsEyebrow}
+      />
+      <SectionList sections={config.guide.repackComparisonSections} />
+    </ShellSection>
+  );
+}
+
 export function LocalizedGlobalStateRoute({
   locale,
 }: {
@@ -391,6 +421,7 @@ function LocalizedRouteCards({
     `${basePath}/docs/metro-bundle-archive`,
     `${basePath}/docs/package-managers`,
     `${basePath}/docs/native-contract`,
+    `${basePath}/docs/repack-comparison`,
     `${basePath}/docs/global-state`,
   ];
 

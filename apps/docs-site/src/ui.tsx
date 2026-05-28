@@ -181,10 +181,81 @@ export function DocBlock({ section }: { readonly section: DocSection }) {
               {paragraph}
             </p>
           ))}
+          {section.table ? <DocTable table={section.table} /> : null}
         </div>
         {section.code ? <CodeBlock code={section.code} /> : null}
       </div>
     </section>
+  );
+}
+
+function DocTable({
+  table,
+}: {
+  readonly table: NonNullable<DocSection['table']>;
+}) {
+  return (
+    <div
+      className={css({
+        overflowX: 'auto',
+        rounded: '2xl',
+        borderWidth: '1px',
+        borderColor: 'line',
+        bg: 'surface',
+      })}
+    >
+      <table
+        className={css({
+          w: '100%',
+          borderCollapse: 'collapse',
+          fontSize: { base: 'sm', md: 'md' },
+          lineHeight: '1.65',
+        })}
+      >
+        <thead>
+          <tr>
+            {table.headers.map((header) => (
+              <th
+                key={header}
+                className={css({
+                  px: '4',
+                  py: '3',
+                  textAlign: 'left',
+                  color: 'page.text',
+                  borderBottomWidth: '1px',
+                  borderBottomColor: 'line',
+                  bg: 'surface',
+                })}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row) => (
+            <tr key={row.join('|')}>
+              {row.map((cell, index) => (
+                <td
+                  key={`${row.join('|')}-${index}`}
+                  className={css({
+                    px: '4',
+                    py: '3',
+                    color: index === 0 ? 'page.text' : 'page.muted',
+                    fontWeight: index === 0 ? 'semibold' : 'normal',
+                    borderTopWidth: '1px',
+                    borderTopColor: 'line',
+                    verticalAlign: 'top',
+                  })}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

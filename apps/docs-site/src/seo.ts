@@ -40,6 +40,8 @@ const copy = {
       'Use Bun, npm, pnpm, Yarn, and Deno with the same RNM install, integration, verify, bundle, and publish commands.',
     nativeContract:
       'Understand native contract hashing, Hermes and New Architecture compatibility, and when React Native OTA must be blocked.',
+    repackComparison:
+      'Compare RNM with Re.Pack 5.x: Metro-first native-safety and Host-owned loaders versus Rspack/Webpack Module Federation runtime chunks.',
     globalState:
       'Provide host-owned sharedState to React Native micro frontends and read it safely with useMicroFrontendSharedState.',
   },
@@ -62,6 +64,8 @@ const copy = {
       'Bun, npm, pnpm, Yarn, Deno에서 RNM 설치, 통합, 검증, bundle, publish command를 실행하는 방법입니다.',
     nativeContract:
       'native hash, Hermes, New Architecture 호환성, OTA 차단 기준을 설명하는 한국어 문서입니다.',
+    repackComparison:
+      'RNM과 Re.Pack 5.x의 차이: Metro-first native-safety/Host-owned loader와 Rspack/Webpack Module Federation runtime chunk를 비교합니다.',
     globalState:
       'Host가 제공한 sharedState를 React Native MFE에서 useMicroFrontendSharedState로 안전하게 읽는 방법입니다.',
   },
@@ -84,6 +88,8 @@ const copy = {
       '使用 Bun、npm、pnpm、Yarn、Deno 执行 RNM 安装、集成、校验、bundle 与 publish command。',
     nativeContract:
       '解释 native hash、Hermes、New Architecture compatibility 以及何时必须阻止 OTA。',
+    repackComparison:
+      '比较 RNM 与 Re.Pack 5.x：Metro-first native-safety/Host-owned loader 对比 Rspack/Webpack Module Federation runtime chunk。',
     globalState:
       '说明如何在 React Native MFE 中通过 useMicroFrontendSharedState 安全读取 Host sharedState。',
   },
@@ -106,6 +112,8 @@ const copy = {
       'Bun、npm、pnpm、Yarn、Deno で RNM install、integration、verify、bundle、publish command を実行します。',
     nativeContract:
       'native hash、Hermes、New Architecture compatibility、OTA を止める条件を説明します。',
+    repackComparison:
+      'RNM と Re.Pack 5.x の違いを比較します: Metro-first native-safety/Host-owned loader と Rspack/Webpack Module Federation runtime chunk。',
     globalState:
       'Host が提供する sharedState を React Native MFE 内で useMicroFrontendSharedState により安全に読み取る方法です。',
   },
@@ -121,6 +129,7 @@ type SeoSection =
   | 'metroBundle'
   | 'packageManagers'
   | 'nativeContract'
+  | 'repackComparison'
   | 'globalState';
 
 const titles: Record<SeoSection, string> = {
@@ -133,6 +142,7 @@ const titles: Record<SeoSection, string> = {
   metroBundle: 'Metro / Bundle Archive',
   packageManagers: 'Package Managers and CLI Commands',
   nativeContract: 'Native Contract Guide',
+  repackComparison: 'RNM vs Re.Pack',
   globalState: 'Global State Guide',
 } as const;
 
@@ -148,6 +158,7 @@ const localizedTitles = {
     metroBundle: 'Metro / Bundle Archive',
     packageManagers: '패키지 매니저와 CLI 명령어',
     nativeContract: 'Native Contract 가이드',
+    repackComparison: 'RNM vs Re.Pack',
     globalState: '전역 상태 가이드',
   },
   'zh-CN': {
@@ -160,6 +171,7 @@ const localizedTitles = {
     metroBundle: 'Metro / Bundle Archive',
     packageManagers: '包管理器与 CLI 命令',
     nativeContract: 'Native Contract 指南',
+    repackComparison: 'RNM vs Re.Pack',
     globalState: '全局状态指南',
   },
   ja: {
@@ -172,6 +184,7 @@ const localizedTitles = {
     metroBundle: 'Metro / Bundle Archive',
     packageManagers: 'Package managers と CLI command',
     nativeContract: 'Native Contract ガイド',
+    repackComparison: 'RNM vs Re.Pack',
     globalState: 'Global State ガイド',
   },
 } satisfies Record<Locale, typeof titles>;
@@ -209,6 +222,8 @@ export function getSeoInfo(urlOriginal: string): SeoInfo {
       'bunin',
       'host shared state',
       'native contract',
+      'Re.Pack',
+      'Module Federation',
     ].join(', '),
   };
 }
@@ -287,6 +302,7 @@ export function getJsonLd(urlOriginal: string) {
           'OTA',
           'Hot Updater',
           'Native Contract',
+          'Re.Pack comparison',
         ],
       },
       {
@@ -337,6 +353,7 @@ function getSection(pathname: string): SeoSection {
   if (route.startsWith('/docs/metro-bundle-archive')) return 'metroBundle';
   if (route.startsWith('/docs/package-managers')) return 'packageManagers';
   if (route.startsWith('/docs/native-contract')) return 'nativeContract';
+  if (route.startsWith('/docs/repack-comparison')) return 'repackComparison';
   if (route.startsWith('/docs/global-state')) return 'globalState';
   if (route.startsWith('/docs')) return 'docs';
 

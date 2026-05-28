@@ -26,7 +26,7 @@
 
 | 操作 | Bun | npm | pnpm | Yarn | Deno task |
 | --- | --- | --- | --- | --- | --- |
-| 全量改版本 | `bun run version:all 0.2.0` | `npm run version:all -- 0.2.0` | `pnpm version:all 0.2.0` | `yarn version:all 0.2.0` | `deno task version:all 0.2.0` |
+| 全量改版本 | `bun run version:all 0.7.0` | `npm run version:all -- 0.7.0` | `pnpm version:all 0.7.0` | `yarn version:all 0.7.0` | `deno task version:all 0.7.0` |
 | 验证 | `bun run release:check` | `npm run release:check` | `pnpm release:check` | `yarn release:check` | `deno task release:check` |
 | 发布 dry-run | `bun run release:dry-run` | `npm run release:dry-run` | `pnpm release:dry-run` | `yarn release:dry-run` | `deno task release:dry-run` |
 | 真正发布 | `bun run release:publish` | `npm run release:publish` | `pnpm release:publish` | `yarn release:publish` | `deno task release:publish` |

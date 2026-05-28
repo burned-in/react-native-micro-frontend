@@ -4,7 +4,7 @@
 
 기능 모듈을 독립적으로 개발하고, native compatibility를 검증한 뒤, host binary가 안전하게 실행할 수 있는 경우에만 OTA로 배포합니다.
 
-관련 문서: [공식 문서 홈](index.ko.md) · [Getting Started](getting-started.ko.md) · [Easy Way](easy-way.ko.md) · [Metro / Bundle archive](metro-bundle-archive.ko.md) · [옵션 레퍼런스](options.ko.md) · [패키지 매니저 매트릭스](package-managers.ko.md)
+관련 문서: [공식 문서 홈](index.ko.md) · [Getting Started](getting-started.ko.md) · [Easy Way](easy-way.ko.md) · [Metro / Bundle archive](metro-bundle-archive.ko.md) · [옵션 레퍼런스](options.ko.md) · [패키지 매니저 매트릭스](package-managers.ko.md) · [RNM vs Re.Pack](repack-comparison.ko.md)
 
 ```txt
 React Native Micro Frontend
@@ -26,6 +26,8 @@ React Native Micro Frontend
 `@bunin/react-native-micro-frontend`는 React Native 팀이 native binary compatibility를 잃지 않으면서 feature module을 독립적으로 배포할 수 있게 해 주는 안전장치이자 통합 레이어입니다.
 
 Hot Updater를 대체하지 않습니다. Hot Updater는 OTA delivery engine이고, 이 라이브러리는 그 전에 MFE를 안전하게 publish/load할 수 있는지 판단합니다.
+
+Acknowledgement: 이 프로젝트는 [Hot Updater](https://github.com/gronxb/hot-updater)에서 큰 영감을 받아 시작했습니다. [gronxb](https://github.com/gronxb)가 만든 Hot Updater는 React Native OTA가 open, practical, infrastructure-owned 방식으로 가능하다는 것을 보여준 훌륭한 프로젝트입니다. RNM은 그 영감 위에 native-contract와 microfrontend governance layer를 더합니다. gronxb에게 진심으로 감사합니다.
 
 ## 주요 기능
 
@@ -133,6 +135,7 @@ bun run docs:preview
 - `/docs/easy-way`는 Bundle, Hot Updater/OTA, Expo 중 적용 방식을 고르는 guide입니다.
 - `/docs/options`는 Host config, MFE config, registry, runtime option을 상세 section으로 나눈 reference입니다.
 - `/docs/hot-updater`는 Hot Updater 설정 전용 route입니다.
+- `/docs/repack-comparison`은 RNM과 Re.Pack 5.x 차이를 비교합니다.
 - `/docs/package-managers`는 Bun, npm, pnpm, Yarn, Deno 명령을 정리합니다.
 - `/docs/ko`, `/docs/zh-cn`, `/docs/ja`는 다국어 entry page입니다.
 
@@ -366,7 +369,7 @@ deno task release:publish
 | `rnm integrate all <mfe>` | 기존 호환용 explicit integration route입니다. |
 | `rnm expo <mfe>` | integration watcher와 OTA safety check 이후 Expo EAS Update deploy command를 출력합니다. |
 
-`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`, `rnm expo`는 integration watcher를 자동 실행합니다. 자동화에서는 `--yes`, watcher 생략은 `--skip-integration`을 사용하세요. 전체 command reference는 [패키지 매니저와 CLI 명령어](package-managers.ko.md)를 확인하세요.
+`rnm add`, `rnm bundle --host`, `rnm verify`, `rnm publish`, `rnm expo`는 integration watcher를 자동 실행합니다. 자동화에서는 `--yes`, watcher 생략은 `--skip-integration`을 사용하세요. 전체 command reference는 [패키지 매니저와 CLI 명령어](package-managers.ko.md) · [RNM vs Re.Pack](repack-comparison.ko.md)를 확인하세요.
 
 ## CLI 예제
 
@@ -477,7 +480,7 @@ rnm build mfe-feature \
 의미:
 
 - Metro 기반 `react-native bundle` 명령을 출력합니다.
-- Re.Pack을 사용하지 않습니다.
+- Re.Pack이 필요 없고 Metro를 대체하지 않습니다.
 - 실행과 command 생성을 분리해 CI에서 검토할 수 있게 합니다.
 
 ### 6a. `withMfe`로 Metro config merge
@@ -777,22 +780,31 @@ nativeHash = hash(
 - native ABI 또는 native dependency 변경은 JS 교체만으로 해결할 수 없습니다.
 - nativeHash mismatch는 Host binary와 MFE bundle의 native 가정이 다르다는 뜻입니다.
 
-## Re.Pack 정책
+## RNM vs Re.Pack
 
-Re.Pack은 사용하지 않습니다.
+RNM은 의도적으로 **Metro-first**이며 `@callstack/repack`에 의존하지 않습니다.
 
-```txt
-허용:
-  Metro bundle generation
-  Hot Updater OTA delivery
-  native contract verification
-  runtime registry loading
+**2026-05-28**에 확인한 최신 기준:
 
-금지:
-  @callstack/repack
-  Webpack Module Federation
-  Re.Pack remote chunk runtime
-```
+| Package | 확인한 최신 version |
+| --- | --- |
+| `@bunin/react-native-micro-frontend` | `0.7.0` |
+| `react-native` | `0.85.3` |
+| `@callstack/repack` | `5.2.5` |
+
+| Concern | RNM | Re.Pack 5.x |
+| --- | --- | --- |
+| 주요 역할 | Native-safety, registry, integration, Host loader orchestration | React Native bundler/runtime replacement |
+| Bundler | `withMfe` helper를 더한 Metro | Metro 대신 Rspack 또는 Webpack |
+| Microfrontend split | `rnm.registry.json` + Host-owned loader | Module Federation v2 remotes/chunks |
+| Artifact | `index.bundle`, `manifest.json`, 참조 assets, `.tar.gz` archive, OTA URL, embedded bundle | Federated modules, remote chunks/containers, script runtime cache |
+| Native safety | Native contract hash로 unsafe OTA/runtime load 차단 | App/team이 native compatibility policy를 직접 소유 |
+
+Metro compatibility, native-contract OTA gate, review 가능한 integration file, Host-owned loader policy가 우선이면 RNM을 선택하세요. Module Federation, Rspack/Webpack plugin, tree-shaking, remote chunk composition이 우선이면 Re.Pack을 선택하세요.
+
+Re.Pack은 분명히 인정받아야 할 기술입니다. 지금까지 React Native micro frontend 영역에서 사실상 표준으로 자리 잡아온 선택지였고, 대단한 engineering achievement입니다. 다만 채택한다는 것은 Rspack/Webpack 계층, 또 하나의 build model, Module Federation shared-dependency policy, remote chunk/cache 운영, native release risk 옆의 추가 debugging surface를 받아들인다는 뜻입니다. 팀이 필요한 것이 Metro artifact에 대한 native-safe OTA gate뿐이라면 그 계층은 leverage보다 architecture weight가 될 수 있습니다.
+
+전체 선택 기준은 [`docs/repack-comparison.ko.md`](repack-comparison.ko.md)를 참고하세요.
 
 ## 한 번에 버전 관리하고 배포하기
 
@@ -803,7 +815,7 @@ publish 대상 패키지는 모두 같은 버전으로 관리합니다. 각 패�
 아래 예시는 Bun을 먼저 보여줍니다. 이 프로젝트의 권장 workflow가 Bun이기 때문입니다. 같은 release script는 `npm`, `pnpm`, `yarn`, `deno task`로도 호출할 수 있습니다.
 
 ```bash
-bun run version:all 0.2.0
+bun run version:all 0.7.0
 bun run version:all patch
 bun run version:all minor
 bun run version:all major
@@ -812,10 +824,10 @@ bun run version:all major
 동일한 명령:
 
 ```bash
-npm run version:all -- 0.2.0
-pnpm version:all 0.2.0
-yarn version:all 0.2.0
-deno task version:all 0.2.0
+npm run version:all -- 0.7.0
+pnpm version:all 0.7.0
+yarn version:all 0.7.0
+deno task version:all 0.7.0
 ```
 
 의미:

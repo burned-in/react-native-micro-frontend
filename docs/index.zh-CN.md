@@ -4,6 +4,10 @@
 
 `@bunin/react-native-micro-frontend` 帮助团队把功能拆成可独立验证的模块，同时保护 host app 的 native binary contract。
 
+## Acknowledgement
+
+本项目最初深受 [gronxb](https://github.com/gronxb) 的 [Hot Updater](https://github.com/gronxb/hot-updater) 启发。Hot Updater 是面向 React Native 的优秀 self-hostable OTA project；RNM 将它作为 first-class delivery engine 来尊重，并在其周围增加 native-contract 与 microfrontend governance。衷心感谢 gronxb。
+
 ## 快速开始
 
 ```bash
@@ -27,6 +31,7 @@ bunx @bunin/react-native-micro-frontend-cli init
 | [日文](README.ja.md)                                    | 日文官方文档。                                               |
 | [包管理器与 CLI](package-managers.zh-CN.md)             | Bun、npm、pnpm、Yarn、Deno 运行矩阵和 RNM CLI 命令。          |
 | [Native contract](native-contract.md)                   | native compatibility 说明。                                  |
+| [RNM vs Re.Pack](repack-comparison.zh-CN.md)    | Metro-first native safety 与 Re.Pack 5.x Module Federation 对比。 |
 | [全局状态](/zh-cn/docs/global-state)                    | Host 向 MFE 提供并读取 sharedState 的指南。                  |
 | [Hot Updater 设置](/zh-cn/docs/hot-updater)             | Hot Updater 路由指南。                                       |
 

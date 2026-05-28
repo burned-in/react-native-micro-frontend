@@ -40,6 +40,7 @@ type NavLabelKey =
   | 'metroBundle'
   | 'packageManagers'
   | 'nativeContract'
+  | 'repackComparison'
   | 'globalState';
 
 type LocalizedNavItem = {
@@ -54,6 +55,7 @@ type LocalizedNavItem = {
     | '/docs/metro-bundle-archive'
     | '/docs/package-managers'
     | '/docs/native-contract'
+    | '/docs/repack-comparison'
     | '/docs/global-state';
 };
 
@@ -70,6 +72,7 @@ const localizedNavLabels = {
     metroBundle: 'Metro / Bundle',
     packageManagers: 'Package managers',
     nativeContract: 'Native contract',
+    repackComparison: 'Re.Pack comparison',
     globalState: 'Global state',
   },
   '/ko': {
@@ -82,6 +85,7 @@ const localizedNavLabels = {
     metroBundle: 'Metro / Bundle',
     packageManagers: '패키지 매니저',
     nativeContract: 'Native contract',
+    repackComparison: 'Re.Pack 비교',
     globalState: '전역 상태',
   },
   '/zh-cn': {
@@ -94,6 +98,7 @@ const localizedNavLabels = {
     metroBundle: 'Metro / Bundle',
     packageManagers: '包管理器',
     nativeContract: 'Native contract',
+    repackComparison: 'Re.Pack 对比',
     globalState: '全局状态',
   },
   '/jp': {
@@ -106,6 +111,7 @@ const localizedNavLabels = {
     metroBundle: 'Metro / Bundle',
     packageManagers: 'パッケージマネージャー',
     nativeContract: 'Native contract',
+    repackComparison: 'Re.Pack 比較',
     globalState: 'グローバル状態',
   },
 } satisfies Record<LocalePrefix, Record<NavLabelKey, string>>;
@@ -184,6 +190,7 @@ const createNavItems = (prefix: LocalePrefix): readonly LocalizedNavItem[] => {
     { label: labels.metroBundle, path: '/docs/metro-bundle-archive' },
     { label: labels.packageManagers, path: '/docs/package-managers' },
     { label: labels.nativeContract, path: '/docs/native-contract' },
+    { label: labels.repackComparison, path: '/docs/repack-comparison' },
     { label: labels.globalState, path: '/docs/global-state' },
   ];
 };

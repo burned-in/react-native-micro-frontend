@@ -102,7 +102,7 @@ Use `--yes` for non-interactive apply, direct integration commands with `--dry-r
 
 | Action | Bun | npm | pnpm | Yarn | Deno task |
 | --- | --- | --- | --- | --- | --- |
-| Version all | `bun run version:all 0.2.0` | `npm run version:all -- 0.2.0` | `pnpm version:all 0.2.0` | `yarn version:all 0.2.0` | `deno task version:all 0.2.0` |
+| Version all | `bun run version:all 0.7.0` | `npm run version:all -- 0.7.0` | `pnpm version:all 0.7.0` | `yarn version:all 0.7.0` | `deno task version:all 0.7.0` |
 | Check | `bun run release:check` | `npm run release:check` | `pnpm release:check` | `yarn release:check` | `deno task release:check` |
 | Dry-run publish | `bun run release:dry-run` | `npm run release:dry-run` | `pnpm release:dry-run` | `yarn release:dry-run` | `deno task release:dry-run` |
 | Publish | `bun run release:publish` | `npm run release:publish` | `pnpm release:publish` | `yarn release:publish` | `deno task release:publish` |

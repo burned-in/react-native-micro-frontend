@@ -4,7 +4,7 @@
 
 独立开发功能模块，验证 native compatibility，并且只在 host binary 可以安全运行时才发布 OTA 更新。
 
-相关文档：[官方文档首页](index.zh-CN.md) · [Getting Started](getting-started.zh-CN.md) · [Easy Way](easy-way.zh-CN.md) · [Metro / Bundle archive](metro-bundle-archive.zh-CN.md) · [选项参考](options.zh-CN.md) · [包管理器矩阵](package-managers.zh-CN.md)
+相关文档：[官方文档首页](index.zh-CN.md) · [Getting Started](getting-started.zh-CN.md) · [Easy Way](easy-way.zh-CN.md) · [Metro / Bundle archive](metro-bundle-archive.zh-CN.md) · [选项参考](options.zh-CN.md) · [包管理器矩阵](package-managers.zh-CN.md) · [RNM vs Re.Pack](repack-comparison.zh-CN.md)
 
 ```txt
 React Native Micro Frontend
@@ -20,6 +20,8 @@ React Native Micro Frontend
 `@bunin/react-native-micro-frontend` 是 React Native 团队的安全与集成层，让功能模块可以独立交付，同时不牺牲 native binary compatibility。
 
 它不替代 Hot Updater。Hot Updater 仍然是 OTA delivery engine；本库负责在发布或加载 MFE 之前判断它是否安全。
+
+Acknowledgement：本项目最初深受 [Hot Updater](https://github.com/gronxb/hot-updater) 启发。[gronxb](https://github.com/gronxb) 创建的 Hot Updater 证明了 React Native OTA 可以以 open、practical、infrastructure-owned 的方式运行，是非常出色的项目。RNM 在这份启发之上增加 native-contract 与 microfrontend governance layer。衷心感谢 gronxb。
 
 ## 核心能力
 
@@ -338,7 +340,7 @@ deno task release:publish
 | `rnm integrate all <mfe>` | 向后兼容的 explicit integration route。 |
 | `rnm expo <mfe>` | 在 integration watcher 与 OTA safety check 后输出 Expo EAS Update deploy command。 |
 
-`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` 会自动运行 integration watcher。自动化使用 `--yes`，跳过 watcher 使用 `--skip-integration`。完整 command reference 请查看 [包管理器与 CLI 命令](package-managers.zh-CN.md)。
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` 会自动运行 integration watcher。自动化使用 `--yes`，跳过 watcher 使用 `--skip-integration`。完整 command reference 请查看 [包管理器与 CLI 命令](package-managers.zh-CN.md) · [RNM vs Re.Pack](repack-comparison.zh-CN.md)。
 
 ## CLI 示例
 
@@ -449,7 +451,7 @@ rnm build mfe-feature \
 含义：
 
 - 打印基于 Metro 的 `react-native bundle` 命令
-- 不使用 Re.Pack
+- 不需要 Re.Pack，也不替换 Metro
 - 将命令生成与执行分离，方便 CI 检查
 
 ### 6a. 使用 `withMfe` merge Metro config
@@ -691,7 +693,7 @@ export function FeatureModuleHeader() {
 
 ## Hot Updater 设置页面
 
-文档站点提供 `/docs/getting-started` 路由来说明首次安装、Host 配置、MFE 注册、校验与 runtime 加载；`/docs/options` 路由按详细页面整理 Host config、MFE config、registry 与 runtime options；也提供 `/docs/hot-updater` 路由来说明 Hot Updater 设置。它保留 Hot Updater 作为 OTA delivery engine，使用 `withReactNativeMicroFrontend` 包装 metadata，并且只在 native safety check 通过后生成 publish command。
+文档站点提供 `/docs/getting-started` 路由来说明首次安装、Host 配置、MFE 注册、校验与 runtime 加载；`/docs/options` 路由按详细页面整理 Host config、MFE config、registry 与 runtime options；也提供 `/docs/hot-updater` 路由来说明 Hot Updater 设置，并提供 `/docs/repack-comparison` 路由对比 RNM 与 Re.Pack。它保留 Hot Updater 作为 OTA delivery engine，使用 `withReactNativeMicroFrontend` 包装 metadata，并且只在 native safety check 通过后生成 publish command。
 
 ## OTA 判断规则
 
@@ -748,22 +750,31 @@ nativeHash = hash(
 - native ABI 或 native dependency 变更不能靠替换 JS 解决。
 - nativeHash mismatch 表示 Host binary 与 MFE bundle 的原生假设不同。
 
-## Re.Pack 策略
+## RNM vs Re.Pack
 
-本项目不使用 Re.Pack。
+RNM 有意保持 **Metro-first**，并且不依赖 `@callstack/repack`。
 
-```txt
-允许：
-  Metro bundle generation
-  Hot Updater OTA delivery
-  native contract verification
-  runtime registry loading
+**2026-05-28** 核验的最新基线：
 
-禁止：
-  @callstack/repack
-  Webpack Module Federation
-  Re.Pack remote chunk runtime
-```
+| Package | 已核验最新 version |
+| --- | --- |
+| `@bunin/react-native-micro-frontend` | `0.7.0` |
+| `react-native` | `0.85.3` |
+| `@callstack/repack` | `5.2.5` |
+
+| Concern | RNM | Re.Pack 5.x |
+| --- | --- | --- |
+| 主要角色 | Native-safety、registry、integration、Host loader orchestration | React Native bundler/runtime replacement |
+| Bundler | 带 `withMfe` helper 的 Metro | 用 Rspack 或 Webpack 替代 Metro |
+| Microfrontend split | `rnm.registry.json` + Host-owned loader | Module Federation v2 remotes/chunks |
+| Artifact | `index.bundle`、`manifest.json`、引用 assets、`.tar.gz` archive、OTA URL、embedded bundle | Federated modules、remote chunks/containers、script runtime cache |
+| Native safety | 用 native contract hash 阻止 unsafe OTA/runtime load | App/team 自行负责 native compatibility policy |
+
+如果优先事项是 Metro compatibility、native-contract OTA gate、可审查 integration files 和 Host-owned loader policy，请选择 RNM。如果优先事项是 Module Federation、Rspack/Webpack plugins、tree-shaking 和 remote chunk composition，请选择 Re.Pack。
+
+Re.Pack 值得被肯定。到目前为止，它一直是 React Native microfrontend 领域接近事实标准的选择，也是出色的工程成果。但采用它也意味着接受额外的 Rspack/Webpack 层、另一套 build model、Module Federation shared-dependency policy、remote chunk/cache operations，以及 native release risk 旁边的额外 debugging surface。如果团队只需要围绕 Metro artifact 的 native-safe OTA gate，这一层可能会成为 architecture weight，而不是 leverage。
+
+完整 decision guide 见 [`docs/repack-comparison.zh-CN.md`](repack-comparison.zh-CN.md)。
 
 ## 一次性版本管理与发布
 
@@ -774,7 +785,7 @@ nativeHash = hash(
 下面先展示 Bun 命令，因为 Bun 是推荐 workflow。同一套 release script 也可以通过 `npm`、`pnpm`、`yarn`、`deno task` 调用。
 
 ```bash
-bun run version:all 0.2.0
+bun run version:all 0.7.0
 bun run version:all patch
 bun run version:all minor
 bun run version:all major
@@ -783,10 +794,10 @@ bun run version:all major
 等价命令：
 
 ```bash
-npm run version:all -- 0.2.0
-pnpm version:all 0.2.0
-yarn version:all 0.2.0
-deno task version:all 0.2.0
+npm run version:all -- 0.7.0
+pnpm version:all 0.7.0
+yarn version:all 0.7.0
+deno task version:all 0.7.0
 ```
 
 含义：

@@ -41,6 +41,11 @@ const guideCards = [
     body: 'Understand what changes require a store release.',
   },
   {
+    title: 'RNM vs Re.Pack',
+    href: '/docs/repack-comparison',
+    body: 'Compare Metro-first native-safety with Re.Pack 5.x Module Federation runtime chunks.',
+  },
+  {
     title: 'Global state',
     href: '/docs/global-state',
     body: 'Provide host sharedState and read it safely inside an MFE.',

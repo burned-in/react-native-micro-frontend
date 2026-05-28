@@ -4,7 +4,7 @@
 
 機能モジュールを独立して開発し、native compatibility を検証し、host binary が安全に実行できる場合だけ OTA 更新を公開します。
 
-関連ドキュメント: [公式ドキュメントホーム](index.ja.md) · [Getting Started](getting-started.ja.md) · [Easy Way](easy-way.ja.md) · [Metro / Bundle archive](metro-bundle-archive.ja.md) · [Options reference](options.ja.md) · [パッケージマネージャ・マトリクス](package-managers.ja.md)
+関連ドキュメント: [公式ドキュメントホーム](index.ja.md) · [Getting Started](getting-started.ja.md) · [Easy Way](easy-way.ja.md) · [Metro / Bundle archive](metro-bundle-archive.ja.md) · [Options reference](options.ja.md) · [パッケージマネージャ・マトリクス](package-managers.ja.md) · [RNM vs Re.Pack](repack-comparison.ja.md)
 
 ```txt
 React Native Micro Frontend
@@ -20,6 +20,8 @@ React Native Micro Frontend
 `@bunin/react-native-micro-frontend` は React Native チーム向けの安全性と統合のレイヤーです。native binary compatibility を保ちながら feature module を独立して配信できます。
 
 Hot Updater を置き換えるものではありません。Hot Updater は OTA delivery engine のままで、このライブラリは MFE を publish/load してよいかを事前に判断します。
+
+Acknowledgement: この project は [Hot Updater](https://github.com/gronxb/hot-updater) から大きな inspiration を受けて始まりました。[gronxb](https://github.com/gronxb) による Hot Updater は、React Native OTA が open で practical、かつ infrastructure-owned な形で成立することを示した素晴らしい project です。RNM はその inspiration の上に native-contract と microfrontend governance layer を加えます。gronxb に心から感謝します。
 
 ## 主な機能
 
@@ -338,7 +340,7 @@ deno task release:publish
 | `rnm integrate all <mfe>` | backward-compatible な explicit integration route です。 |
 | `rnm expo <mfe>` | integration watcher と OTA safety check の後に Expo EAS Update deploy command を出力します。 |
 
-`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` は integration watcher を自動実行します。automation では `--yes`、watcher を省く場合は `--skip-integration` を使います。完全な command reference は [Package managers と CLI command](package-managers.ja.md) を確認してください。
+`rnm add`、`rnm bundle --host`、`rnm verify`、`rnm publish`、`rnm expo` は integration watcher を自動実行します。automation では `--yes`、watcher を省く場合は `--skip-integration` を使います。完全な command reference は [Package managers と CLI command](package-managers.ja.md) · [RNM vs Re.Pack](repack-comparison.ja.md) を確認してください。
 
 ## CLI 例
 
@@ -449,7 +451,7 @@ rnm build mfe-feature \
 意味:
 
 - Metro ベースの `react-native bundle` command を表示します。
-- Re.Pack は使用しません。
+- Re.Pack は不要で、Metro を置き換えません。
 - command 生成と実行を分離し、CI で確認しやすくします。
 
 ### 6a. `withMfe` で Metro config を merge する
@@ -692,7 +694,7 @@ export function FeatureModuleHeader() {
 
 ## Hot Updater 設定ページ
 
-ドキュメントサイトには `/docs/getting-started` route があり、初回 install、Host config、MFE registration、verification、runtime loading を説明します。`/docs/options` route は Host config、MFE config、registry、runtime options を detailed page として整理します。Hot Updater については `/docs/hot-updater` route があります。Hot Updater を OTA delivery engine として維持し、`withReactNativeMicroFrontend` で metadata をラップし、native safety check が通った場合だけ publish command を生成する流れを説明します。
+ドキュメントサイトには `/docs/getting-started` route があり、初回 install、Host config、MFE registration、verification、runtime loading を説明します。`/docs/options` route は Host config、MFE config、registry、runtime options を detailed page として整理します。Hot Updater については `/docs/hot-updater` route があり、RNM と Re.Pack の比較は `/docs/repack-comparison` route にあります。Hot Updater を OTA delivery engine として維持し、`withReactNativeMicroFrontend` で metadata をラップし、native safety check が通った場合だけ publish command を生成する流れを説明します。
 
 ## OTA 判定ルール
 
@@ -749,22 +751,31 @@ nativeHash = hash(
 - native ABI または native dependency の変更は、JS を差し替えるだけでは解決できません。
 - nativeHash mismatch は、Host binary と MFE bundle の native 前提が異なることを意味します。
 
-## Re.Pack 方針
+## RNM vs Re.Pack
 
-Re.Pack は使用しません。
+RNM は意図的に **Metro-first** であり、`@callstack/repack` に依存しません。
 
-```txt
-許可:
-  Metro bundle generation
-  Hot Updater OTA delivery
-  native contract verification
-  runtime registry loading
+**2026-05-28** に確認した latest baseline:
 
-禁止:
-  @callstack/repack
-  Webpack Module Federation
-  Re.Pack remote chunk runtime
-```
+| Package | 確認した latest version |
+| --- | --- |
+| `@bunin/react-native-micro-frontend` | `0.7.0` |
+| `react-native` | `0.85.3` |
+| `@callstack/repack` | `5.2.5` |
+
+| Concern | RNM | Re.Pack 5.x |
+| --- | --- | --- |
+| Primary role | Native-safety、registry、integration、Host loader orchestration | React Native bundler/runtime replacement |
+| Bundler | `withMfe` helper を加えた Metro | Metro の代わりに Rspack または Webpack |
+| Microfrontend split | `rnm.registry.json` + Host-owned loader | Module Federation v2 remotes/chunks |
+| Artifact | `index.bundle`、`manifest.json`、参照 assets、`.tar.gz` archive、OTA URL、embedded bundle | Federated modules、remote chunks/containers、script runtime cache |
+| Native safety | Native contract hash で unsafe OTA/runtime load を block | App/team が native compatibility policy を所有 |
+
+Metro compatibility、native-contract OTA gate、reviewable integration file、Host-owned loader policy が優先なら RNM を選びます。Module Federation、Rspack/Webpack plugin、tree-shaking、remote chunk composition が優先なら Re.Pack を選びます。
+
+Re.Pack は正当に評価されるべき技術です。これまで React Native microfrontend の実質的な標準に近い選択肢であり、優れた engineering achievement です。一方で、採用するということは追加の Rspack/Webpack layer、もう一つの build model、Module Federation shared-dependency policy、remote chunk/cache operations、native release risk の横にある追加 debugging surface を受け入れることでもあります。必要なのが Metro artifact に対する native-safe OTA gate だけなら、その layer は leverage ではなく architecture weight になり得ます。
+
+完全な decision guide は [`docs/repack-comparison.ja.md`](repack-comparison.ja.md) を参照してください。
 
 ## 一括バージョン管理と公開
 
@@ -773,7 +784,7 @@ Re.Pack は使用しません。
 ### 全 package の version を指定または bump する
 
 ```bash
-bun run version:all 0.2.0
+bun run version:all 0.7.0
 bun run version:all patch
 bun run version:all minor
 bun run version:all major
@@ -782,10 +793,10 @@ bun run version:all major
 同等コマンド:
 
 ```bash
-npm run version:all -- 0.2.0
-pnpm version:all 0.2.0
-yarn version:all 0.2.0
-deno task version:all 0.2.0
+npm run version:all -- 0.7.0
+pnpm version:all 0.7.0
+yarn version:all 0.7.0
+deno task version:all 0.7.0
 ```
 
 意味:

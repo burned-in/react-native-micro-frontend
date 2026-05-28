@@ -25,6 +25,8 @@ Use it in production only after pinning exact package versions and running your 
 
 It does **not** replace Hot Updater. Hot Updater remains the OTA delivery engine; this library decides whether an MFE is safe to load or publish before that delivery happens.
 
+Acknowledgement: this project began with strong inspiration from [Hot Updater](https://github.com/gronxb/hot-updater), the self-hostable React Native OTA project by [gronxb](https://github.com/gronxb). Hot Updater proved that React Native OTA can be open, practical, and infrastructure-owned; RNM builds on that inspiration by adding a native-contract and microfrontend governance layer around delivery. Thank you, gronxb.
+
 ## Highlights
 
 | Capability              | What it does                                                                                                                                                                      |
@@ -130,6 +132,7 @@ Use `hotUpdater` when `ota.provider` is `hot-updater`; use `custom` when your re
 | [`docs/README.zh-CN.md`](docs/README.zh-CN.md)                 | Simplified Chinese guide.                                                              |
 | [`docs/package-managers.md`](docs/package-managers.md)         | Package manager command matrix.                                                        |
 | [`docs/native-contract.md`](docs/native-contract.md)           | Native contract notes.                                                                 |
+| [`docs/repack-comparison.md`](docs/repack-comparison.md)     | RNM vs Re.Pack 5.x architecture and decision guide.                                    |
 
 ## Documentation website
 
@@ -149,6 +152,7 @@ Meaning:
 - `/docs/getting-started` is the step-by-step first MFE setup guide.
 - `/docs/options` is the complete options reference split into detailed sections.
 - `/docs/hot-updater` is the routed Hot Updater configuration guide.
+- `/docs/repack-comparison` compares RNM with Re.Pack 5.x.
 - `/docs/package-managers` lists Bun, npm, pnpm, Yarn, and Deno commands.
 - `/ko/docs`, `/zh-cn/docs`, and `/jp/docs` expose localized entry pages.
 
@@ -493,7 +497,7 @@ rnm build mfe-feature \
 Meaning:
 
 - prints a Metro `react-native bundle` command
-- does not use Re.Pack
+- does not require Re.Pack or replace Metro
 - separates command generation from execution so CI can inspect the exact command
 
 ### 6a. Merge Metro config with `withMfe`
@@ -792,22 +796,31 @@ Why this matters:
 - Native ABI or dependency changes cannot be fixed by replacing JavaScript.
 - A mismatched native hash means the host binary and MFE bundle were built against different native assumptions.
 
-## Re.Pack policy
+## RNM vs Re.Pack
 
-Re.Pack is intentionally excluded.
+RNM is intentionally **Metro-first** and does not depend on `@callstack/repack`.
 
-```txt
-Allowed:
-  Metro bundle generation
-  Hot Updater OTA delivery
-  native contract verification
-  runtime registry loading
+Latest baseline checked on **2026-05-28**:
 
-Not allowed:
-  @callstack/repack
-  Webpack Module Federation
-  Re.Pack remote chunk runtime
-```
+| Package | Latest checked version |
+| --- | --- |
+| `@bunin/react-native-micro-frontend` | `0.7.0` |
+| `react-native` | `0.85.3` |
+| `@callstack/repack` | `5.2.5` |
+
+| Concern | RNM | Re.Pack 5.x |
+| --- | --- | --- |
+| Primary role | Native-safety, registry, integration, and Host loader orchestration | React Native bundler/runtime replacement |
+| Bundler | Metro with `withMfe` helper | Rspack or Webpack instead of Metro |
+| Microfrontend split | `rnm.registry.json` + Host-owned loader | Module Federation v2 remotes/chunks |
+| Artifact | `index.bundle`, `manifest.json`, referenced assets, `.tar.gz` archive, OTA URL, or embedded bundle | Federated modules, remote chunks/containers, script runtime cache |
+| Native safety | Native contract hash blocks unsafe OTA/runtime load | App/team must own native compatibility policy |
+
+Choose RNM when Metro compatibility, native-contract OTA gates, reviewable integration files, and Host-owned loader policy are the priority. Choose Re.Pack when Module Federation, Rspack/Webpack plugins, tree-shaking, and remote chunk composition are the priority.
+
+Re.Pack deserves credit: it has been the practical standard for React Native microfrontends and is a remarkable piece of engineering. The trade-off is that adopting it means accepting an additional Rspack/Webpack layer: another build model, Module Federation shared-dependency policy, remote chunk/cache operations, and debugging surface next to native release risk. If the team only needs native-safe OTA gates around Metro artifacts, that layer can become architecture weight rather than leverage.
+
+See [`docs/repack-comparison.md`](docs/repack-comparison.md) for the full decision guide.
 
 ## One-shot versioning and publishing
 
@@ -818,7 +831,7 @@ All publishable packages are versioned together. Use the root scripts instead of
 The examples below show the Bun command first because Bun is the preferred workflow. The same release scripts are also callable through `npm`, `pnpm`, `yarn`, and `deno task`.
 
 ```bash
-bun run version:all 0.2.0
+bun run version:all 0.7.0
 bun run version:all patch
 bun run version:all minor
 bun run version:all major
@@ -827,10 +840,10 @@ bun run version:all major
 Equivalent commands:
 
 ```bash
-npm run version:all -- 0.2.0
-pnpm version:all 0.2.0
-yarn version:all 0.2.0
-deno task version:all 0.2.0
+npm run version:all -- 0.7.0
+pnpm version:all 0.7.0
+yarn version:all 0.7.0
+deno task version:all 0.7.0
 ```
 
 Meaning:

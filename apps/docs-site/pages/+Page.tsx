@@ -8,6 +8,10 @@ export default function Page() {
         eyebrow="React Native Micro Frontend"
         title="Native-safe feature modules with a polished OTA workflow."
         subtitle="Ship React Native feature modules independently, verify native binary compatibility, and publish through Hot Updater only when the host can safely load the update."
+        secondaryCta={{
+          label: 'Hot Updater on GitHub',
+          href: 'https://github.com/gronxb/hot-updater',
+        }}
       />
       <FeatureGrid features={features} />
       <SectionList sections={homeSections} />
