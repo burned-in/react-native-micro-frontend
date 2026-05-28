@@ -35,6 +35,12 @@ test('rnm init generates and imports bundle archive asset registration', () => {
   expect(
     readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('declare const require');
+  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
+    'ReactNative.NativeModules',
+  );
   expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
     'registerBundleArchiveAssetFileSystem',
   );

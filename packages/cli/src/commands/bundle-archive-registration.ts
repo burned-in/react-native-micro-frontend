@@ -60,10 +60,10 @@ export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     ...(hasBlobUtilAssetFileSystem
       ? [
           '',
-          'declare const require: ((specifier: string) => unknown) | undefined;',
-          '',
           'function resolveOptionalReactNativeBlobUtil(): unknown {',
           "  if (typeof require !== 'function') return undefined;",
+          '  const nativeModules = ReactNative.NativeModules as Record<string, unknown> | undefined;',
+          '  if (!nativeModules?.ReactNativeBlobUtil && !nativeModules?.RNFetchBlob) return undefined;',
           '  try {',
           "    return require('react-native-blob-util');",
           '  } catch {',

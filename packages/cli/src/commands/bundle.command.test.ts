@@ -154,6 +154,12 @@ test('copies host archive and generates React Native archive asset registration'
   ).not.toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('declare const require');
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).toContain('ReactNative.NativeModules');
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).toContain('registerBundleArchiveAssetFileSystem');
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
