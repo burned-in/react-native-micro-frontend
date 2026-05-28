@@ -15,10 +15,6 @@ export interface BundleArchiveRegistrationOptions {
 
 export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
   const bundleDir = join(hostRoot, '.bundle', 'rnm');
-  const hasBlobUtilAssetFileSystem = packageJsonHasDependency(
-    hostRoot,
-    'react-native-blob-util',
-  );
   const archiveFiles = existsSync(bundleDir)
     ? readdirSync(bundleDir)
         .filter((file) => /\.tar\.gz$/u.test(file))
@@ -38,9 +34,7 @@ export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     "import * as ReactNativeMicroFrontend from '@bunin/react-native-micro-frontend';",
     "import * as ReactNativeMicroFrontendRuntime from '@bunin/react-native-micro-frontend/runtime';",
     ...(entries.length > 0 ? ["import { Image } from 'react-native';"] : []),
-    hasBlobUtilAssetFileSystem
-      ? "import { createReactNativeBlobUtilAssetFileSystem, registerBundleArchiveAssetFileSystem, registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';"
-      : "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
+    "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
     '',
     'export const bundleArchiveAssets = {',
     ...entries,
@@ -57,32 +51,6 @@ export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     '',
     'registerBundleArchiveAssets(bundleArchiveAssets);',
     'registerBundleArchiveExternalModules(bundleArchiveExternalModules);',
-    ...(hasBlobUtilAssetFileSystem
-      ? [
-          '',
-          'function resolveOptionalReactNativeBlobUtil(): unknown {',
-          "  if (typeof require !== 'function') return undefined;",
-          '  const nativeModules = ReactNative.NativeModules as Record<string, unknown> | undefined;',
-          '  if (!nativeModules?.ReactNativeBlobUtil && !nativeModules?.RNFetchBlob) return undefined;',
-          '  try {',
-          "    return require('react-native-blob-util');",
-          '  } catch {',
-          '    return undefined;',
-          '  }',
-          '}',
-          '',
-          'const reactNativeBlobUtil = resolveOptionalReactNativeBlobUtil();',
-          'if (reactNativeBlobUtil) {',
-          '  try {',
-          '    registerBundleArchiveAssetFileSystem(',
-          '      createReactNativeBlobUtilAssetFileSystem(reactNativeBlobUtil),',
-          '    );',
-          '  } catch {',
-          '    // Keep app startup safe when the package is installed but its native module is unavailable.',
-          '  }',
-          '}',
-        ]
-      : []),
     '',
   ].join('\n');
 
@@ -213,23 +181,6 @@ function toImportSpecifier(path: string): string {
 
 function toPosixPath(path: string): string {
   return path.replaceAll('\\', '/');
-}
-
-function packageJsonHasDependency(root: string, packageName: string): boolean {
-  const packageJsonPath = join(root, 'package.json');
-  if (!existsSync(packageJsonPath)) return false;
-
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
-    readonly dependencies?: Readonly<Record<string, unknown>>;
-    readonly devDependencies?: Readonly<Record<string, unknown>>;
-    readonly optionalDependencies?: Readonly<Record<string, unknown>>;
-  };
-
-  return [
-    packageJson.dependencies,
-    packageJson.devDependencies,
-    packageJson.optionalDependencies,
-  ].some((dependencies) => dependencies?.[packageName] !== undefined);
 }
 
 function stringFlag(value: string | boolean | undefined): string | undefined {

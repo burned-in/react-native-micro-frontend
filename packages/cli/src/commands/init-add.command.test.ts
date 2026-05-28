@@ -29,21 +29,21 @@ test('rnm init generates and imports bundle archive asset registration', () => {
   expect(readFileSync(join(root, 'index.ts'), 'utf8')).toStartWith(
     "import './rnm.bundle-archives';\n",
   );
-  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
-    "require('react-native-blob-util')",
-  );
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain("require('react-native-blob-util')");
   expect(
     readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
   expect(
     readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain('declare const require');
-  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
-    'ReactNative.NativeModules',
-  );
-  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
-    'registerBundleArchiveAssetFileSystem',
-  );
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('ReactNative.NativeModules');
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('registerBundleArchiveAssetFileSystem');
   expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
     'react-native/Libraries/Image/AssetRegistry',
   );
@@ -73,9 +73,9 @@ test('rnm add refreshes and imports bundle archive asset registration', () => {
   expect(readFileSync(join(root, 'index.ts'), 'utf8')).toStartWith(
     "import './rnm.bundle-archives';\n",
   );
-  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
-    'createReactNativeBlobUtilAssetFileSystem',
-  );
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('createReactNativeBlobUtilAssetFileSystem');
 });
 
 test('rnm add can skip host entry import while still generating registration', () => {
