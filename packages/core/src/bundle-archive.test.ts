@@ -1093,7 +1093,12 @@ describe('bundle archive loader', () => {
       `,
     });
     const hostImage = Object.assign(
-      (props: unknown) => ({ type: 'Image', props }),
+      (props: { readonly source?: unknown }) => {
+        if (!props.source || typeof props.source !== 'object') {
+          throw new Error('archive asset id leaked into Host Image');
+        }
+        return { type: 'Image', props };
+      },
       { resolveAssetSource: () => ({ uri: 'host://fallback' }) },
     );
 
@@ -1112,7 +1117,7 @@ describe('bundle archive loader', () => {
 
     expect(module.default()).toEqual({
       type: 'Image',
-      props: { source: 3 },
+      props: { source: { uri: 'data:image/jpeg;base64,anBn' } },
     });
   });
 

@@ -657,13 +657,29 @@ function createPatchedImageModule(
   resolveImage: () => unknown,
   resolveAssetSource: (source: unknown) => unknown,
 ): unknown {
+  type ImageCallable = (this: unknown, ...args: unknown[]) => unknown;
+  const callImage = (
+    image: ImageCallable,
+    thisArgument: unknown,
+    args: readonly unknown[],
+  ): unknown => {
+    if (args.length === 0) {
+      return Reflect.apply(image, thisArgument, []);
+    }
+
+    const [props, ...rest] = args;
+    return Reflect.apply(image, thisArgument, [
+      resolveImagePropsForPreparedAssets(props, resolveAssetSource),
+      ...rest,
+    ]);
+  };
   const patchedImage = function patchedReactNativeImage(
     this: unknown,
     ...args: unknown[]
   ) {
     const image = resolveImage();
     if (typeof image === 'function') {
-      return image.apply(this, args);
+      return callImage(image as ImageCallable, this, args);
     }
     return undefined;
   };
@@ -673,7 +689,7 @@ function createPatchedImageModule(
       apply(_target, thisArgument, args) {
         const image = resolveImage();
         if (typeof image === 'function') {
-          return Reflect.apply(image, thisArgument, args);
+          return callImage(image as ImageCallable, thisArgument, args);
         }
         return undefined;
       },
@@ -713,6 +729,57 @@ function createPatchedImageModule(
   }
 
   return Object.assign(patchedImage, { resolveAssetSource });
+}
+
+function resolveImagePropsForPreparedAssets(
+  props: unknown,
+  resolveAssetSource: (source: unknown) => unknown,
+): unknown {
+  if (!isRecord(props)) return props;
+
+  const assetPropNames = [
+    'source',
+    'defaultSource',
+    'loadingIndicatorSource',
+  ] as const;
+  let resolvedProps: Record<string, unknown> | undefined;
+
+  for (const propName of assetPropNames) {
+    if (!Object.hasOwn(props, propName)) continue;
+
+    const source = props[propName];
+    const resolvedSource = resolveImageSourceValue(source, resolveAssetSource);
+    if (resolvedSource !== source) {
+      resolvedProps ??= { ...props };
+      resolvedProps[propName] = resolvedSource;
+    }
+  }
+
+  return resolvedProps ?? props;
+}
+
+function resolveImageSourceValue(
+  source: unknown,
+  resolveAssetSource: (source: unknown) => unknown,
+): unknown {
+  if (source == null) return source;
+  if (Array.isArray(source)) {
+    let resolvedSources: unknown[] | undefined;
+
+    source.forEach((item, index) => {
+      const resolvedItem = resolveImageSourceValue(item, resolveAssetSource);
+      if (resolvedItem !== item) {
+        resolvedSources ??= [...source];
+        resolvedSources[index] = resolvedItem;
+      }
+    });
+
+    return resolvedSources ?? source;
+  }
+  if (isRecord(source) && typeof source.uri === 'string') return source;
+
+  const resolvedSource = resolveAssetSource(source);
+  return resolvedSource ?? source;
 }
 
 function patchAssetRegistryForPreparedAssets(
