@@ -15,6 +15,10 @@ export interface BundleArchiveRegistrationOptions {
 
 export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
   const bundleDir = join(hostRoot, '.bundle', 'rnm');
+  const usesBlobUtilAssetFileSystem = hostHasPackageDependency(
+    hostRoot,
+    'react-native-blob-util',
+  );
   const archiveFiles = existsSync(bundleDir)
     ? readdirSync(bundleDir)
         .filter((file) => /\.tar\.gz$/u.test(file))
@@ -29,12 +33,17 @@ export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     "import * as React from 'react';",
     "import * as ReactJsxRuntime from 'react/jsx-runtime';",
     "import * as ReactNative from 'react-native';",
+    ...(usesBlobUtilAssetFileSystem
+      ? ["import ReactNativeBlobUtil from 'react-native-blob-util';"]
+      : []),
     '// @ts-ignore React Native exposes this Metro asset registry subpath at runtime.',
     "import * as ReactNativeAssetRegistry from 'react-native/Libraries/Image/AssetRegistry';",
     "import * as ReactNativeMicroFrontend from '@bunin/react-native-micro-frontend';",
     "import * as ReactNativeMicroFrontendRuntime from '@bunin/react-native-micro-frontend/runtime';",
     ...(entries.length > 0 ? ["import { Image } from 'react-native';"] : []),
-    "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
+    usesBlobUtilAssetFileSystem
+      ? "import { createReactNativeBlobUtilAssetFileSystem, registerBundleArchiveAssets, registerBundleArchiveAssetFileSystem, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';"
+      : "import { registerBundleArchiveAssets, registerBundleArchiveExternalModules } from '@bunin/react-native-micro-frontend/bundle-archive';",
     '',
     'export const bundleArchiveAssets = {',
     ...entries,
@@ -49,6 +58,13 @@ export function writeBundleArchiveAssetRegistry(hostRoot: string): void {
     "  '@bunin/react-native-micro-frontend/runtime': ReactNativeMicroFrontendRuntime,",
     '} as const;',
     '',
+    ...(usesBlobUtilAssetFileSystem
+      ? [
+          'registerBundleArchiveAssetFileSystem(',
+          '  createReactNativeBlobUtilAssetFileSystem(ReactNativeBlobUtil),',
+          ');',
+        ]
+      : []),
     'registerBundleArchiveAssets(bundleArchiveAssets);',
     'registerBundleArchiveExternalModules(bundleArchiveExternalModules);',
     '',
@@ -185,4 +201,29 @@ function toPosixPath(path: string): string {
 
 function stringFlag(value: string | boolean | undefined): string | undefined {
   return typeof value === 'string' ? value : undefined;
+}
+
+function hostHasPackageDependency(
+  hostRoot: string,
+  packageName: string,
+): boolean {
+  const packageJsonPath = join(hostRoot, 'package.json');
+  if (!existsSync(packageJsonPath)) return false;
+
+  try {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+      readonly dependencies?: Readonly<Record<string, unknown>>;
+      readonly devDependencies?: Readonly<Record<string, unknown>>;
+      readonly optionalDependencies?: Readonly<Record<string, unknown>>;
+      readonly peerDependencies?: Readonly<Record<string, unknown>>;
+    };
+    return [
+      packageJson.dependencies,
+      packageJson.devDependencies,
+      packageJson.optionalDependencies,
+      packageJson.peerDependencies,
+    ].some((dependencies) => Boolean(dependencies?.[packageName]));
+  } catch {
+    return false;
+  }
 }

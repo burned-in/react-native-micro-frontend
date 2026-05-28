@@ -1,6 +1,6 @@
 {
   "name": "@bunin/react-native-micro-frontend-hot-updater-adapter",
-  "version": "0.6.8",
+  "version": "0.7.0",
   "author": "bunin contributors",
   "homepage": "https://rnmfe.bunin.app/",
   "repository": {

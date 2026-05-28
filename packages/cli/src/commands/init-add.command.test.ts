@@ -32,18 +32,21 @@ test('rnm init generates and imports bundle archive asset registration', () => {
   expect(
     readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain("require('react-native-blob-util')");
-  expect(
-    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
-  ).not.toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
+  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
+    "import ReactNativeBlobUtil from 'react-native-blob-util'",
+  );
   expect(
     readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain('declare const require');
   expect(
     readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain('ReactNative.NativeModules');
-  expect(
-    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
-  ).not.toContain('registerBundleArchiveAssetFileSystem');
+  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
+    'registerBundleArchiveAssetFileSystem',
+  );
+  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
+    'createReactNativeBlobUtilAssetFileSystem(ReactNativeBlobUtil)',
+  );
   expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
     'react-native/Libraries/Image/AssetRegistry',
   );
@@ -73,9 +76,9 @@ test('rnm add refreshes and imports bundle archive asset registration', () => {
   expect(readFileSync(join(root, 'index.ts'), 'utf8')).toStartWith(
     "import './rnm.bundle-archives';\n",
   );
-  expect(
-    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
-  ).not.toContain('createReactNativeBlobUtilAssetFileSystem');
+  expect(readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8')).toContain(
+    'createReactNativeBlobUtilAssetFileSystem',
+  );
 });
 
 test('rnm add can skip host entry import while still generating registration', () => {
@@ -95,12 +98,33 @@ test('rnm add can skip host entry import while still generating registration', (
   );
 });
 
-function createHostFixture(): string {
+test('rnm init omits blob-util asset filesystem when Host has no blob-util dependency', () => {
+  const root = createHostFixture({ blobUtil: false });
+
+  const result = runInitCommand(root, {}, printer());
+
+  expect(result).toBe(0);
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('registerBundleArchiveAssetFileSystem');
+  expect(
+    readFileSync(join(root, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).not.toContain('createReactNativeBlobUtilAssetFileSystem');
+});
+
+function createHostFixture(
+  options: { readonly blobUtil?: boolean } = {},
+): string {
   const root = mkdtempSync(join(tmpdir(), 'rnm-host-init-add-'));
   tempRoots.push(root);
   writeFileSync(
     join(root, 'package.json'),
-    '{"dependencies":{"react-native-blob-util":"^0.24.6"}}\n',
+    options.blobUtil === false
+      ? '{"dependencies":{}}\n'
+      : '{"dependencies":{"react-native-blob-util":"^0.24.6"}}\n',
   );
   writeFileSync(
     join(root, 'index.ts'),

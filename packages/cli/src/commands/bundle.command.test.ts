@@ -198,7 +198,7 @@ test('copies host archive and generates React Native archive asset registration'
   ).not.toContain("require('react-native-blob-util')");
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
-  ).not.toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
+  ).toContain("import ReactNativeBlobUtil from 'react-native-blob-util'");
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).not.toContain('declare const require');
@@ -207,7 +207,10 @@ test('copies host archive and generates React Native archive asset registration'
   ).not.toContain('ReactNative.NativeModules');
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
-  ).not.toContain('registerBundleArchiveAssetFileSystem');
+  ).toContain('registerBundleArchiveAssetFileSystem');
+  expect(
+    readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
+  ).toContain('createReactNativeBlobUtilAssetFileSystem(ReactNativeBlobUtil)');
   expect(
     readFileSync(join(hostRoot, 'rnm.bundle-archives.ts'), 'utf8'),
   ).toContain('require("./.bundle/rnm/host-asset-feature.ios.ota.tar.gz")');
