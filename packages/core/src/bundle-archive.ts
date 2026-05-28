@@ -556,14 +556,14 @@ function patchReactNativeAssetResolver(
   const reactNative = isRecord(externalModules['react-native'])
     ? externalModules['react-native']
     : undefined;
-  const image = isObjectLike(reactNative?.Image) ? reactNative.Image : {};
   const assetRegistryModule =
     externalModules[REACT_NATIVE_ASSET_REGISTRY_MODULE];
   const assetRegistry =
     resolveAssetRegistryObject(assetRegistryModule) ??
-    (isRecord(reactNative?.AssetRegistry) ? reactNative.AssetRegistry : {});
+    resolveReactNativeAssetRegistry(reactNative) ??
+    {};
+  const resolveHostImage = createReactNativeImageResolver(reactNative);
   const runtimeRegisteredAssetUris = new Map<string, string>();
-  const originalResolve = image.resolveAssetSource;
   const patchedAssetRegistry = patchAssetRegistryForPreparedAssets(
     assetRegistry,
     archiveManifest,
@@ -587,6 +587,11 @@ function patchReactNativeAssetResolver(
       return isRecord(source) ? { ...source, uri } : { uri };
     }
 
+    const image = resolveHostImage();
+    const originalResolve = isRecord(image)
+      ? image.resolveAssetSource
+      : undefined;
+
     return typeof originalResolve === 'function'
       ? originalResolve.call(image, source)
       : source;
@@ -596,11 +601,11 @@ function patchReactNativeAssetResolver(
     ...externalModules,
     ...(reactNative
       ? {
-          'react-native': {
-            ...reactNative,
-            Image: patchImageModuleExport(image, resolveFromPrepared),
-            AssetRegistry: patchedAssetRegistry,
-          },
+          'react-native': patchReactNativeModuleExport(
+            reactNative,
+            createPatchedImageModule(resolveHostImage, resolveFromPrepared),
+            patchedAssetRegistry,
+          ),
         }
       : {}),
     ...(assetRegistryModule !== undefined
@@ -614,24 +619,100 @@ function patchReactNativeAssetResolver(
   };
 }
 
-function patchImageModuleExport(
-  image: unknown,
+function createReactNativeImageResolver(
+  reactNative: Readonly<Record<string, unknown>> | undefined,
+): () => unknown {
+  let resolved = false;
+  let image: unknown;
+
+  return () => {
+    if (!resolved) {
+      image = isObjectLike(reactNative?.Image) ? reactNative.Image : {};
+      resolved = true;
+    }
+    return image;
+  };
+}
+
+function resolveReactNativeAssetRegistry(
+  reactNative: Readonly<Record<string, unknown>> | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+  if (!reactNative) return undefined;
+  const assetRegistry = reactNative.AssetRegistry;
+  return isRecord(assetRegistry) ? assetRegistry : undefined;
+}
+
+function patchReactNativeModuleExport(
+  reactNative: Readonly<Record<string, unknown>>,
+  patchedImage: unknown,
+  patchedAssetRegistry: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> {
+  return cloneObjectWithValueOverrides(reactNative, {
+    Image: patchedImage,
+    AssetRegistry: patchedAssetRegistry,
+  });
+}
+
+function createPatchedImageModule(
+  resolveImage: () => unknown,
   resolveAssetSource: (source: unknown) => unknown,
 ): unknown {
-  if (typeof image === 'function') {
-    const patchedImage = function patchedReactNativeImage(
-      this: unknown,
-      ...args: unknown[]
-    ) {
+  const patchedImage = function patchedReactNativeImage(
+    this: unknown,
+    ...args: unknown[]
+  ) {
+    const image = resolveImage();
+    if (typeof image === 'function') {
       return image.apply(this, args);
-    };
-    Object.assign(patchedImage, image, { resolveAssetSource });
-    return patchedImage;
+    }
+    return undefined;
+  };
+
+  if (typeof Proxy === 'function') {
+    return new Proxy(patchedImage, {
+      apply(_target, thisArgument, args) {
+        const image = resolveImage();
+        if (typeof image === 'function') {
+          return Reflect.apply(image, thisArgument, args);
+        }
+        return undefined;
+      },
+      get(_target, property, receiver) {
+        if (property === 'resolveAssetSource') return resolveAssetSource;
+        const image = resolveImage();
+        return isObjectLike(image)
+          ? Reflect.get(image, property, receiver)
+          : undefined;
+      },
+      getOwnPropertyDescriptor(_target, property) {
+        if (property === 'resolveAssetSource') {
+          return {
+            configurable: true,
+            enumerable: true,
+            value: resolveAssetSource,
+            writable: true,
+          };
+        }
+        const image = resolveImage();
+        return isObjectLike(image)
+          ? Object.getOwnPropertyDescriptor(image, property)
+          : undefined;
+      },
+      has(_target, property) {
+        return (
+          property === 'resolveAssetSource' ||
+          (isObjectLike(resolveImage()) && property in Object(resolveImage()))
+        );
+      },
+      ownKeys() {
+        const image = resolveImage();
+        const keys = isObjectLike(image) ? Reflect.ownKeys(image) : [];
+        return [...new Set([...keys, 'resolveAssetSource'])];
+      },
+    });
   }
 
-  return isRecord(image)
-    ? { ...image, resolveAssetSource }
-    : { resolveAssetSource };
+  return Object.assign(patchedImage, { resolveAssetSource });
 }
 
 function patchAssetRegistryForPreparedAssets(
@@ -697,11 +778,10 @@ function patchAssetRegistryForPreparedAssets(
     return originalAsset;
   };
 
-  return {
-    ...assetRegistry,
+  return cloneObjectWithValueOverrides(assetRegistry, {
     registerAsset,
     getAssetByID,
-  };
+  });
 }
 
 function resolveAssetRegistryObject(
@@ -723,13 +803,63 @@ function patchAssetRegistryModuleExport(
 ): unknown {
   if (!isRecord(moduleValue)) return patchedAssetRegistry;
   if ('default' in moduleValue) {
-    return {
-      ...moduleValue,
-      ...patchedAssetRegistry,
-      default: patchedAssetRegistry,
-    };
+    return cloneObjectWithDescriptorOverrides(moduleValue, {
+      ...Object.getOwnPropertyDescriptors(patchedAssetRegistry),
+      default: {
+        configurable: true,
+        enumerable: true,
+        value: patchedAssetRegistry,
+        writable: true,
+      },
+    });
   }
   return patchedAssetRegistry;
+}
+
+function cloneObjectWithValueOverrides(
+  object: Readonly<Record<string, unknown>>,
+  overrides: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> {
+  const descriptors = Object.fromEntries(
+    Object.entries(Object.getOwnPropertyDescriptors(object)).filter(
+      ([key]) => !(key in overrides),
+    ),
+  );
+  const clone = Object.create(Object.getPrototypeOf(object)) as Record<
+    string,
+    unknown
+  >;
+  Object.defineProperties(clone, descriptors);
+
+  for (const [key, value] of Object.entries(overrides)) {
+    const descriptor = Object.getOwnPropertyDescriptor(object, key);
+    Object.defineProperty(clone, key, {
+      configurable: true,
+      enumerable: descriptor?.enumerable ?? true,
+      value,
+      writable: true,
+    });
+  }
+
+  return clone;
+}
+
+function cloneObjectWithDescriptorOverrides(
+  object: Readonly<Record<string, unknown>>,
+  overrides: PropertyDescriptorMap,
+): Record<string, unknown> {
+  const descriptors = Object.fromEntries(
+    Object.entries(Object.getOwnPropertyDescriptors(object)).filter(
+      ([key]) => !(key in overrides),
+    ),
+  );
+  const clone = Object.create(Object.getPrototypeOf(object)) as Record<
+    string,
+    unknown
+  >;
+  Object.defineProperties(clone, descriptors);
+  Object.defineProperties(clone, overrides);
+  return clone;
 }
 
 function resolvePreparedAssetUri(
