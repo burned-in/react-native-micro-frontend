@@ -113,7 +113,7 @@ test('records Metro entry module metadata and appends an archive export footer',
   ).toContain('__rnm_mfe_module__');
 });
 
-test('strips bundled React Native internals from archive runtime to avoid Host module collisions', () => {
+test('externalizes only registered shared modules from archive runtime', () => {
   const root = createBundleFixture(
     'mfe.config.mjs',
     `export default { name: 'native-emitter-regression', version: '2.1.0', entry: './src/index.tsx' };
@@ -140,10 +140,16 @@ test('strips bundled React Native internals from archive runtime to avoid Host m
     'utf8',
   );
 
-  expect(bundleCode).not.toContain('NativeEventEmitter');
-  expect(bundleCode).not.toContain(
-    'node_modules/react-native/Libraries/EventEmitter/NativeEventEmitter.js',
+  expect(bundleCode).toContain(
+    'RNM externalized a bundled shared dependency module, but no Host external module was registered for Metro module id 3.',
   );
+  expect(bundleCode).toContain(
+    'RNM externalized a bundled shared dependency module, but no Host external module was registered for Metro module id 6.',
+  );
+  expect(bundleCode).not.toContain(
+    'RNM externalized a bundled shared dependency module, but no Host external module was registered for Metro module id 7.',
+  );
+  expect(bundleCode).toContain('NativeEventEmitter');
   expect(bundleCode).toContain('__rnm_mfe_module__');
   expect(bundleCode).toContain('registerAsset');
   expect(readManifest(root, 'native-emitter-regression', 'ios')).toMatchObject({

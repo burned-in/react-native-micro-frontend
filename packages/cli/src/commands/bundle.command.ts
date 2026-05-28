@@ -353,6 +353,7 @@ function appendBundleEntryExport(
     bundleCode,
     target.sourceMapOutput,
     target.entryFile,
+    new Set(Object.values(sharedMetadata.metroModuleId)),
     printer,
   );
 
@@ -477,8 +478,11 @@ function stripBundledSharedDependencyModules(
   bundleCode: string,
   sourceMapOutput: string,
   entryFile: string,
+  externalizedModuleIds: ReadonlySet<string | number>,
   printer: CliPrinter,
 ): string {
+  if (externalizedModuleIds.size === 0) return bundleCode;
+
   const moduleSources = createSourceMapModuleSourceMap(
     bundleCode,
     sourceMapOutput,
@@ -497,9 +501,10 @@ function stripBundledSharedDependencyModules(
   for (const call of calls) {
     const moduleId = parseLiteralModuleId(call.args[1]);
     if (moduleId === undefined) continue;
+    if (!externalizedModuleIds.has(moduleId)) continue;
 
     const source = moduleSources.get(moduleId);
-    if (!source || !isBundledSharedDependencySource(source)) continue;
+    if (!source || !findSharedModuleNameForPath(source)) continue;
 
     replacements.push({
       start: call.start,
@@ -562,24 +567,6 @@ function createSourceMapModuleSourceMap(
   });
 
   return moduleSources;
-}
-
-function isBundledSharedDependencySource(source: string): boolean {
-  const normalized = toPosixPath(source);
-  return ['react', 'react-native', '@bunin/react-native-micro-frontend'].some(
-    (packageName) => modulePathBelongsToPackage(normalized, packageName),
-  );
-}
-
-function modulePathBelongsToPackage(
-  modulePath: string,
-  packageName: string,
-): boolean {
-  const packagePath = packageName.split('/').join('/');
-  return (
-    modulePath.includes(`/node_modules/${packagePath}/`) ||
-    modulePath.startsWith(`node_modules/${packagePath}/`)
-  );
 }
 
 function findStatementEnd(source: string, endParenIndex: number): number {
