@@ -12,6 +12,17 @@
 | Operations | Runtime moving parts を減らしたい。 | Remote chunk/cache/CDN/federation operations を受け入れる。 |
 | Best fit | Metro artifact 周辺の native-safe OTA/archive。 | Runtime composition と code-splitting が core architecture。 |
 
+## Capability map
+
+| Capability | RNM でできること | Re.Pack でできること | できないこと / 注意 |
+| --- | --- | --- | --- |
+| Metro-first bundle archive | 可能です。`rnm bundle` が Metro `index.bundle`、`manifest.json`、参照 assets、任意の `.tar.gz` archive を生成します。 | 主経路ではありません。Re.Pack は Rspack/Webpack output と runtime chunks を使います。 | RNM は Metro archive を Module Federation remote に変換しません。 |
+| Native-contract OTA gate | 可能です。RNM は native assumptions を capture し、unsafe OTA/runtime load を block します。 | Re.Pack runtime の周辺で app/team policy として設計する必要があります。 | RNM も native change を OTA-safe にはしません。native change は store release が必要です。 |
+| Module Federation remotes | 対応しません。 | 対応します。Re.Pack の core microfrontend model です。 | RNM は Webpack Module Federation や remote chunk containers を実行しません。 |
+| Rspack/Webpack plugin ecosystem | 対応しません。RNM は Metro-first です。 | 対応します。Re.Pack は Rspack/Webpack config、plugins、loaders、chunking を提供します。 | RNM は Metro を Rspack/Webpack に置き換えません。 |
+| Host-owned delivery loader | 可能です。Host が Hot Updater、Expo EAS Update、embedded bundle、bundle archive、custom loader を選びます。 | Re.Pack は script runtime と federation loading flow を提供します。 | RNM 自体は CDN policy、JavaScript evaluation、remote integrity を所有しません。 |
+| Shared dependency policy | Metro alias/watchFolders で Host/MFE package sharing を補強します。 | Module Federation shared dependency negotiation を提供します。 | RNM は federation shared dependency negotiation を行いません。 |
+
 ## 現在の基準
 
 | Package | 確認した latest version |

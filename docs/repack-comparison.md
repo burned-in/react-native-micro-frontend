@@ -12,6 +12,17 @@ This page compares `@bunin/react-native-micro-frontend` (RNM) with Re.Pack using
 | Operations | You prefer fewer runtime moving parts. | You accept remote chunk/cache/CDN/federation operations. |
 | Best fit | Native-safe OTA or archives around Metro artifacts. | Runtime composition and code-splitting are core architecture. |
 
+## Capability map
+
+| Capability | RNM supports | Re.Pack supports | Not covered / caution |
+| --- | --- | --- | --- |
+| Metro-first bundle archive | Yes. `rnm bundle` produces Metro `index.bundle`, `manifest.json`, referenced assets, and optional `.tar.gz` archives. | Not its main path. Re.Pack uses Rspack/Webpack output and runtime chunks. | RNM does not convert Metro archives into Module Federation remotes. |
+| Native-contract OTA gate | Yes. RNM captures native assumptions and blocks unsafe OTA/runtime loading. | Possible only as app/team policy around the Re.Pack runtime. | RNM does not make native changes OTA-safe; native changes still need a store release. |
+| Module Federation remotes | No. | Yes. This is Re.Pack's core microfrontend model. | RNM does not run Webpack Module Federation or remote chunk containers. |
+| Rspack/Webpack plugin ecosystem | No. RNM stays Metro-first. | Yes. Re.Pack brings Rspack/Webpack configuration, plugins, loaders, and chunking. | RNM does not replace Metro with Rspack/Webpack. |
+| Host-owned delivery loader | Yes. The Host can use Hot Updater, Expo EAS Update, embedded bundles, bundle archives, or a custom loader. | Re.Pack provides its own script runtime and federation loading flow. | RNM does not own CDN policy, JavaScript evaluation, or remote integrity by itself. |
+| Shared dependency policy | Metro aliases/watch folders for Host/MFE package sharing. | Module Federation shared dependency negotiation. | RNM does not negotiate federation shared dependencies. |
+
 ## Current baseline
 
 | Package | Latest checked version |

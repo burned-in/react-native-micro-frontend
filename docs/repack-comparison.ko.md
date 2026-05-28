@@ -12,6 +12,17 @@
 | Operations | Runtime moving parts를 줄이고 싶을 때. | Remote chunk/cache/CDN/federation 운영을 받아들일 때. |
 | Best fit | Metro artifact 주변의 native-safe OTA/archive. | Runtime composition과 code-splitting이 core architecture일 때. |
 
+## Capability map
+
+| Capability | RNM이 되는 것 | Re.Pack이 되는 것 | 안 되는 것 / 주의 |
+| --- | --- | --- | --- |
+| Metro-first bundle archive | 됩니다. `rnm bundle`이 Metro `index.bundle`, `manifest.json`, 참조 asset, 선택적 `.tar.gz` archive를 만듭니다. | 주력 경로는 아닙니다. Re.Pack은 Rspack/Webpack output과 runtime chunk를 사용합니다. | RNM은 Metro archive를 Module Federation remote로 바꾸지 않습니다. |
+| Native-contract OTA gate | 됩니다. RNM은 native assumption을 capture하고 unsafe OTA/runtime load를 막습니다. | Re.Pack runtime 주변에 app/team policy로 설계해야 합니다. | RNM도 native change를 OTA-safe로 만들지는 않습니다. native change는 Store release가 필요합니다. |
+| Module Federation remote | 안 됩니다. | 됩니다. Re.Pack의 core microfrontend model입니다. | RNM은 Webpack Module Federation이나 remote chunk container를 실행하지 않습니다. |
+| Rspack/Webpack plugin ecosystem | 안 됩니다. RNM은 Metro-first입니다. | 됩니다. Re.Pack은 Rspack/Webpack config, plugin, loader, chunking을 제공합니다. | RNM은 Metro를 Rspack/Webpack으로 대체하지 않습니다. |
+| Host-owned delivery loader | 됩니다. Host가 Hot Updater, Expo EAS Update, embedded bundle, bundle archive, custom loader를 선택합니다. | Re.Pack은 자체 script runtime과 federation loading flow를 제공합니다. | RNM은 CDN policy, JavaScript evaluation, remote integrity를 자체적으로 소유하지 않습니다. |
+| Shared dependency policy | Metro alias/watchFolders로 Host/MFE package sharing을 보강합니다. | Module Federation shared dependency negotiation을 제공합니다. | RNM은 federation shared dependency negotiation을 하지 않습니다. |
+
 ## 최신 기준
 
 | Package | 확인한 최신 version |

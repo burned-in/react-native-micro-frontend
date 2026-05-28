@@ -12,6 +12,17 @@
 | Operations | 希望减少 runtime moving parts。 | 可以接受 remote chunk/cache/CDN/federation operations。 |
 | Best fit | 围绕 Metro artifact 的 native-safe OTA/archive。 | Runtime composition 与 code-splitting 是核心架构。 |
 
+## Capability map
+
+| Capability | RNM 能做什么 | Re.Pack 能做什么 | 不能做 / 注意 |
+| --- | --- | --- | --- |
+| Metro-first bundle archive | 可以。`rnm bundle` 生成 Metro `index.bundle`、`manifest.json`、引用 assets，以及可选 `.tar.gz` archive。 | 不是主要路径。Re.Pack 使用 Rspack/Webpack output 与 runtime chunks。 | RNM 不会把 Metro archive 转成 Module Federation remote。 |
+| Native-contract OTA gate | 可以。RNM 捕获 native assumptions，并阻止 unsafe OTA/runtime load。 | 需要在 Re.Pack runtime 周围由 app/team policy 设计。 | RNM 也不会让 native change 变成 OTA-safe；native change 仍需要 Store release。 |
+| Module Federation remotes | 不支持。 | 支持。这是 Re.Pack 的核心 microfrontend model。 | RNM 不运行 Webpack Module Federation 或 remote chunk containers。 |
+| Rspack/Webpack plugin ecosystem | 不支持。RNM 保持 Metro-first。 | 支持。Re.Pack 提供 Rspack/Webpack config、plugins、loaders 与 chunking。 | RNM 不会用 Rspack/Webpack 替代 Metro。 |
+| Host-owned delivery loader | 支持。Host 可选择 Hot Updater、Expo EAS Update、embedded bundle、bundle archive 或 custom loader。 | Re.Pack 提供自己的 script runtime 与 federation loading flow。 | RNM 本身不拥有 CDN policy、JavaScript evaluation 或 remote integrity。 |
+| Shared dependency policy | 用 Metro alias/watchFolders 增强 Host/MFE package sharing。 | 提供 Module Federation shared dependency negotiation。 | RNM 不做 federation shared dependency negotiation。 |
+
 ## 当前基线
 
 | Package | 已核验最新 version |

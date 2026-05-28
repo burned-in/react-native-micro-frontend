@@ -2005,9 +2005,63 @@ export const repackComparisonSections: readonly DocSection[] = [
     },
   },
   {
+    eyebrow: 'Capability map',
+    title:
+      'What RNM does, what Re.Pack does, and what is intentionally out of scope.',
+    body: [
+      'Use this table to separate supported capabilities from deliberate boundaries. RNM is not a smaller Re.Pack; it solves a different layer around Metro artifacts, native safety, and Host-owned loading.',
+    ],
+    table: {
+      headers: [
+        'Capability',
+        'RNM supports',
+        'Re.Pack supports',
+        'Not covered / caution',
+      ],
+      rows: [
+        [
+          'Metro-first bundle archive',
+          'Yes. rnm bundle produces Metro index.bundle, manifest.json, referenced assets, and optional .tar.gz archives.',
+          'Not its main path. Re.Pack uses Rspack/Webpack output and runtime chunks.',
+          'RNM does not convert Metro archives into Module Federation remotes.',
+        ],
+        [
+          'Native-contract OTA gate',
+          'Yes. RNM captures native assumptions and blocks unsafe OTA/runtime loading.',
+          'Possible only as app/team policy around the Re.Pack runtime.',
+          'RNM does not make native changes OTA-safe; native changes still need a store release.',
+        ],
+        [
+          'Module Federation remotes',
+          'No.',
+          "Yes. This is Re.Pack's core microfrontend model.",
+          'RNM does not run Webpack Module Federation or remote chunk containers.',
+        ],
+        [
+          'Rspack/Webpack plugin ecosystem',
+          'No. RNM stays Metro-first.',
+          'Yes. Re.Pack brings Rspack/Webpack configuration, plugins, loaders, and chunking.',
+          'RNM does not replace Metro with Rspack/Webpack.',
+        ],
+        [
+          'Host-owned delivery loader',
+          'Yes. The Host can use Hot Updater, Expo EAS Update, embedded bundles, bundle archives, or a custom loader.',
+          'Re.Pack provides its own script runtime and federation loading flow.',
+          'RNM does not own CDN policy, JavaScript evaluation, or remote integrity by itself.',
+        ],
+        [
+          'Shared dependency policy',
+          'Metro aliases/watch folders for Host/MFE package sharing.',
+          'Module Federation shared dependency negotiation.',
+          'RNM does not negotiate federation shared dependencies.',
+        ],
+      ],
+    },
+  },
+  {
     eyebrow: 'Current baseline',
     title:
-      'Compare against the current Re.Pack 5.x architecture, not old Re.Pack 3 notes.',
+      'Compare against the current Re.Pack 5.x architecture and public package baselines.',
     body: [
       'Checked on 2026-05-28: RNM is published as 0.7.0, react-native latest on npm is 0.85.3, and @callstack/repack latest on npm is 5.2.5.',
       'The Re.Pack website labels 5.x as latest and describes Re.Pack as a modern React Native build tool powered by Rspack or Webpack, with Module Federation v2 for mobile microfrontends.',
@@ -2165,15 +2219,69 @@ const localizedGuidesShared = {
       },
     },
     {
+      eyebrow: 'Capability map',
+      title:
+        'RNM이 되는 것, Re.Pack이 되는 것, 의도적으로 안 되는 것을 구분합니다.',
+      body: [
+        '이 표는 지원 capability와 의도적인 boundary를 분리해서 보여줍니다. RNM은 작은 Re.Pack이 아니라 Metro artifact, native safety, Host-owned loading 주변의 다른 layer를 해결합니다.',
+      ],
+      table: {
+        headers: [
+          'Capability',
+          'RNM이 되는 것',
+          'Re.Pack이 되는 것',
+          '안 되는 것 / 주의',
+        ],
+        rows: [
+          [
+            'Metro-first bundle archive',
+            '됩니다. rnm bundle이 Metro index.bundle, manifest.json, 참조 asset, 선택적 .tar.gz archive를 만듭니다.',
+            '주력 경로는 아닙니다. Re.Pack은 Rspack/Webpack output과 runtime chunk를 사용합니다.',
+            'RNM은 Metro archive를 Module Federation remote로 바꾸지 않습니다.',
+          ],
+          [
+            'Native-contract OTA gate',
+            '됩니다. RNM은 native assumption을 capture하고 unsafe OTA/runtime load를 막습니다.',
+            'Re.Pack runtime 주변에 app/team policy로 설계해야 합니다.',
+            'RNM도 native change를 OTA-safe로 만들지는 않습니다. native change는 Store release가 필요합니다.',
+          ],
+          [
+            'Module Federation remote',
+            '안 됩니다.',
+            '됩니다. Re.Pack의 core microfrontend model입니다.',
+            'RNM은 Webpack Module Federation이나 remote chunk container를 실행하지 않습니다.',
+          ],
+          [
+            'Rspack/Webpack plugin ecosystem',
+            '안 됩니다. RNM은 Metro-first입니다.',
+            '됩니다. Re.Pack은 Rspack/Webpack config, plugin, loader, chunking을 제공합니다.',
+            'RNM은 Metro를 Rspack/Webpack으로 대체하지 않습니다.',
+          ],
+          [
+            'Host-owned delivery loader',
+            '됩니다. Host가 Hot Updater, Expo EAS Update, embedded bundle, bundle archive, custom loader를 선택합니다.',
+            'Re.Pack은 자체 script runtime과 federation loading flow를 제공합니다.',
+            'RNM은 CDN policy, JavaScript evaluation, remote integrity를 자체적으로 소유하지 않습니다.',
+          ],
+          [
+            'Shared dependency policy',
+            'Metro alias/watchFolders로 Host/MFE package sharing을 보강합니다.',
+            'Module Federation shared dependency negotiation을 제공합니다.',
+            'RNM은 federation shared dependency negotiation을 하지 않습니다.',
+          ],
+        ],
+      },
+    },
+    {
       eyebrow: '최신 기준',
       title:
-        'Re.Pack 3 시절 설명이 아니라 현재 Re.Pack 5.x 기준으로 비교합니다.',
+        '현재 Re.Pack 5.x architecture와 공개 package baseline 기준으로 비교합니다.',
       body: [
         '2026-05-28 기준 RNM은 0.7.0, react-native 최신 npm version은 0.85.3, @callstack/repack 최신 npm version은 5.2.5입니다.',
         'Re.Pack 5.x는 Rspack/Webpack 기반의 React Native build tool이며 Module Federation v2로 mobile microfrontend와 on-demand remote chunk를 제공합니다.',
         '두 도구 모두 release가 빠르므로 app repo에서는 exact version을 pin하고 CI에서 native-contract check를 다시 실행해야 합니다.',
       ],
-      code: repackComparisonSections[1]?.code ?? '',
+      code: repackComparisonSections[2]?.code ?? '',
     },
     {
       eyebrow: '아키텍처 차이',
@@ -2184,7 +2292,7 @@ const localizedGuidesShared = {
         'Re.Pack은 Metro를 Rspack 또는 Webpack으로 대체합니다. microfrontend는 Module Federation v2, remote chunk, Re.Pack script runtime이 중심입니다.',
         'RNM은 @callstack/repack에 의존하지 않고 Webpack Module Federation remote를 실행하지 않습니다. 실제 loader는 Host가 Hot Updater, Expo, embedded bundle, bundle archive, custom CDN/runtime 중에서 소유합니다.',
       ],
-      code: repackComparisonSections[2]?.code ?? '',
+      code: repackComparisonSections[3]?.code ?? '',
     },
     {
       eyebrow: '균형 잡힌 평가',
@@ -2195,7 +2303,7 @@ const localizedGuidesShared = {
         '다만 그 강력함의 대가는 Rspack/Webpack 계층을 추가로 받아들이는 것입니다. 이는 또 하나의 build model, runtime loading model, Module Federation shared-dependency policy, remote chunk/cache 운영, native release risk 옆의 추가 debugging surface를 뜻합니다.',
         'Module Federation이 제품 요구사항이라면 그 힘은 충분히 가치가 있습니다. 반대로 필요한 것이 Metro artifact에 대한 native-safe OTA gate뿐이라면 RNM은 그 architecture weight를 의도적으로 피합니다.',
       ],
-      code: repackComparisonSections[3]?.code ?? '',
+      code: repackComparisonSections[4]?.code ?? '',
     },
     {
       eyebrow: '선택 기준',
@@ -2205,7 +2313,7 @@ const localizedGuidesShared = {
         'Module Federation, code-splitting, tree-shaking, Webpack/Rspack plugin, web-style remote module composition이 핵심이면 Re.Pack을 선택합니다.',
         '두 방식을 섞을 수는 있지만 custom Host loader architecture가 되므로 remote chunk integrity, cache invalidation, signing, native compatibility check를 Host team이 직접 소유해야 합니다.',
       ],
-      code: repackComparisonSections[4]?.code ?? '',
+      code: repackComparisonSections[5]?.code ?? '',
     },
   ],
   zhRepackComparison: [
@@ -2247,14 +2355,67 @@ const localizedGuidesShared = {
       },
     },
     {
+      eyebrow: 'Capability map',
+      title: '区分 RNM 能做什么、Re.Pack 能做什么，以及有意不做什么。',
+      body: [
+        '这张表把 supported capabilities 与 deliberate boundaries 分开。RNM 不是更小的 Re.Pack；它解决的是 Metro artifacts、native safety 与 Host-owned loading 周围的另一层问题。',
+      ],
+      table: {
+        headers: [
+          'Capability',
+          'RNM 能做什么',
+          'Re.Pack 能做什么',
+          '不能做 / 注意',
+        ],
+        rows: [
+          [
+            'Metro-first bundle archive',
+            '可以。rnm bundle 生成 Metro index.bundle、manifest.json、引用 assets，以及可选 .tar.gz archive。',
+            '不是主要路径。Re.Pack 使用 Rspack/Webpack output 与 runtime chunks。',
+            'RNM 不会把 Metro archive 转成 Module Federation remote。',
+          ],
+          [
+            'Native-contract OTA gate',
+            '可以。RNM 捕获 native assumptions，并阻止 unsafe OTA/runtime load。',
+            '需要在 Re.Pack runtime 周围由 app/team policy 设计。',
+            'RNM 也不会让 native change 变成 OTA-safe；native change 仍需要 Store release。',
+          ],
+          [
+            'Module Federation remotes',
+            '不支持。',
+            '支持。这是 Re.Pack 的核心 microfrontend model。',
+            'RNM 不运行 Webpack Module Federation 或 remote chunk containers。',
+          ],
+          [
+            'Rspack/Webpack plugin ecosystem',
+            '不支持。RNM 保持 Metro-first。',
+            '支持。Re.Pack 提供 Rspack/Webpack config、plugins、loaders 与 chunking。',
+            'RNM 不会用 Rspack/Webpack 替代 Metro。',
+          ],
+          [
+            'Host-owned delivery loader',
+            '支持。Host 可选择 Hot Updater、Expo EAS Update、embedded bundle、bundle archive 或 custom loader。',
+            'Re.Pack 提供自己的 script runtime 与 federation loading flow。',
+            'RNM 本身不拥有 CDN policy、JavaScript evaluation 或 remote integrity。',
+          ],
+          [
+            'Shared dependency policy',
+            '用 Metro alias/watchFolders 增强 Host/MFE package sharing。',
+            '提供 Module Federation shared dependency negotiation。',
+            'RNM 不做 federation shared dependency negotiation。',
+          ],
+        ],
+      },
+    },
+    {
       eyebrow: '当前基线',
-      title: '按当前 Re.Pack 5.x 架构比较，而不是旧版 Re.Pack 3 说明。',
+      title: '按当前 Re.Pack 5.x 架构与公开 package baseline 比较。',
       body: [
         '截至 2026-05-28，RNM 发布版本为 0.7.0，react-native npm 最新版本为 0.85.3，@callstack/repack npm 最新版本为 5.2.5。',
         'Re.Pack 5.x 是基于 Rspack/Webpack 的 React Native build tool，并通过 Module Federation v2 提供 mobile microfrontend 和 on-demand remote chunk。',
         '两个项目发布都很快，因此应用仓库应固定 exact version，并在 CI 中重新运行 native-contract check。',
       ],
-      code: repackComparisonSections[1]?.code ?? '',
+      code: repackComparisonSections[2]?.code ?? '',
     },
     {
       eyebrow: '架构差异',
@@ -2265,7 +2426,7 @@ const localizedGuidesShared = {
         'Re.Pack 用 Rspack 或 Webpack 替代 Metro。其 microfrontend 方案以 Module Federation v2、remote chunks 与 Re.Pack script runtime 为核心。',
         'RNM 不依赖 @callstack/repack，也不执行 Webpack Module Federation remote。实际 loader 由 Host 在 Hot Updater、Expo、embedded bundle、bundle archive 或 custom CDN/runtime 中选择并负责。',
       ],
-      code: repackComparisonSections[2]?.code ?? '',
+      code: repackComparisonSections[3]?.code ?? '',
     },
     {
       eyebrow: '平衡评价',
@@ -2276,7 +2437,7 @@ const localizedGuidesShared = {
         '但这种强大能力的代价，是额外接受一层 Rspack/Webpack：另一套 build model、runtime loading model、Module Federation shared-dependency policy、remote chunk/cache operations，以及 native release risk 旁边的额外 debugging surface。',
         '如果 Module Federation 是产品需求，这种能力通常值得采用。反之，如果团队只需要围绕 Metro artifact 的 native-safe OTA gate，RNM 会有意避开这部分 architecture weight。',
       ],
-      code: repackComparisonSections[3]?.code ?? '',
+      code: repackComparisonSections[4]?.code ?? '',
     },
     {
       eyebrow: '选择指南',
@@ -2286,7 +2447,7 @@ const localizedGuidesShared = {
         '如果核心需求是 Module Federation、code-splitting、tree-shaking、Webpack/Rspack plugins 或 web-style remote module composition，请选择 Re.Pack。',
         '不要随意混用。把 RNM native-contract gates 与 Re.Pack runtime 结合会变成 custom Host loader architecture，Host 团队必须自己负责 remote chunk integrity、cache invalidation、signing 与 native compatibility checks。',
       ],
-      code: repackComparisonSections[4]?.code ?? '',
+      code: repackComparisonSections[5]?.code ?? '',
     },
   ],
   jaRepackComparison: [
@@ -2328,15 +2489,69 @@ const localizedGuidesShared = {
       },
     },
     {
+      eyebrow: 'Capability map',
+      title:
+        'RNM でできること、Re.Pack でできること、意図的にできないことを分けます。',
+      body: [
+        'この表は supported capabilities と deliberate boundaries を分けて示します。RNM は小さな Re.Pack ではなく、Metro artifacts、native safety、Host-owned loading の周辺にある別 layer を解決します。',
+      ],
+      table: {
+        headers: [
+          'Capability',
+          'RNM でできること',
+          'Re.Pack でできること',
+          'できないこと / 注意',
+        ],
+        rows: [
+          [
+            'Metro-first bundle archive',
+            '可能です。rnm bundle が Metro index.bundle、manifest.json、参照 assets、任意の .tar.gz archive を生成します。',
+            '主経路ではありません。Re.Pack は Rspack/Webpack output と runtime chunks を使います。',
+            'RNM は Metro archive を Module Federation remote に変換しません。',
+          ],
+          [
+            'Native-contract OTA gate',
+            '可能です。RNM は native assumptions を capture し、unsafe OTA/runtime load を block します。',
+            'Re.Pack runtime の周辺で app/team policy として設計する必要があります。',
+            'RNM も native change を OTA-safe にはしません。native change は store release が必要です。',
+          ],
+          [
+            'Module Federation remotes',
+            '対応しません。',
+            '対応します。Re.Pack の core microfrontend model です。',
+            'RNM は Webpack Module Federation や remote chunk containers を実行しません。',
+          ],
+          [
+            'Rspack/Webpack plugin ecosystem',
+            '対応しません。RNM は Metro-first です。',
+            '対応します。Re.Pack は Rspack/Webpack config、plugins、loaders、chunking を提供します。',
+            'RNM は Metro を Rspack/Webpack に置き換えません。',
+          ],
+          [
+            'Host-owned delivery loader',
+            '可能です。Host が Hot Updater、Expo EAS Update、embedded bundle、bundle archive、custom loader を選びます。',
+            'Re.Pack は script runtime と federation loading flow を提供します。',
+            'RNM 自体は CDN policy、JavaScript evaluation、remote integrity を所有しません。',
+          ],
+          [
+            'Shared dependency policy',
+            'Metro alias/watchFolders で Host/MFE package sharing を補強します。',
+            'Module Federation shared dependency negotiation を提供します。',
+            'RNM は federation shared dependency negotiation を行いません。',
+          ],
+        ],
+      },
+    },
+    {
       eyebrow: '現在の基準',
       title:
-        '古い Re.Pack 3 ではなく現在の Re.Pack 5.x architecture と比較します。',
+        '現在の Re.Pack 5.x architecture と公開 package baseline で比較します。',
       body: [
         '2026-05-28 時点で RNM は 0.7.0、react-native の npm latest は 0.85.3、@callstack/repack の npm latest は 5.2.5 です。',
         'Re.Pack 5.x は Rspack/Webpack powered な React Native build tool で、Module Federation v2 により mobile microfrontend と on-demand remote chunk を提供します。',
         'どちらも release が速いため、app repo では exact version を pin し、CI で native-contract check を再実行してください。',
       ],
-      code: repackComparisonSections[1]?.code ?? '',
+      code: repackComparisonSections[2]?.code ?? '',
     },
     {
       eyebrow: 'Architecture difference',
@@ -2347,7 +2562,7 @@ const localizedGuidesShared = {
         'Re.Pack は Metro を Rspack または Webpack に置き換えます。microfrontend は Module Federation v2、remote chunks、Re.Pack script runtime が中心です。',
         'RNM は @callstack/repack に依存せず、Webpack Module Federation remote を実行しません。実際の loader は Host が Hot Updater、Expo、embedded bundle、bundle archive、custom CDN/runtime から選んで所有します。',
       ],
-      code: repackComparisonSections[2]?.code ?? '',
+      code: repackComparisonSections[3]?.code ?? '',
     },
     {
       eyebrow: 'Balanced critique',
@@ -2358,7 +2573,7 @@ const localizedGuidesShared = {
         '一方で、その強力さの代償として追加の Rspack/Webpack layer を受け入れる必要があります。これはもう一つの build model、runtime loading model、Module Federation shared-dependency policy、remote chunk/cache operations、native release risk の横にある追加 debugging surface を意味します。',
         'Module Federation が product requirement なら、その力には十分な価値があります。逆に必要なのが Metro artifact に対する native-safe OTA gate だけなら、RNM はその architecture weight を意図的に避けます。',
       ],
-      code: repackComparisonSections[3]?.code ?? '',
+      code: repackComparisonSections[4]?.code ?? '',
     },
     {
       eyebrow: 'Decision guide',
@@ -2368,7 +2583,7 @@ const localizedGuidesShared = {
         'Module Federation、code-splitting、tree-shaking、Webpack/Rspack plugins、web-style remote module composition が主目的なら Re.Pack を選びます。',
         '安易に混在させないでください。RNM native-contract gates と Re.Pack runtime を組み合わせる場合は custom Host loader architecture になり、remote chunk integrity、cache invalidation、signing、native compatibility checks を Host team が所有します。',
       ],
-      code: repackComparisonSections[4]?.code ?? '',
+      code: repackComparisonSections[5]?.code ?? '',
     },
   ],
   koGlobalState: {
